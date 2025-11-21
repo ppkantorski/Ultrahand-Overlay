@@ -2403,7 +2403,7 @@ std::string packageRootLayerTitle;
 std::string packageRootLayerName;
 std::string packageRootLayerVersion;
 std::string packageRootLayerColor;
-bool packageRootLayerIsStarred = false;
+//bool packageRootLayerIsStarred = false;
 
 //std::string lastPackageHeader;
 
@@ -5849,14 +5849,16 @@ public:
                 if (returningToHiddenMain) {
                     setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, IN_HIDDEN_PACKAGE_STR, TRUE_STR);
                 }
-                {
-                    //std::lock_guard<std::mutex> lock(jumpItemMutex);
-                    jumpItemName = (packageRootLayerIsStarred ? STAR_SYMBOL + "  " + packageRootLayerTitle : packageRootLayerTitle) + "?" + packageRootLayerName;
-                    jumpItemValue = hidePackageVersions ? "" : packageRootLayerVersion;
-                    jumpItemExactMatch.store(true, release);
-                    //g_overlayFilename = "";
-                    skipJumpReset.store(true, release);
-                }
+                //{
+                //    //std::lock_guard<std::mutex> lock(jumpItemMutex);
+                //    jumpItemName = (packageRootLayerIsStarred ? STAR_SYMBOL + "  " + packageRootLayerTitle : packageRootLayerTitle) + "?" + packageRootLayerName;
+                //    jumpItemValue = hidePackageVersions ? "" : packageRootLayerVersion;
+                //    jumpItemExactMatch.store(true, release);
+                //    //g_overlayFilename = "";
+                //    skipJumpReset.store(true, release);
+                //}
+                jumpItemName.clear();
+                jumpItemValue.clear();
                 
                 //tsl::clearGlyphCacheNow.store(true, release);
                 //tsl::pop();
@@ -6321,6 +6323,24 @@ public:
             newOverlayName.reserve(192);
             displayVersion.reserve(64);
             
+
+            // Helper to build return name for overlays (defined before listItem)
+            auto buildOverlayReturnName = [](bool isStarred, const std::string& fileName, const std::string& displayName) -> std::string {
+                std::string name;
+                if (!isStarred) {
+                    name.reserve(STAR_SYMBOL.size() + 2 + displayName.size() + 1 + fileName.size());
+                    name = STAR_SYMBOL;
+                    name += "  ";
+                    name += displayName;
+                } else {
+                    name = displayName;
+                }
+                name += '?';
+                name += fileName;
+                return name;
+            };
+
+
             // Process overlay set and add to list
             for (const auto& taintedOverlayFileName : overlaySet) {
                 overlayFileName.clear();
@@ -6392,15 +6412,18 @@ public:
                     jumpItemValue = hideOverlayVersions ? "" : displayVersion;
                     jumpItemExactMatch.store(true, std::memory_order_release);
                 }
-                
-                listItem->setClickListener([overlayFile, newStarred, overlayFileName, overlayName, overlayVersion, requiresAMS110Handling, supportsAMS110](s64 keys) {
+                                
+                listItem->setClickListener([overlayFile, newStarred, overlayFileName, overlayName, overlayVersion, requiresAMS110Handling, supportsAMS110, buildOverlayReturnName](s64 keys) {
                     if (runningInterpreter.load(std::memory_order_acquire)) return false;
                     
                     if (simulatedMenu.load(std::memory_order_acquire)) {
                         keys |= SYSTEM_SETTINGS_KEY;
                     }
                     
-                    if ((keys & KEY_A && !(keys & ~KEY_A & ALL_KEYS_MASK)) && !requiresAMS110Handling) {
+                    // Check for single key press (no other keys)
+                    const s64 cleanKeys = keys & ALL_KEYS_MASK;
+                    
+                    if ((keys & KEY_A && cleanKeys == KEY_A) && !requiresAMS110Handling) {
                         disableSound.store(true, std::memory_order_release);
                         
                         std::string useOverlayLaunchArgs, overlayLaunchArgs;
@@ -6428,39 +6451,34 @@ public:
                         ult::launchingOverlay.store(true, std::memory_order_release);
                         if (useOverlayLaunchArgs == TRUE_STR) tsl::setNextOverlay(overlayFile, overlayLaunchArgs);
                         else tsl::setNextOverlay(overlayFile);
-    
+                
                         tsl::Overlay::get()->close(true);
                         return true;
-                    } else if (keys & STAR_KEY && !(keys & ~STAR_KEY & ALL_KEYS_MASK)) {
+                    }
+                    
+                    if (keys & STAR_KEY && cleanKeys == STAR_KEY) {
                         if (!overlayFile.empty()) {
                             setIniFileValue(OVERLAYS_INI_FILEPATH, overlayFileName, STAR_STR, newStarred ? TRUE_STR : FALSE_STR);
                         }
+                        
                         skipJumpReset.store(true, std::memory_order_release);
-                        std::string jumpName;
-                        if (newStarred) {
-                            jumpName.reserve(STAR_SYMBOL.size() + 2 + overlayName.size() + 1 + overlayFileName.size());
-                            jumpName = STAR_SYMBOL;
-                            jumpName += "  ";
-                            jumpName += overlayName;
-                        } else {
-                            jumpName = overlayName;
-                        }
-                        jumpName += '?';
-                        jumpName += overlayFileName;
-                        jumpItemName = jumpName;
+                        jumpItemName = buildOverlayReturnName(newStarred, overlayFileName, overlayName);
                         jumpItemValue = hideOverlayVersions ? "" : overlayVersion;
                         jumpItemExactMatch.store(true, std::memory_order_release);
+                        
                         wasInHiddenMode = inHiddenMode.load(std::memory_order_acquire);
-                        if (inHiddenMode.load(std::memory_order_acquire)) {
+                        if (wasInHiddenMode) {
                             inMainMenu.store(false, std::memory_order_release);
-                            //inHiddenMode = true;
                             reloadMenu2 = true;
                         }
+                        
                         refreshPage.store(true, std::memory_order_release);
                         triggerRumbleClick.store(true, std::memory_order_release);
                         triggerMoveSound.store(true, std::memory_order_release);
                         return true;
-                    } else if (keys & SETTINGS_KEY && !(keys & ~SETTINGS_KEY & ALL_KEYS_MASK)) {
+                    }
+                    
+                    if (keys & SETTINGS_KEY && cleanKeys == SETTINGS_KEY) {
                         if (!inHiddenMode.load(std::memory_order_acquire)) {
                             lastMenu = "";
                             inMainMenu.store(false, std::memory_order_release);
@@ -6468,42 +6486,26 @@ public:
                             lastMenu = "hiddenMenuMode";
                             inHiddenMode.store(false, std::memory_order_release);
                         }
-                        std::string returnName;
-                        if (!newStarred) {
-                            returnName.reserve(STAR_SYMBOL.size() + 2 + overlayName.size() + 1 + overlayFileName.size());
-                            returnName = STAR_SYMBOL;
-                            returnName += "  ";
-                            returnName += overlayName;
-                        } else {
-                            returnName = overlayName;
-                        }
-                        returnName += '?';
-                        returnName += overlayFileName;
-                        returnJumpItemName = returnName;
+                        
+                        returnJumpItemName = buildOverlayReturnName(newStarred, overlayFileName, overlayName);
                         returnJumpItemValue = hideOverlayVersions ? "" : overlayVersion;
                         jumpItemName = jumpItemValue = "";
+                        
                         tsl::changeTo<SettingsMenu>(overlayFileName, OVERLAY_STR, overlayName, overlayVersion, "", !supportsAMS110);
                         triggerRumbleClick.store(true, std::memory_order_release);
                         triggerSettingsSound.store(true, std::memory_order_release);
                         return true;
-                    } else if (keys & SYSTEM_SETTINGS_KEY && !(keys & ~SYSTEM_SETTINGS_KEY & ALL_KEYS_MASK)) {
-                        std::string returnName;
-                        if (!newStarred) {
-                            returnName.reserve(STAR_SYMBOL.size() + 2 + overlayName.size() + 1 + overlayFileName.size());
-                            returnName = STAR_SYMBOL;
-                            returnName += "  ";
-                            returnName += overlayName;
-                        } else {
-                            returnName = overlayName;
-                        }
-                        returnName += '?';
-                        returnName += overlayFileName;
-                        returnJumpItemName = returnName;
+                    }
+                    
+                    if (keys & SYSTEM_SETTINGS_KEY && cleanKeys == SYSTEM_SETTINGS_KEY) {
+                        returnJumpItemName = buildOverlayReturnName(newStarred, overlayFileName, overlayName);
                         returnJumpItemValue = hideOverlayVersions ? "" : overlayVersion;
                         return true;
                     }
+                    
                     return false;
                 });
+
                 if (requiresAMS110Handling) {
                     listItem->isLocked = true;
                 }
@@ -6664,6 +6666,23 @@ public:
             
             std::string packageName, packageVersion, newPackageName;
     
+            // Helper to build return name (defined before listItem)
+            auto buildReturnName = [](bool isStarred, const std::string& pkgName, const std::string& displayName) -> std::string {
+                std::string name;
+                if (!isStarred) {
+                    name.reserve(STAR_SYMBOL.size() + 2 + displayName.size() + 1 + pkgName.size());
+                    name = STAR_SYMBOL;
+                    name += "  ";
+                    name += displayName;
+                } else {
+                    name = displayName;
+                }
+                name += "?";
+                name += pkgName;
+                return name;
+            };
+
+
             bool firstItem = true;
             for (const auto& taintedPackageName : packageSet) {
                 if (firstItem) {
@@ -6720,32 +6739,36 @@ public:
                 listItem->setTextColor(usePackageTitles ? tsl::ultPackageTextColor : tsl::packageTextColor);
                 listItem->disableClickAnimation();
                 
-                listItem->setClickListener([packageFilePath, newStarred, packageName, newPackageName, packageVersion, packageStarred](s64 keys) {
+                listItem->setClickListener([packageFilePath, newStarred, packageName, newPackageName, packageVersion, packageStarred, buildReturnName](s64 keys) {
                     if (runningInterpreter.load(acquire)) return false;
                     
                     if (simulatedMenu.load(std::memory_order_acquire)) {
                         keys |= SYSTEM_SETTINGS_KEY;
                     }
-    
-                    if ((keys & KEY_A && !(keys & ~KEY_A & ALL_KEYS_MASK))) {
+                
+                    // Check for single key press (no other keys)
+                    const s64 cleanKeys = keys & ALL_KEYS_MASK;
+                    
+                    if (keys & KEY_A && cleanKeys == KEY_A) {
                         inMainMenu.store(false, std::memory_order_release);
                         
+                        // Check for boot package
                         if (isFile(packageFilePath + BOOT_PACKAGE_FILENAME)) {
                             bool useBootPackage = true;
-                            {
-                                const auto packagesIniData = getParsedDataFromIniFile(PACKAGES_INI_FILEPATH);
-                                auto sectionIt = packagesIniData.find(packageName);
-                                if (sectionIt != packagesIniData.end()) {
-                                    auto bootIt = sectionIt->second.find(USE_BOOT_PACKAGE_STR);
-                                    useBootPackage = (bootIt == sectionIt->second.end()) || (bootIt->second != FALSE_STR);
-                                    if (!selectedPackage.empty()) {
-                                        auto quickIt = sectionIt->second.find(USE_QUICK_LAUNCH_STR);
-                                        const bool useQuickLaunch = (quickIt != sectionIt->second.end()) && (quickIt->second == TRUE_STR);
-                                        useBootPackage = useBootPackage && !useQuickLaunch;
-                                    }
+                            const auto packagesIniData = getParsedDataFromIniFile(PACKAGES_INI_FILEPATH);
+                            auto sectionIt = packagesIniData.find(packageName);
+                            
+                            if (sectionIt != packagesIniData.end()) {
+                                auto bootIt = sectionIt->second.find(USE_BOOT_PACKAGE_STR);
+                                useBootPackage = (bootIt == sectionIt->second.end()) || (bootIt->second != FALSE_STR);
+                                
+                                if (!selectedPackage.empty()) {
+                                    auto quickIt = sectionIt->second.find(USE_QUICK_LAUNCH_STR);
+                                    useBootPackage = useBootPackage && 
+                                                   ((quickIt == sectionIt->second.end()) || (quickIt->second != TRUE_STR));
                                 }
                             }
-    
+                
                             if (useBootPackage) {
                                 auto bootCommands = loadSpecificSectionFromIni(packageFilePath + BOOT_PACKAGE_FILENAME, "boot");
                                 if (!bootCommands.empty()) {
@@ -6756,42 +6779,38 @@ public:
                                 }
                             }
                         }
-    
-                        packageRootLayerTitle = newPackageName;
-                        packageRootLayerName = packageName;
-                        packageRootLayerVersion = packageVersion;
-                        packageRootLayerIsStarred = packageStarred;
+                
+                        returnJumpItemName = buildReturnName(newStarred, packageName, newPackageName);
+                        returnJumpItemValue = hidePackageVersions ? "" : packageVersion;
+                
                         tsl::clearGlyphCacheNow.store(true, release);
                         tsl::swapTo<PackageMenu>(SwapDepth(2), packageFilePath, "");
                         return true;
-                    } else if (keys & STAR_KEY && !(keys & ~STAR_KEY & ALL_KEYS_MASK)) {
-                        if (!packageName.empty()) setIniFileValue(PACKAGES_INI_FILEPATH, packageName, STAR_STR, newStarred ? TRUE_STR : FALSE_STR);
-                        skipJumpReset.store(true, release);
-                        std::string jumpName;
-                        if (newStarred) {
-                            jumpName.reserve(STAR_SYMBOL.size() + 2 + newPackageName.size() + 1 + packageName.size());
-                            jumpName = STAR_SYMBOL;
-                            jumpName += "  ";
-                            jumpName += newPackageName;
-                        } else {
-                            jumpName = newPackageName;
+                    }
+                    
+                    if (keys & STAR_KEY && cleanKeys == STAR_KEY) {
+                        if (!packageName.empty()) {
+                            setIniFileValue(PACKAGES_INI_FILEPATH, packageName, STAR_STR, newStarred ? TRUE_STR : FALSE_STR);
                         }
-                        jumpName += "?";
-                        jumpName += packageName;
-                        jumpItemName = jumpName;
+                        
+                        skipJumpReset.store(true, release);
+                        jumpItemName = buildReturnName(newStarred, packageName, newPackageName);
                         jumpItemValue = hidePackageVersions ? "" : packageVersion;
                         jumpItemExactMatch.store(true, release);
+                        
                         wasInHiddenMode = inHiddenMode.load(std::memory_order_acquire);
-                        if (inHiddenMode.load(std::memory_order_acquire)) {
+                        if (wasInHiddenMode) {
                             inMainMenu.store(false, std::memory_order_release);
-                            //inHiddenMode = true;
                             reloadMenu2 = true;
                         }
+                        
                         refreshPage.store(true, release);
                         triggerRumbleClick.store(true, std::memory_order_release);
                         triggerMoveSound.store(true, std::memory_order_release);
                         return true;
-                    } else if (keys & SETTINGS_KEY && !(keys & ~SETTINGS_KEY & ALL_KEYS_MASK)) {
+                    }
+                    
+                    if (keys & SETTINGS_KEY && cleanKeys == SETTINGS_KEY) {
                         if (!inHiddenMode.load(std::memory_order_acquire)) {
                             lastMenu = "";
                             inMainMenu.store(false, std::memory_order_release);
@@ -6799,40 +6818,23 @@ public:
                             lastMenu = "hiddenMenuMode";
                             inHiddenMode.store(false, std::memory_order_release);
                         }
-                        std::string returnName;
-                        if (!newStarred) {
-                            returnName.reserve(STAR_SYMBOL.size() + 2 + newPackageName.size() + 1 + packageName.size());
-                            returnName = STAR_SYMBOL;
-                            returnName += "  ";
-                            returnName += newPackageName;
-                        } else {
-                            returnName = newPackageName;
-                        }
-                        returnName += "?";
-                        returnName += packageName;
-                        returnJumpItemName = returnName;
+                        
+                        returnJumpItemName = buildReturnName(newStarred, packageName, newPackageName);
                         returnJumpItemValue = hidePackageVersions ? "" : packageVersion;
                         jumpItemName = jumpItemValue = "";
+                        
                         tsl::changeTo<SettingsMenu>(packageName, PACKAGE_STR, newPackageName, packageVersion);
                         triggerRumbleClick.store(true, std::memory_order_release);
                         triggerSettingsSound.store(true, std::memory_order_release);
                         return true;
-                    } else if (keys & SYSTEM_SETTINGS_KEY && !(keys & ~SYSTEM_SETTINGS_KEY & ALL_KEYS_MASK)) {
-                        std::string returnName;
-                        if (!newStarred) {
-                            returnName.reserve(STAR_SYMBOL.size() + 2 + newPackageName.size() + 1 + packageName.size());
-                            returnName = STAR_SYMBOL;
-                            returnName += "  ";
-                            returnName += newPackageName;
-                        } else {
-                            returnName = newPackageName;
-                        }
-                        returnName += "?";
-                        returnName += packageName;
-                        returnJumpItemName = returnName;
+                    }
+                    
+                    if (keys & SYSTEM_SETTINGS_KEY && cleanKeys == SYSTEM_SETTINGS_KEY) {
+                        returnJumpItemName = buildReturnName(newStarred, packageName, newPackageName);
                         returnJumpItemValue = hidePackageVersions ? "" : packageVersion;
                         return true;
                     }
+                    
                     return false;
                 });
                 
