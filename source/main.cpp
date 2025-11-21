@@ -2128,7 +2128,7 @@ public:
             if (lastMenu == "hiddenMenuMode") {
                 popCount = 3;
                 inMainMenu.store(false, std::memory_order_release);
-                inHiddenMode = true;
+                inHiddenMode.store(true, std::memory_order_release);
                 if (entryMode == OVERLAY_STR)
                     setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, IN_HIDDEN_OVERLAY_STR, TRUE_STR);
                 else
@@ -2270,7 +2270,7 @@ public:
                         if (lastMenu == "hiddenMenuMode") {
                             popCount = 3;
                             inMainMenu.store(false, std::memory_order_release);
-                            inHiddenMode = true;
+                            inHiddenMode.store(true, std::memory_order_release);
                             if (entryMode == OVERLAY_STR)
                                 setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, IN_HIDDEN_OVERLAY_STR, TRUE_STR);
                             else
@@ -5816,7 +5816,7 @@ public:
 
             if (nestedMenuCount == 0) {
                 inPackageMenu = false;
-                if (!inHiddenMode)
+                if (!inHiddenMode.load(std::memory_order_acquire))
                     returningToMain = true;
                 else
                     returningToHiddenMain = true;
@@ -6111,7 +6111,7 @@ public:
             auto overlayIt = ultrahandSection.find(IN_HIDDEN_OVERLAY_STR);
             if (overlayIt != ultrahandSection.end() && overlayIt->second == TRUE_STR) {
                 inMainMenu.store(false, std::memory_order_release);
-                inHiddenMode = true;
+                inHiddenMode.store(true, std::memory_order_release);
                 hiddenMenuMode = OVERLAYS_STR;
                 skipJumpReset.store(true, release);
                 ultrahandSection[IN_HIDDEN_OVERLAY_STR] = FALSE_STR;
@@ -6120,7 +6120,7 @@ public:
                 auto packageIt = ultrahandSection.find(IN_HIDDEN_PACKAGE_STR);
                 if (packageIt != ultrahandSection.end() && packageIt->second == TRUE_STR) {
                     inMainMenu.store(false, std::memory_order_release);
-                    inHiddenMode = true;
+                    inHiddenMode.store(true, std::memory_order_release);
                     hiddenMenuMode = PACKAGES_STR;
                     skipJumpReset.store(true, release);
                     ultrahandSection[IN_HIDDEN_PACKAGE_STR] = FALSE_STR;
@@ -6133,7 +6133,7 @@ public:
             }
         }
     
-        if (!inHiddenMode && dropdownSection.empty())
+        if (!inHiddenMode.load(std::memory_order_acquire) && dropdownSection.empty())
             inMainMenu.store(true, std::memory_order_release);
         else
             inMainMenu.store(false, std::memory_order_release);
@@ -6184,7 +6184,7 @@ public:
         inOverlaysPage.store(true, std::memory_order_release);
         inPackagesPage.store(false, std::memory_order_release);
     
-        addHeader(list, (!inHiddenMode ? OVERLAYS : HIDDEN_OVERLAYS)+" "+DIVIDER_SYMBOL+" \uE0E3 "+SETTINGS+" "+DIVIDER_SYMBOL+" \uE0E2 "+FAVORITE);
+        addHeader(list, (!inHiddenMode.load(std::memory_order_acquire) ? OVERLAYS : HIDDEN_OVERLAYS)+" "+DIVIDER_SYMBOL+" \uE0E3 "+SETTINGS+" "+DIVIDER_SYMBOL+" \uE0E2 "+FAVORITE);
         
         std::vector<std::string> overlayFiles = getFilesListByWildcards(OVERLAY_PATH+"*.ovl");
         
@@ -6271,7 +6271,7 @@ public:
                         }
                     }
                     
-                    if ((!inHiddenMode && !isHidden) || (inHiddenMode && isHidden)) {
+                    if (inHiddenMode.load(std::memory_order_acquire) == isHidden) {
                         const auto& [result, overlayName, overlayVersion, usingLibUltrahand, supportsAMS110] = getOverlayInfo(OVERLAY_PATH + overlayFileName);
                         if (result != ResultSuccess) continue;
                         
@@ -6419,7 +6419,7 @@ public:
                         {
                             auto iniData = getParsedDataFromIniFile(ULTRAHAND_CONFIG_INI_PATH);
                             auto& ultrahandSection = iniData[ULTRAHAND_PROJECT_NAME];
-                            if (inHiddenMode) ultrahandSection[IN_HIDDEN_OVERLAY_STR] = TRUE_STR;
+                            if (inHiddenMode.load(std::memory_order_acquire)) ultrahandSection[IN_HIDDEN_OVERLAY_STR] = TRUE_STR;
                             ultrahandSection[IN_OVERLAY_STR] = TRUE_STR;
                             saveIniFileData(ULTRAHAND_CONFIG_INI_PATH, iniData);
                         }
@@ -6450,10 +6450,10 @@ public:
                         jumpItemName = jumpName;
                         jumpItemValue = hideOverlayVersions ? "" : overlayVersion;
                         jumpItemExactMatch.store(true, std::memory_order_release);
-                        wasInHiddenMode = inHiddenMode;
-                        if (inHiddenMode) {
+                        wasInHiddenMode = inHiddenMode.load(std::memory_order_acquire);
+                        if (inHiddenMode.load(std::memory_order_acquire)) {
                             inMainMenu.store(false, std::memory_order_release);
-                            inHiddenMode = true;
+                            //inHiddenMode = true;
                             reloadMenu2 = true;
                         }
                         refreshPage.store(true, std::memory_order_release);
@@ -6461,12 +6461,12 @@ public:
                         triggerMoveSound.store(true, std::memory_order_release);
                         return true;
                     } else if (keys & SETTINGS_KEY && !(keys & ~SETTINGS_KEY & ALL_KEYS_MASK)) {
-                        if (!inHiddenMode) {
+                        if (!inHiddenMode.load(std::memory_order_acquire)) {
                             lastMenu = "";
                             inMainMenu.store(false, std::memory_order_release);
                         } else {
                             lastMenu = "hiddenMenuMode";
-                            inHiddenMode = false;
+                            inHiddenMode.store(false, std::memory_order_release);
                         }
                         std::string returnName;
                         if (!newStarred) {
@@ -6514,7 +6514,7 @@ public:
             overlaySet.clear();
         }
         
-        if (drawHiddenTab && !inHiddenMode && !hideHidden) {
+        if (drawHiddenTab && !inHiddenMode.load(std::memory_order_acquire) && !hideHidden) {
             tsl::elm::ListItem* listItem = new tsl::elm::ListItem(HIDDEN, DROPDOWN_SYMBOL);
             listItem->setClickListener([](uint64_t keys) {
                 if (runningInterpreter.load(std::memory_order_acquire)) return false;
@@ -6527,7 +6527,7 @@ public:
                     jumpItemValue = "";
                     jumpItemExactMatch.store(true, std::memory_order_release);
                     inMainMenu.store(false, std::memory_order_release);
-                    inHiddenMode = true;
+                    inHiddenMode.store(true, std::memory_order_release);
                     tsl::changeTo<MainMenu>(OVERLAYS_STR);
                     return true;
                 } else if (keys & SYSTEM_SETTINGS_KEY && !(keys & ~SYSTEM_SETTINGS_KEY & ALL_KEYS_MASK)) {
@@ -6625,7 +6625,7 @@ public:
                         const std::string hide = (packageIt->second.find(HIDE_STR) != packageIt->second.end()) ? packageIt->second[HIDE_STR] : FALSE_STR;
                         if (hide == TRUE_STR) drawHiddenTab = true;
                         
-                        if ((!inHiddenMode && hide == FALSE_STR) || (inHiddenMode && hide == TRUE_STR)) {
+                        if (inHiddenMode.load(std::memory_order_acquire) == (hide == TRUE_STR)) {
                             PackageHeader packageHeader = getPackageHeaderFromIni(PACKAGE_PATH + packageName+ "/" +PACKAGE_FILENAME);
                             if (cleanVersionLabels) {
                                 packageHeader.version = cleanVersionLabel(packageHeader.version);
@@ -6667,7 +6667,7 @@ public:
             bool firstItem = true;
             for (const auto& taintedPackageName : packageSet) {
                 if (firstItem) {
-                    addHeader(list, (!inHiddenMode ? PACKAGES : HIDDEN_PACKAGES)+" "+DIVIDER_SYMBOL+" \uE0E3 "+SETTINGS+" "+DIVIDER_SYMBOL+" \uE0E2 "+FAVORITE);
+                    addHeader(list, (!inHiddenMode.load(std::memory_order_acquire) ? PACKAGES : HIDDEN_PACKAGES)+" "+DIVIDER_SYMBOL+" \uE0E3 "+SETTINGS+" "+DIVIDER_SYMBOL+" \uE0E2 "+FAVORITE);
                     firstItem = false;
                 }
                 
@@ -6781,10 +6781,10 @@ public:
                         jumpItemName = jumpName;
                         jumpItemValue = hidePackageVersions ? "" : packageVersion;
                         jumpItemExactMatch.store(true, release);
-                        wasInHiddenMode = inHiddenMode;
-                        if (inHiddenMode) {
+                        wasInHiddenMode = inHiddenMode.load(std::memory_order_acquire);
+                        if (inHiddenMode.load(std::memory_order_acquire)) {
                             inMainMenu.store(false, std::memory_order_release);
-                            inHiddenMode = true;
+                            //inHiddenMode = true;
                             reloadMenu2 = true;
                         }
                         refreshPage.store(true, release);
@@ -6792,12 +6792,12 @@ public:
                         triggerMoveSound.store(true, std::memory_order_release);
                         return true;
                     } else if (keys & SETTINGS_KEY && !(keys & ~SETTINGS_KEY & ALL_KEYS_MASK)) {
-                        if (!inHiddenMode) {
+                        if (!inHiddenMode.load(std::memory_order_acquire)) {
                             lastMenu = "";
                             inMainMenu.store(false, std::memory_order_release);
                         } else {
                             lastMenu = "hiddenMenuMode";
-                            inHiddenMode = false;
+                            inHiddenMode.store(false, std::memory_order_release);
                         }
                         std::string returnName;
                         if (!newStarred) {
@@ -6841,7 +6841,7 @@ public:
     
             packageSet.clear();
             
-            if (drawHiddenTab && !inHiddenMode && !hideHidden) {
+            if (drawHiddenTab && !inHiddenMode.load(std::memory_order_acquire) && !hideHidden) {
                 tsl::elm::ListItem* listItem = new tsl::elm::ListItem(HIDDEN, DROPDOWN_SYMBOL);
                 listItem->setClickListener([](uint64_t keys) {
                     if (runningInterpreter.load(acquire)) return false;
@@ -6851,7 +6851,7 @@ public:
     
                     if ((keys & KEY_A && !(keys & ~KEY_A & ALL_KEYS_MASK))) {
                         inMainMenu.store(false, std::memory_order_release);
-                        inHiddenMode = true;
+                        inHiddenMode.store(true, std::memory_order_release);
                         tsl::changeTo<MainMenu>(PACKAGES_STR);
                         return true;
                     } else if (keys & SYSTEM_SETTINGS_KEY && !(keys & ~SYSTEM_SETTINGS_KEY & ALL_KEYS_MASK)) {
@@ -6865,7 +6865,7 @@ public:
             }
         }
         
-        if (!inHiddenMode) {
+        if (!inHiddenMode.load(std::memory_order_acquire)) {
             std::string pageLeftName, pageRightName, pathPattern, pathPatternOn, pathPatternOff;
             bool usingPages = false;
             
@@ -7024,7 +7024,7 @@ public:
             }
         }
         
-        if (inMainMenu.load(acquire) && !inHiddenMode && dropdownSection.empty()) {
+        if (inMainMenu.load(acquire) && !inHiddenMode.load(std::memory_order_acquire) && dropdownSection.empty()) {
             if (triggerMenuReload || triggerMenuReload2) {
                 triggerMenuReload = triggerMenuReload2 = false;
                 disableSound.store(true, std::memory_order_release);
@@ -7174,7 +7174,7 @@ public:
             }
         }
         
-        if (!inMainMenu.load(acquire) && inHiddenMode && !returningToHiddenMain && !returningToMain) {
+        if (!inMainMenu.load(acquire) && inHiddenMode.load(std::memory_order_acquire) && !returningToHiddenMain && !returningToMain) {
             simulatedNextPage.exchange(false, std::memory_order_acq_rel);
             //simulatedMenu.exchange(false, std::memory_order_acq_rel);
     
@@ -7182,7 +7182,7 @@ public:
                 // Check if we're in hidden mode with no underlying menu to go back to
                 if (hiddenMenuMode == OVERLAYS_STR || hiddenMenuMode == PACKAGES_STR) {
                     inMainMenu.store(true, std::memory_order_release);
-                    inHiddenMode = false;
+                    inHiddenMode.store(false, std::memory_order_release);
                     hiddenMenuMode = "";
                     //setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, IN_HIDDEN_OVERLAY_STR, "");
                     //setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, IN_HIDDEN_PACKAGE_STR, "");
@@ -7215,7 +7215,7 @@ public:
                 }
     
                 returningToMain = true;
-                inHiddenMode = false;
+                inHiddenMode.exchange(false, std::memory_order_acq_rel);
                 
                 if (reloadMenu2) {
                     //tsl::pop();
@@ -7254,7 +7254,7 @@ public:
         }
         if (returningToHiddenMain && !(keysDown & KEY_B)) {
             returningToHiddenMain = false;
-            inHiddenMode = true;
+            inHiddenMode.store(true, std::memory_order_release);
         }
     
         if (triggerExit.exchange(false, std::memory_order_acq_rel)) {
