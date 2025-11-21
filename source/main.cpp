@@ -1036,7 +1036,7 @@ public:
                 if (newMB <= oldMB) {
                     setOverlayHeapSize(newHeapSize);
                     this->exitOnBack = (currentHeapSize != newHeapSize);
-                    if (newMB == 4 && tsl::notification) {
+                    if (newMB == 4 && oldMB != 4 && tsl::notification) {
                         // First time for THIS notification OR wait until not active
                         if (!*downloadsNotificationShown || !tsl::notification->isActive()) {
                             tsl::notification->show(std::string("  ")+"Downloads will be disabled.", 23);
