@@ -7604,6 +7604,9 @@ public:
                 selectedPackage.clear();
             }
         }
+        if (firstBoot && tsl::notification) {
+            tsl::notification->show("  "+ULTRAHAND_HAS_STARTED);
+        }
         //settingsInitialized.exchange(true, acq_rel);
         // Default behavior - load main menu
         return initially<MainMenu>();
@@ -7647,8 +7650,8 @@ public:
             // initialize expanded memory on boot
             //setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "memory_expansion", (loaderTitle == "nx-ovlloader+") ? TRUE_STR : FALSE_STR);
 
-            if (tsl::notification)
-                tsl::notification->show("  "+ULTRAHAND_HAS_STARTED);
+            //if (tsl::notification)
+            //    tsl::notification->show("  "+ULTRAHAND_HAS_STARTED);
             
         }
         
