@@ -7433,12 +7433,14 @@ void initializeSettingsAndDirectories() {
         saveIniFileData(ULTRAHAND_CONFIG_INI_PATH, iniData);
     }
 
-    if (useNotifications && !isFile(NOTIFICATIONS_FLAG_FILEPATH)) {
-        FILE* file = std::fopen((NOTIFICATIONS_FLAG_FILEPATH).c_str(), "w");
-        if (file) {
-            std::fclose(file);
+    if (useNotifications) {
+        if (!isFile(NOTIFICATIONS_FLAG_FILEPATH)) {
+            FILE* file = std::fopen((NOTIFICATIONS_FLAG_FILEPATH).c_str(), "w");
+            if (file) {
+                std::fclose(file);
+            }
         }
-    } else if (!useNotifications) {
+    } else {
         deleteFileOrDirectory(NOTIFICATIONS_FLAG_FILEPATH);
     }
     
