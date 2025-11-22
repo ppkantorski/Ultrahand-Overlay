@@ -1056,7 +1056,7 @@ public:
                 // - System overhead during overlay restart
                 // - Memory fragmentation
                 // - Other processes that might allocate memory between restart
-                constexpr float SAFETY_MARGIN_MB = 5.0f;
+                constexpr float SAFETY_MARGIN_MB = 8.0f;
             
                 // Check if new heap size fits in total available memory
                 if (static_cast<float>(newMB) > (totalAvailableMB - SAFETY_MARGIN_MB)) {
