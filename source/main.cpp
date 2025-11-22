@@ -1041,7 +1041,7 @@ public:
                     if (newMB == 4 && oldMB != 4 && tsl::notification) {
                         // First time for THIS notification OR wait until not active
                         if (!*downloadsNotificationShown || !tsl::notification->isActive()) {
-                            tsl::notification->show(std::string("  ")+"Downloads will be disabled.", 23);
+                            tsl::notification->show(std::string("  ")+"Some overlays might not work.", 23);
                             *downloadsNotificationShown = true;
                         }
                     }
@@ -1297,7 +1297,7 @@ public:
             useNotifications = getBoolValue("notifications", true); // TRUE_STR default
             createToggleListItem(list, NOTIFICATIONS, useNotifications, "notifications");
 
-            if (ult::expandedMemory) {
+            if (!ult::limitedMemory) {
                 useSoundEffects = getBoolValue("sound_effects", false); // TRUE_STR default
                 createToggleListItem(list, SOUND_EFFECTS, useSoundEffects, "sound_effects");
             }
@@ -1498,7 +1498,7 @@ public:
                 triggerRumbleDoubleClick.store(true, std::memory_order_release);
             }
 
-            if (expandedMemory && useSoundEffects) {
+            if (!limitedMemory && useSoundEffects) {
                 reloadSoundCacheNow.store(true, std::memory_order_release);
                 //ult::AudioPlayer::initialize();
             }
@@ -2652,7 +2652,7 @@ public:
             if (!commandSuccess.load()) {
                 triggerRumbleDoubleClick.store(true, std::memory_order_release);
             }
-            if (expandedMemory && useSoundEffects) {
+            if (!limitedMemory && useSoundEffects) {
                 reloadSoundCacheNow.store(true, std::memory_order_release);
                 //ult::AudioPlayer::initialize();
             }
@@ -3756,7 +3756,7 @@ public:
                 triggerRumbleDoubleClick.store(true, std::memory_order_release);
             }
 
-            if (expandedMemory && useSoundEffects) {
+            if (!limitedMemory && useSoundEffects) {
                 reloadSoundCacheNow.store(true, std::memory_order_release);
                 //ult::AudioPlayer::initialize();
             }
@@ -5665,7 +5665,7 @@ public:
                 triggerRumbleDoubleClick.store(true, std::memory_order_release);
             }
 
-            if (expandedMemory && useSoundEffects) {
+            if (!limitedMemory && useSoundEffects) {
                 reloadSoundCacheNow.store(true, std::memory_order_release);
                 //ult::AudioPlayer::initialize();
             }
@@ -5676,7 +5676,7 @@ public:
         if (ult::refreshWallpaperNow.exchange(false, std::memory_order_acq_rel)) {
             closeInterpreterThread();
             ult::reloadWallpaper();
-            if (expandedMemory && useSoundEffects) {
+            if (!limitedMemory && useSoundEffects) {
                 reloadSoundCacheNow.store(true, std::memory_order_release);
                 //ult::AudioPlayer::initialize();
             }
@@ -6468,9 +6468,11 @@ public:
                         }
                         
                         skipJumpReset.store(true, std::memory_order_release);
-                        jumpItemName = buildOverlayReturnName(newStarred, overlayFileName, overlayName);
+                        jumpItemName = buildOverlayReturnName(!newStarred, overlayFileName, overlayName);
                         jumpItemValue = hideOverlayVersions ? "" : overlayVersion;
                         jumpItemExactMatch.store(true, std::memory_order_release);
+
+
                         
                         wasInHiddenMode = inHiddenMode.load(std::memory_order_acquire);
                         if (wasInHiddenMode) {
@@ -6804,7 +6806,7 @@ public:
                         }
                         
                         skipJumpReset.store(true, release);
-                        jumpItemName = buildReturnName(newStarred, packageName, newPackageName);
+                        jumpItemName = buildReturnName(!newStarred, packageName, newPackageName);
                         jumpItemValue = hidePackageVersions ? "" : packageVersion;
                         jumpItemExactMatch.store(true, release);
                         
@@ -6979,8 +6981,7 @@ public:
             if (!commandSuccess.load()) {
                 triggerRumbleDoubleClick.store(true, std::memory_order_release);
             }
-
-            if (expandedMemory && useSoundEffects) {
+            if (!limitedMemory && useSoundEffects) {
                 reloadSoundCacheNow.store(true, std::memory_order_release);
                 //ult::AudioPlayer::initialize();
             }
@@ -6992,7 +6993,7 @@ public:
             closeInterpreterThread();
             ult::reloadWallpaper();
 
-            if (expandedMemory && useSoundEffects) {
+            if (!limitedMemory && useSoundEffects) {
                 reloadSoundCacheNow.store(true, std::memory_order_release);
                 //ult::AudioPlayer::initialize();
             }
@@ -7627,6 +7628,39 @@ public:
     }
 
 
+    //static constexpr SocketInitConfig socketInitConfig = {
+    //    // TCP buffers
+    //    .tcp_tx_buf_size     = 32768,   // 0x8000 = 32 KB
+    //    .tcp_rx_buf_size     = 32768,   // 0x8000 = 32 KB
+    //    .tcp_tx_buf_max_size = 131072/2,  // 0x20000 = 128 KB
+    //    .tcp_rx_buf_max_size = 131072/2,  // 0x20000 = 128 KB
+    //
+    //    // UDP buffers
+    //    .udp_tx_buf_size     = 512,    // 0x400 = 1 KB
+    //    .udp_rx_buf_size     = 512,    // 0x400 = 1 KB
+    //
+    //    // Socket buffer efficiency
+    //    .sb_efficiency       = 1,       // 1 = prioritize memory efficiency
+    //    .bsd_service_type    = BsdServiceType_Auto
+    //};
+
+    static constexpr SocketInitConfig socketInitConfig = {
+        // TCP buffers
+        .tcp_tx_buf_size     = 16 * 1024,   // 16 KB default
+        .tcp_rx_buf_size     = 16 * 1024,   // 16 KB default
+        .tcp_tx_buf_max_size = 64 * 1024,   // 64 KB default max
+        .tcp_rx_buf_max_size = 64 * 1024,   // 64 KB default max
+    
+        // UDP buffers
+        .udp_tx_buf_size     = 512,         // 512 B default
+        .udp_rx_buf_size     = 512,         // 512 B default
+    
+        // Socket buffer efficiency
+        .sb_efficiency       = 1,           // 0 = default, balanced memory vs CPU
+                                            // 1 = prioritize memory efficiency (smaller internal allocations)
+        .bsd_service_type    = BsdServiceType_Auto // Auto-select service
+    };
+
     /**
      * @brief Initializes essential services and resources.
      *
@@ -7640,9 +7674,12 @@ public:
         //if (R_SUCCEEDED(socketInitializeDefault())) {
             //initializeCurl();
         //}
-        if (!ult::limitedMemory)
-            socketInitializeDefault();
-
+        //if (!ult::limitedMemory)
+        //    socketInitializeDefault();
+        //else {
+        //    socketInitialize(&socketInitConfig);
+        //}
+        socketInitialize(&socketInitConfig);
 
         unpackDeviceInfo();
 
@@ -7687,8 +7724,8 @@ public:
             executeIniCommands(PACKAGE_PATH + EXIT_PACKAGE_FILENAME, "exit");
 
         //cleanupCurl();
-        if (!ult::limitedMemory)
-            socketExit();
+        //if (!ult::limitedMemory)
+        socketExit();
     }
     
 };

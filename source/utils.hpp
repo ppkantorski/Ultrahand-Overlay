@@ -4414,7 +4414,7 @@ void processCommand(const std::vector<std::string>& cmd, const std::string& pack
             preprocessPath(destinationPath, packagePath);
             bool downloadSuccess = false;
 
-            if (!ult::limitedMemory) {
+            {
                 for (size_t i = 0; i < 3; ++i) {
                     downloadSuccess = downloadFile(fileUrl, destinationPath);
                     if (abortDownload.load(std::memory_order_acquire)) {
@@ -4866,6 +4866,15 @@ void backgroundInterpreter(void* workPtr) {
     // Clean up work data
     delete workData;
     
+    if (ult::isHidden.load(std::memory_order_acquire)) {
+        if (tsl::notification) {
+            if (commandSuccess.load(std::memory_order_acquire))
+                tsl::notification->show(std::string("  ")+"Task has completed!");
+            else
+                tsl::notification->show(std::string("  ")+"Task has failed.");
+        }
+    }
+
     // Thread naturally exits here
 }
 
@@ -4938,7 +4947,7 @@ void executeInterpreterCommands(std::vector<std::vector<std::string>>&& commands
         return;
     }
 
-    if (ult::expandedMemory && ult::useSoundEffects) {
+    if (!ult::limitedMemory && ult::useSoundEffects) {
         //clearSoundCacheNow.store(true, std::memory_order_release);
         if (triggerEnterSound.exchange(false)) {
             ult::AudioPlayer::playEnterSound();
