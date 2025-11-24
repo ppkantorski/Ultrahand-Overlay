@@ -1069,12 +1069,20 @@ public:
                 initialStep = 3;  // Custom size is always last (index 3 now)
             }
             
-            // Create separate trackers for each notification type
-            auto lowMemoryNotificationShown = std::make_shared<bool>(false);
-            auto memoryNotificationShown = std::make_shared<bool>(false);
+            // Track the last MB value the slider was at
+            auto lastSliderMB = std::make_shared<u32>(currentHeapMB);
+            
+            // Create trackers for each notification type
+            auto soundEnabledShown = std::make_shared<bool>(false);
+            auto wallpaperEnabledShown = std::make_shared<bool>(false);
+            auto wallpaperDisabledShown = std::make_shared<bool>(false);
+            auto soundDisabledShown = std::make_shared<bool>(false);
+            auto notEnoughMemoryShown = std::make_shared<bool>(false);
             
             // Use simple callback - gets called when user releases the trackbar
-            heapTrackbar->setSimpleCallback([this, freeRamMB, lowMemoryNotificationShown, memoryNotificationShown, customMemoryMB, hasIniEntry](s16 value, s16 index) {
+            heapTrackbar->setSimpleCallback([this, freeRamMB, lastSliderMB, soundEnabledShown, wallpaperEnabledShown, 
+                                              wallpaperDisabledShown, soundDisabledShown, notEnoughMemoryShown, 
+                                              customMemoryMB, hasIniEntry](s16 value, s16 index) {
                 // Map step index → heap size
                 u64 newHeapBytes;
                 u32 newMB;
@@ -1085,7 +1093,6 @@ public:
                     case 2: newHeapBytes = 0x800000;  newMB = 8; break;   // 8MB
                     case 3: 
                         // Only allow custom size if it came from INI entry
-                        // If it was just showing current heap without INI, don't allow selection
                         if (hasIniEntry && customMemoryMB > 8) {
                             newHeapBytes = mbToBytes(customMemoryMB);
                             newMB = customMemoryMB;
@@ -1099,44 +1106,86 @@ public:
                 OverlayHeapSize newHeapSize = static_cast<OverlayHeapSize>(newHeapBytes);
                 
                 const u32 oldMB = bytesToMB(static_cast<u64>(currentHeapSize));
+                const u32 previousSliderMB = *lastSliderMB;
                 
-                // If shrinking heap → ALWAYS allowed
-                if (newMB <= oldMB) {
-                    setOverlayHeapSize(newHeapSize);
-                    this->exitOnBack = (currentHeapSize != newHeapSize);
-                    if (newMB == 4 && oldMB != 4 && tsl::notification) {
-                        // First time for THIS notification OR wait until not active
-                        if (!*lowMemoryNotificationShown || !tsl::notification->isActive()) {
-                            tsl::notification->show(std::string("  ")+"Some overlays might not work.", 23);
-                            *lowMemoryNotificationShown = true;
-                        }
-                    }
+                // If no actual change, do nothing
+                if (newMB == previousSliderMB) {
                     return;
                 }
                 
-                // Calculate total memory that would be available after freeing current heap
-                const float totalAvailableMB = freeRamMB + static_cast<float>(oldMB);
+                // Determine slider direction
+                bool isSliderShrinking = (newMB < previousSliderMB);
+                bool isSliderGrowing = (newMB > previousSliderMB);
                 
-                // Safety margin
-                constexpr float SAFETY_MARGIN_MB = 5.3f;
-            
-                // Check if new heap size fits in total available memory
-                if (static_cast<float>(newMB) > (totalAvailableMB - SAFETY_MARGIN_MB)) {
-                    // Not enough memory for the new heap size
-                    if (tsl::notification) {
-                        // First time for THIS notification OR wait until not active
-                        if (!*memoryNotificationShown || !tsl::notification->isActive()) {
-                            tsl::notification->show(std::string("  ")+"Not enough memory.");
-                            *memoryNotificationShown = true;
+                // If growing heap relative to ORIGINAL size, check if we have enough memory
+                if (newMB > oldMB) {
+                    // Calculate total memory that would be available after freeing current heap
+                    const float totalAvailableMB = freeRamMB + static_cast<float>(oldMB);
+                    
+                    // Safety margin
+                    constexpr float SAFETY_MARGIN_MB = 5.3f;
+                
+                    // Check if new heap size fits in total available memory
+                    if (static_cast<float>(newMB) > (totalAvailableMB - SAFETY_MARGIN_MB)) {
+                        // Not enough memory - REJECT the change
+                        if (tsl::notification) {
+                            if (!*notEnoughMemoryShown || !tsl::notification->isActive()) {
+                                tsl::notification->show(std::string("  ")+"Not enough memory.");
+                                *notEnoughMemoryShown = true;
+                            }
+                        }
+                        setOverlayHeapSize(currentHeapSize);
+                        this->exitOnBack = false;
+                        // Don't update lastSliderMB since change was rejected
+                        return;
+                    }
+                }
+                
+                // Change is allowed (either shrinking or enough memory for growth)
+                setOverlayHeapSize(newHeapSize);
+                this->exitOnBack = (currentHeapSize != newHeapSize);
+                
+                // Show feature notifications based on slider direction
+                if (tsl::notification) {
+                    if (isSliderShrinking) {
+                        // Going down - check for disabled features
+                        if (previousSliderMB >= 8 && newMB < 8) {
+                            // Wallpaper disabled
+                            if (!*wallpaperDisabledShown || !tsl::notification->isActive()) {
+                                tsl::notification->show(std::string("  ")+"Wallpaper support disabled.", 23);
+                                *wallpaperDisabledShown = true;
+                            }
+                            *wallpaperEnabledShown = false;
+                        } else if (previousSliderMB >= 6 && newMB < 6) {
+                            // Sound disabled
+                            if (!*soundDisabledShown || !tsl::notification->isActive()) {
+                                tsl::notification->show(std::string("  ")+"Sound support disabled.", 23);
+                                *soundDisabledShown = true;
+                            }
+                            *soundEnabledShown = false;
+                        }
+                    } else if (isSliderGrowing) {
+                        // Going up - check for enabled features
+                        if (previousSliderMB < 8 && newMB >= 8) {
+                            // Wallpaper enabled
+                            if (!*wallpaperEnabledShown || !tsl::notification->isActive()) {
+                                tsl::notification->show(std::string("  ")+"Wallpaper support enabled.", 23);
+                                *wallpaperEnabledShown = true;
+                            }
+                            *wallpaperDisabledShown = false;
+                        } else if (previousSliderMB < 6 && newMB >= 6) {
+                            // Sound enabled
+                            if (!*soundEnabledShown || !tsl::notification->isActive()) {
+                                tsl::notification->show(std::string("  ")+"Sound support enabled.", 23);
+                                *soundEnabledShown = true;
+                            }
+                            *soundDisabledShown = false;
                         }
                     }
-                    setOverlayHeapSize(currentHeapSize);
-                    this->exitOnBack = false;
-                } else {
-                    // Enough RAM → allow change
-                    setOverlayHeapSize(newHeapSize);
-                    this->exitOnBack = (currentHeapSize != newHeapSize);
                 }
+                
+                // Update slider position after successful change
+                *lastSliderMB = newMB;
             });
             
             heapTrackbar->setProgress(initialStep);
@@ -1734,7 +1783,7 @@ public:
                 if (state && tsl::notification) {
                     // First time for THIS notification OR wait until not active
                     if (!*forceSupportNotificationShown || !tsl::notification->isActive()) {
-                        tsl::notification->show("  "+FORCED_SUPPORT_WARNING, 20);
+                        tsl::notification->show("  "+FORCED_SUPPORT_WARNING, 20);
                         *forceSupportNotificationShown = true;
                     }
                 }
