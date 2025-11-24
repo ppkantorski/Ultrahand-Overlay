@@ -591,9 +591,9 @@ private:
                 };
                 
                 // Try #1: Update via update.ini
-                addBackupCommands();
                 interpreterCommands.push_back({"delete", DOWNLOADS_PATH+"update.ini"});
-                interpreterCommands.push_back({"download", LATEST_UPDATER_INI_URL, DOWNLOADS_PATH});
+                interpreterCommands.push_back({"download", LATEST_UPDATER_INI_URL, DOWNLOADS_PATH}); // if fails, move to next try
+                addBackupCommands();
                 interpreterCommands.push_back({"exec", "update", DOWNLOADS_PATH+"update.ini"});
                 interpreterCommands.push_back({"delete", DOWNLOADS_PATH+"update.ini"});
                 addRestoreAndLoaderCommands();
