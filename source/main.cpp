@@ -981,8 +981,52 @@ public:
             // At the top of your function/class, get current heap size
             //OverlayHeapSize currentHeapSize = getCurrentHeapSize();
             
+            // Read custom overlay memory from INI
+            const std::string customMemoryStr = parseValueFromIniSection(ULTRAHAND_CONFIG_INI_PATH, MEMORY_STR, "custom_overlay_memory_MB");
+            
+            u32 customMemoryMB = 0;
+            bool hasIniEntry = false;
+            
+            if (!customMemoryStr.empty()) {
+                // Manual parsing without try-catch
+                int parsedValue = 0;
+                bool isValid = true;
+                
+                // Check if string contains only digits
+                for (char c : customMemoryStr) {
+                    if (c < '0' || c > '9') {
+                        isValid = false;
+                        break;
+                    }
+                }
+                
+                if (isValid && !customMemoryStr.empty()) {
+                    parsedValue = std::atoi(customMemoryStr.c_str());
+                    // Validate: must be even, greater than 8
+                    if (parsedValue > 8 && parsedValue % 2 == 0) {
+                        customMemoryMB = static_cast<u32>(parsedValue);
+                        heapSizeCache.customSizeMB = customMemoryMB;
+                        hasIniEntry = true;
+                    }
+                }
+            }
+            
+            // Get current heap size in MB
+            u32 currentHeapMB = bytesToMB(static_cast<u64>(currentHeapSize));
+            
+            // Check if current heap is larger than 8MB but no INI entry exists
+            // This handles the case where memory was set but INI was removed/not present
+            if (!hasIniEntry && currentHeapMB > 8) {
+                customMemoryMB = currentHeapMB;
+            }
+            
             // Create step descriptions for the trackbar
-            std::vector<std::string> heapSizeLabels = {"4 MB", "6 MB", "8 MB", "10 MB"};
+            std::vector<std::string> heapSizeLabels = {"4 MB", "6 MB", "8 MB"};
+            
+            // Add custom size if valid (either from INI or current heap > 8MB)
+            if (customMemoryMB > 8) {
+                heapSizeLabels.push_back(std::to_string(customMemoryMB) + " MB");
+            }
             
             // Create the V2 trackbar
             auto* heapTrackbar = new tsl::elm::NamedStepTrackBarV2(
@@ -996,67 +1040,67 @@ public:
             
             // Set the initial position based on current heap size
             u8 initialStep = 1; // Default to 6MB (index 1)
-            switch (currentHeapSize) {
-                case OverlayHeapSize::Size_4MB:  initialStep = 0; break;
-                case OverlayHeapSize::Size_6MB:  initialStep = 1; break;
-                case OverlayHeapSize::Size_8MB:  initialStep = 2; break;
-                case OverlayHeapSize::Size_10MB: initialStep = 3; break;
+            
+            if (currentHeapMB == 4) {
+                initialStep = 0;
+            } else if (currentHeapMB == 6) {
+                initialStep = 1;
+            } else if (currentHeapMB == 8) {
+                initialStep = 2;
+            } else if (customMemoryMB > 8 && currentHeapMB == customMemoryMB) {
+                initialStep = 3;  // Custom size is always last (index 3 now)
             }
             
-            
             // Create separate trackers for each notification type
-            auto downloadsNotificationShown = std::make_shared<bool>(false);
+            auto lowMemoryNotificationShown = std::make_shared<bool>(false);
             auto memoryNotificationShown = std::make_shared<bool>(false);
             
             // Use simple callback - gets called when user releases the trackbar
-            heapTrackbar->setSimpleCallback([this, freeRamMB, downloadsNotificationShown, memoryNotificationShown](s16 value, s16 index) {
-                // Map step index → heap size enum
-                OverlayHeapSize newHeapSize;
+            heapTrackbar->setSimpleCallback([this, freeRamMB, lowMemoryNotificationShown, memoryNotificationShown, customMemoryMB, hasIniEntry](s16 value, s16 index) {
+                // Map step index → heap size
+                u64 newHeapBytes;
+                u32 newMB;
+                
                 switch (index) {
-                    case 0: newHeapSize = OverlayHeapSize::Size_4MB; break;
-                    case 1: newHeapSize = OverlayHeapSize::Size_6MB; break;
-                    case 2: newHeapSize = OverlayHeapSize::Size_8MB; break;
-                    case 3: newHeapSize = OverlayHeapSize::Size_10MB; break;
+                    case 0: newHeapBytes = 0x400000;  newMB = 4; break;   // 4MB
+                    case 1: newHeapBytes = 0x600000;  newMB = 6; break;   // 6MB
+                    case 2: newHeapBytes = 0x800000;  newMB = 8; break;   // 8MB
+                    case 3: 
+                        // Only allow custom size if it came from INI entry
+                        // If it was just showing current heap without INI, don't allow selection
+                        if (hasIniEntry && customMemoryMB > 8) {
+                            newHeapBytes = mbToBytes(customMemoryMB);
+                            newMB = customMemoryMB;
+                        } else {
+                            return;  // Invalid or temporary custom size
+                        }
+                        break;
                     default: return;
                 }
-            
-                // Convert enum → megabytes
-                auto toMB = [](OverlayHeapSize s) -> u32 {
-                    switch (s) {
-                        case OverlayHeapSize::Size_4MB:  return 4;
-                        case OverlayHeapSize::Size_6MB:  return 6;
-                        case OverlayHeapSize::Size_8MB:  return 8;
-                        case OverlayHeapSize::Size_10MB: return 10;
-                    }
-                    return 0;
-                };
-            
-                const u32 oldMB = toMB(currentHeapSize);
-                const u32 newMB = toMB(newHeapSize);
-            
+                
+                OverlayHeapSize newHeapSize = static_cast<OverlayHeapSize>(newHeapBytes);
+                
+                const u32 oldMB = bytesToMB(static_cast<u64>(currentHeapSize));
+                
                 // If shrinking heap → ALWAYS allowed
                 if (newMB <= oldMB) {
                     setOverlayHeapSize(newHeapSize);
                     this->exitOnBack = (currentHeapSize != newHeapSize);
                     if (newMB == 4 && oldMB != 4 && tsl::notification) {
                         // First time for THIS notification OR wait until not active
-                        if (!*downloadsNotificationShown || !tsl::notification->isActive()) {
-                            tsl::notification->show(std::string("  ")+"Some overlays might not work.", 23);
-                            *downloadsNotificationShown = true;
+                        if (!*lowMemoryNotificationShown || !tsl::notification->isActive()) {
+                            tsl::notification->show(std::string("  ")+"Some overlays might not work.", 23);
+                            *lowMemoryNotificationShown = true;
                         }
                     }
                     return;
                 }
                 
                 // Calculate total memory that would be available after freeing current heap
-                // When overlay restarts: current heap is freed, then new heap is allocated
                 const float totalAvailableMB = freeRamMB + static_cast<float>(oldMB);
                 
-                // Safety margin accounts for:
-                // - System overhead during overlay restart
-                // - Memory fragmentation
-                // - Other processes that might allocate memory between restart
-                constexpr float SAFETY_MARGIN_MB = 8.0f;
+                // Safety margin
+                constexpr float SAFETY_MARGIN_MB = 5.3f;
             
                 // Check if new heap size fits in total available memory
                 if (static_cast<float>(newMB) > (totalAvailableMB - SAFETY_MARGIN_MB)) {
@@ -1064,7 +1108,7 @@ public:
                     if (tsl::notification) {
                         // First time for THIS notification OR wait until not active
                         if (!*memoryNotificationShown || !tsl::notification->isActive()) {
-                            tsl::notification->show(std::string("  ")+"Not enough memory.");
+                            tsl::notification->show(std::string("  ")+"Not enough memory.");
                             *memoryNotificationShown = true;
                         }
                     }
@@ -1076,6 +1120,7 @@ public:
                     this->exitOnBack = (currentHeapSize != newHeapSize);
                 }
             });
+            
             heapTrackbar->setProgress(initialStep);
             heapTrackbar->disableClickAnimation();
             list->addItem(heapTrackbar);
@@ -1835,7 +1880,7 @@ public:
                 }
                 //if (!hideForceSupport && requiresLNY2 && requiresAMS110Handling) {
                 if (requiresLNY2 && requiresAMS110Handling) {
-                    createAndAddToggleListItem(list, FORCE_LNY2_SUPPORT,
+                    createAndAddToggleListItem(list, FORCE_AMS110_SUPPORT,
                         false, "force_support", getValue("force_support"), settingsIniPath, entryName, true);
                 }
             } else if (entryMode == PACKAGE_STR) {
