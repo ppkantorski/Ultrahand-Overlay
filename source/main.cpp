@@ -524,18 +524,18 @@ private:
     }
 
     
-    void addUpdateButton(tsl::elm::List* list, const std::string& title, const std::string& downloadUrl, const std::string& targetPath, const std::string& movePath, const std::string& versionLabel) {
+    void addUpdateButton(tsl::elm::List* list, const std::string& title, const std::string& versionLabel) {
         auto* listItem = new tsl::elm::ListItem(title);
         listItem->setValue(versionLabel, true);
         if (isVersionGreaterOrEqual(versionLabel.c_str(), APP_VERSION) && versionLabel != APP_VERSION)
             listItem->setValueColor(tsl::onTextColor);
     
-        listItem->setClickListener([this, listItem, title, downloadUrl, targetPath, movePath](uint64_t keys) {
+        listItem->setClickListener([this, listItem, title](uint64_t keys) {
             static bool executingCommands = false;
             if (runningInterpreter.load(acquire)) {
                 return false;
             } else {
-                if (executingCommands && commandSuccess.load(acquire) && movePath != LANG_PATH) {
+                if (executingCommands && commandSuccess.load(acquire) && title != UPDATE_LANGUAGES) {
                     softwareHasUpdated = true;
                     triggerMenuReload = true;
                 }
@@ -550,9 +550,7 @@ private:
             isDownloadCommand.store(true, release);
             
             std::vector<std::vector<std::string>> interpreterCommands = {
-                {"try:"},
-                {"delete", targetPath},
-                {"download", downloadUrl, DOWNLOADS_PATH}
+                {"try:"}
             };
     
             // === UPDATE_ULTRAHAND case ===
@@ -561,43 +559,61 @@ private:
                 const bool disableSoundEffectsUpdate = isFile(FLAGS_PATH+"NO_SOUND_EFFECTS_UPDATES.flag");
                 const std::string versionLabel = cleanVersionLabel(parseValueFromIniSection((SETTINGS_PATH+"RELEASE.ini"), "Release Info", "latest_version"));
                 
-                // All downloads first
-                interpreterCommands.push_back({"download", UPDATER_PAYLOAD_URL, PAYLOADS_PATH});
-                interpreterCommands.push_back({"download", INCLUDED_THEME_FOLDER_URL + "ultra.ini", THEMES_PATH});
-                interpreterCommands.push_back({"download", INCLUDED_THEME_FOLDER_URL + "ultra-blue.ini", THEMES_PATH});
+                // Lambda to add backup/restore commands
+                auto addBackupCommands = [&]() {
+                    if (disableSoundEffectsUpdate) {
+                        interpreterCommands.push_back({"delete", DOWNLOADS_PATH+"sounds/"});
+                        interpreterCommands.push_back({"cp", SOUNDS_PATH, DOWNLOADS_PATH+"sounds/"});
+                    }
+                    if (disableLoaderUpdate) {
+                        interpreterCommands.push_back({"delete", DOWNLOADS_PATH+"420000000007E51A/"});
+                        interpreterCommands.push_back({"cp", "/atmosphere/contents/420000000007E51A/", DOWNLOADS_PATH+"420000000007E51A/"});
+                    }
+                };
                 
-                if (!disableLoaderUpdate) {
-                    std::string loaderUrl = isVersionGreaterOrEqual(amsVersion,"1.8.0") ? NX_OVLLOADER_ZIP_URL : OLD_NX_OVLLOADER_ZIP_URL;
-                    interpreterCommands.push_back({"download", loaderUrl, DOWNLOADS_PATH});
-                }
+                auto addRestoreAndLoaderCommands = [&]() {
+                    if (disableSoundEffectsUpdate) {
+                        interpreterCommands.push_back({"mv", DOWNLOADS_PATH+"sounds/", SOUNDS_PATH});
+                    }
+                    if (disableLoaderUpdate) {
+                        interpreterCommands.push_back({"mv", DOWNLOADS_PATH+"420000000007E51A/", "/atmosphere/contents/420000000007E51A/"});
+                    } else if (!isVersionGreaterOrEqual(amsVersion,"1.8.0")) {
+                        interpreterCommands.push_back({"download", OLD_NX_OVLLOADER_ZIP_URL, DOWNLOADS_PATH});
+                        interpreterCommands.push_back({"unzip", DOWNLOADS_PATH + "nx-ovlloader.zip", ROOT_PATH});
+                        interpreterCommands.push_back({"delete", DOWNLOADS_PATH + "nx-ovlloader.zip"});
+                    }
+                };
                 
-                if (!disableSoundEffectsUpdate) {
-                    interpreterCommands.push_back({"download", SOUND_EFFECTS_URL, SOUNDS_PATH});
-                }
+                auto addVersionUpdate = [&]() {
+                    if (!versionLabel.empty()) {
+                        interpreterCommands.push_back({"set-json-val", HB_APPSTORE_JSON, "version", versionLabel});
+                    }
+                };
                 
-                // Process downloaded files
-                if (!disableSoundEffectsUpdate) {
-                    interpreterCommands.push_back({"unzip", SOUNDS_PATH + "sounds.zip", SOUNDS_PATH});
-                    interpreterCommands.push_back({"delete", SOUNDS_PATH + "sounds.zip"});
-                }
+                // Try #1: Update via update.ini
+                addBackupCommands();
+                interpreterCommands.push_back({"delete", DOWNLOADS_PATH+"update.ini"});
+                interpreterCommands.push_back({"download", LATEST_UPDATER_INI_URL, DOWNLOADS_PATH});
+                interpreterCommands.push_back({"exec", "update", DOWNLOADS_PATH+"update.ini"});
+                addRestoreAndLoaderCommands();
+                addVersionUpdate();
                 
-                if (!disableLoaderUpdate) {
-                    interpreterCommands.push_back({"unzip", DOWNLOADS_PATH + "nx-ovlloader.zip", ROOT_PATH});
-                    interpreterCommands.push_back({"delete", DOWNLOADS_PATH + "nx-ovlloader.zip"});
-                }
-                
-                interpreterCommands.push_back({"move", targetPath, movePath});
-                
-                if (!versionLabel.empty()) {
-                    interpreterCommands.push_back({"set-json-val", HB_APPSTORE_JSON, "version", versionLabel});
-                }
+                // Try #2: Update via sdout.zip
+                interpreterCommands.push_back({"try:"});
+                addBackupCommands();
+                interpreterCommands.push_back({"delete", DOWNLOADS_PATH+"sdout.zip"});
+                interpreterCommands.push_back({"download", ULTRAHAND_REPO_URL + "releases/latest/download/sdout.zip", DOWNLOADS_PATH});
+                interpreterCommands.push_back({"unzip", DOWNLOADS_PATH+"sdout.zip", ROOT_PATH});
+                addRestoreAndLoaderCommands();
+                addVersionUpdate();
             } 
             // === UPDATE_LANGUAGES case ===
-            else {
-                interpreterCommands.push_back({"unzip", targetPath, movePath});
+            else if (title == UPDATE_LANGUAGES) {
+                interpreterCommands.push_back({"delete", DOWNLOADS_PATH+"lang.zip"});
+                interpreterCommands.push_back({"download", ULTRAHAND_REPO_URL + "releases/latest/download/lang.zip", DOWNLOADS_PATH});
+                interpreterCommands.push_back({"unzip", DOWNLOADS_PATH+"lang.zip", LANG_PATH});
+                interpreterCommands.push_back({"delete", DOWNLOADS_PATH+"lang.zip"});
             }
-            
-            interpreterCommands.push_back({"delete", targetPath});
     
             runningInterpreter.store(true, release);
             executeInterpreterCommands(std::move(interpreterCommands), "", "");
@@ -864,8 +880,8 @@ public:
             }
 
             addHeader(list, SOFTWARE_UPDATE);
-            addUpdateButton(list, UPDATE_ULTRAHAND, ULTRAHAND_REPO_URL + "releases/latest/download/ovlmenu.ovl", DOWNLOADS_PATH+"ovlmenu.ovl", OVERLAY_PATH+"ovlmenu.ovl", fullVersionLabel);
-            addUpdateButton(list, UPDATE_LANGUAGES, ULTRAHAND_REPO_URL + "releases/latest/download/lang.zip", DOWNLOADS_PATH+"lang.zip", LANG_PATH, fullVersionLabel);
+            addUpdateButton(list, UPDATE_ULTRAHAND, fullVersionLabel);
+            addUpdateButton(list, UPDATE_LANGUAGES, fullVersionLabel);
 
             PackageHeader overlayHeader;
             overlayHeader.title = "Ultrahand Overlay";
@@ -7689,23 +7705,6 @@ public:
     //    .bsd_service_type    = BsdServiceType_Auto
     //};
 
-    static constexpr SocketInitConfig socketInitConfig = {
-        // TCP buffers
-        .tcp_tx_buf_size     = 16 * 1024,   // 16 KB default
-        .tcp_rx_buf_size     = 16 * 1024,   // 16 KB default
-        .tcp_tx_buf_max_size = 64 * 1024,   // 64 KB default max
-        .tcp_rx_buf_max_size = 64 * 1024,   // 64 KB default max
-    
-        // UDP buffers
-        .udp_tx_buf_size     = 512,         // 512 B default
-        .udp_rx_buf_size     = 512,         // 512 B default
-    
-        // Socket buffer efficiency
-        .sb_efficiency       = 1,           // 0 = default, balanced memory vs CPU
-                                            // 1 = prioritize memory efficiency (smaller internal allocations)
-        .bsd_service_type    = BsdServiceType_Auto // Auto-select service
-    };
-
     /**
      * @brief Initializes essential services and resources.
      *
@@ -7724,6 +7723,22 @@ public:
         //else {
         //    socketInitialize(&socketInitConfig);
         //}
+        constexpr SocketInitConfig socketInitConfig = {
+            // TCP buffers
+            .tcp_tx_buf_size     = 16 * 1024,   // 16 KB default
+            .tcp_rx_buf_size     = 16 * 1024*2,   // 16 KB default
+            .tcp_tx_buf_max_size = 64 * 1024,   // 64 KB default max
+            .tcp_rx_buf_max_size = 64 * 1024*2,   // 64 KB default max
+            
+            // UDP buffers
+            .udp_tx_buf_size     = 512,         // 512 B default
+            .udp_rx_buf_size     = 512,         // 512 B default
+        
+            // Socket buffer efficiency
+            .sb_efficiency       = 1,           // 0 = default, balanced memory vs CPU
+                                                // 1 = prioritize memory efficiency (smaller internal allocations)
+            .bsd_service_type    = BsdServiceType_Auto // Auto-select service
+        };
         socketInitialize(&socketInitConfig);
 
         unpackDeviceInfo();

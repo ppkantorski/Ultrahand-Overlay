@@ -4320,22 +4320,15 @@ void executeCommands(std::vector<std::vector<std::string>> commands) {
     resetPercentages();
 }
 
-void executeIniCommands(const std::string &iniPath, const std::string &section) {
+void executeIniCommands(const std::string &iniPath, const std::string &section, const std::string &packagePath = PACKAGE_PATH) {
     if (isFileOrDirectory(iniPath)) {
         auto commands = loadSpecificSectionFromIni(iniPath, section);
         if (!commands.empty()) {
-            interpretAndExecuteCommands(std::move(commands), PACKAGE_PATH, section);
+            interpretAndExecuteCommands(std::move(commands), packagePath, section);
             resetPercentages();
-        } else {
-            // Section not found or empty
-            setCommandFailed();
         }
-    } else {
-        // INI file not found
-        setCommandFailed();
     }
 }
-
 
 // Main processCommand function
 void processCommand(const std::vector<std::string>& cmd, const std::string& packagePath = "", const std::string& selectedCommand = "") {
@@ -4504,14 +4497,28 @@ void processCommand(const std::vector<std::string>& cmd, const std::string& pack
                     std::string iniPath = secondArg;
                     preprocessPath(iniPath, packagePath);
                     
-                    executeIniCommands(iniPath, sectionName);
+                    bool resetCommandSuccess = false;
+                    if (!commandSuccess.load(std::memory_order_acquire)) 
+                        resetCommandSuccess = true;
+                    
+                    executeIniCommands(iniPath, sectionName, packagePath);
+                    
+                    if (resetCommandSuccess)
+                        setCommandFailed();
                 } else {
                     // Second arg exists but is not an INI - default to boot package
                     setCommandFailed();
                 }
             } else {
                 // Default behavior: exec <section> - uses boot package
-                executeIniCommands(packagePath + BOOT_PACKAGE_FILENAME, sectionName);
+                bool resetCommandSuccess = false;
+                if (!commandSuccess.load(std::memory_order_acquire)) 
+                    resetCommandSuccess = true;
+                
+                executeIniCommands(packagePath + BOOT_PACKAGE_FILENAME, sectionName, packagePath);
+                
+                if (resetCommandSuccess)
+                    setCommandFailed();
             }
         }
     } else if (commandName == "reboot") {
