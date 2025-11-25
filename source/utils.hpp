@@ -4334,483 +4334,587 @@ void executeIniCommands(const std::string &iniPath, const std::string &section, 
 void processCommand(const std::vector<std::string>& cmd, const std::string& packagePath = "", const std::string& selectedCommand = "") {
     const std::string& commandName = cmd[0];
     const size_t cmdSize = cmd.size();
-
-    if (commandName == "mkdir" || commandName == "make") {
-        handleMakeDirCommand(cmd, packagePath);
-    } else if (commandName == "cp" || commandName == "copy") {
-        handleCopyCommand(cmd, packagePath);
-    } else if (commandName == "del" || commandName == "delete") {
-        handleDeleteCommand(cmd, packagePath);
-    } else if (commandName.compare(0, 7, "mirror_") == 0) {
-        handleMirrorCommand(cmd, packagePath);
-    } else if (commandName == "mv" || commandName == "move" || commandName == "rename") {
-        handleMoveCommand(cmd, packagePath);
-    } else if (commandName == "add-ini-section" || commandName == "rename-ini-section" || commandName == "remove-ini-section" || commandName == "remove-ini-key" || commandName == "set-ini-val" || commandName == "set-ini-value" || commandName == "set-ini-key") {
-        handleIniCommands(cmd, packagePath);
-    } else if (commandName == "set-json-val" || commandName == "set-json-value" || commandName == "set-json-key") {
-        handleJsonCommands(cmd, packagePath);
-    } else if (commandName == "set-footer") {
-        if (cmdSize >= 2) {
-            const std::string desiredValue = getUnquoted(cmd, 1);
-            if (desiredValue.find(NULL_STR) != std::string::npos)
-                setCommandFailed();
-            else
-                setIniFileValue((packagePath + CONFIG_FILENAME), selectedCommand, FOOTER_STR, desiredValue);
-        }
-    } else if (commandName == "compare") {
-        if (cmdSize >= 4) {
-            std::string path1 = cmd[1];
-            preprocessPath(path1, packagePath);
-            std::string path2 = cmd[2];
-            preprocessPath(path2, packagePath);
-            std::string outputPath = cmd[3];
-            preprocessPath(outputPath, packagePath);
-            if (path1.find('*') != std::string::npos)
-                compareWildcardFilesLists(path1, path2, outputPath);
-            else
-                compareFilesLists(path1, path2, outputPath);
-        }
-    } else if (commandName == "flag") {
-        if (cmdSize >= 3) {
-            std::string wildcardPattern = cmd[1];
-            preprocessPath(wildcardPattern, packagePath);
-            std::string outputDir = cmd[2];
-            preprocessPath(outputDir, packagePath);
-            createFlagFiles(wildcardPattern, outputDir);
-        } else {
-            #if USING_LOGGING_DIRECTIVE
-            if (!disableLogging)
-                logMessage("Usage: flag <wildcardPattern> <outputDir>");
-            #endif
-        }
-    } else if (commandName == "dot-clean") {
-        if (cmdSize >= 2) {
-            std::string path = cmd[1];
-            preprocessPath(path, packagePath);
-            dotCleanDirectory(path);
-        }
-    } else if (commandName.compare(0, 7, "hex-by-") == 0) {
-        if (cmdSize >= 4) {
-            std::string sourcePath = cmd[1];
-            preprocessPath(sourcePath, packagePath);
     
-            const std::string secondArg = getUnquoted(cmd, 2);
-            const std::string thirdArg = getUnquoted(cmd, 3);
-            
-            std::string fourthArg;
-            if (cmdSize >= 5)
-                fourthArg = getUnquoted(cmd, 4);
-
-            std::string fifthArg;
-            if (cmdSize >= 6)
-                fifthArg = getUnquoted(cmd, 5);
-    
-            if (commandName == "hex-by-custom-offset" || commandName == "hex-by-custom-decimal-offset" || commandName == "hex-by-custom-rdecimal-offset") {
-                if (cmdSize >= 5) {
-                    const std::string customPattern = getUnquoted(cmd, 2);
-                    const std::string offset = getUnquoted(cmd, 3);
-                    const std::string hexDataReplacement = getUnquoted(cmd, 4);
-            
-                    std::string byteGroupSize;
-                    if (cmdSize >= 6)
-                        byteGroupSize = getUnquoted(cmd, 5);
-            
-                    handleHexByCustom(sourcePath, customPattern, offset, hexDataReplacement, commandName, byteGroupSize);
-                }
-            } else {
-                handleHexEdit(sourcePath, secondArg, thirdArg, fourthArg, fifthArg, commandName, cmd);
+    // Fast path dispatch by first character
+    switch (commandName[0]) {
+        case 'a':
+            if (commandName == "add-ini-section") {
+                handleIniCommands(cmd, packagePath);
+                return;
             }
-        }
-    } else if (commandName == "download") {
-        if (cmdSize >= 3) {
-            std::string fileUrl = cmd[1];
-            preprocessUrl(fileUrl);
-            std::string destinationPath = cmd[2];
-            preprocessPath(destinationPath, packagePath);
-            bool downloadSuccess = false;
-
-            {
-                for (size_t i = 0; i < 3; ++i) {
-                    downloadSuccess = downloadFile(fileUrl, destinationPath);
-                    if (abortDownload.load(std::memory_order_acquire)) {
-                        downloadSuccess = false;
-                        break;
-                    }
-                    if (downloadSuccess) break;
-
-                    // ADD THIS: Give time for cleanup before retry
-                    if (i < 2) {  // Don't sleep after last attempt
-                        svcSleepThread(200'000'000);
-                    }
-                }
-            }
-            commandSuccess.store(
-                downloadSuccess &&
-                commandSuccess.load(std::memory_order_acquire),
-                std::memory_order_release
-            );
-        }
-    } else if (commandName == "unzip") {
-        if (cmdSize >= 3) {
-            std::string sourcePath = cmd[1];
-            preprocessPath(sourcePath, packagePath);
-            std::string destinationPath = cmd[2];
-            preprocessPath(destinationPath, packagePath);
-            commandSuccess.store(
-                unzipFile(sourcePath, destinationPath) &&
-                commandSuccess.load(std::memory_order_acquire),
-                std::memory_order_release
-            );
-        }
-    } else if (commandName == "pchtxt2ips") {
-        if (cmdSize >= 3) {
-            std::string sourcePath = cmd[1];
-            preprocessPath(sourcePath, packagePath);
-            std::string destinationPath = cmd[2];
-            preprocessPath(destinationPath, packagePath);
-            commandSuccess.store(
-                pchtxt2ips(sourcePath, destinationPath) &&
-                commandSuccess.load(std::memory_order_acquire),
-                std::memory_order_release
-            );
-        }
-    } else if (commandName == "pchtxt2cheat") {
-        if (cmdSize >= 2) {
-            std::string sourcePath = cmd[1];
-            preprocessPath(sourcePath, packagePath);
-            commandSuccess.store(
-                pchtxt2cheat(sourcePath) &&
-                commandSuccess.load(std::memory_order_acquire),
-                std::memory_order_release
-            );
-        }
-    } else if (commandName == "exec") {
-        if (cmdSize >= 2) {
-            const std::string sectionName = getUnquoted(cmd, 1);
+            break;
             
-            // Check if second argument is provided and is a path to an INI file
-            if (cmdSize >= 3) {
-                const std::string secondArg = getUnquoted(cmd, 2);
-                
-                if (secondArg.length() >= 4 && secondArg.substr(secondArg.length() - 4) == ".ini") {
-                    // Extended behavior: exec <section> <iniPath>
-                    std::string iniPath = secondArg;
-                    preprocessPath(iniPath, packagePath);
+        case 'b':
+            if (commandName == "back") {
+                goBackAfter.store(true, std::memory_order_release);
+                return;
+            }
+            if (cmdSize >= 2 && commandName == "backlight") {
+                std::string togglePattern = getUnquoted(cmd, 1);
+                lblInitialize();
+                if (togglePattern == "auto") {
+                    if (cmdSize >= 3) {
+                        togglePattern = cmd[2];
+                        if (togglePattern == ON_STR)
+                            lblEnableAutoBrightnessControl();
+                        else if (togglePattern == OFF_STR)
+                            lblDisableAutoBrightnessControl();
+                    }
+                } else if (togglePattern == ON_STR) {
+                    lblSwitchBacklightOn(0);
+                } else if (togglePattern == OFF_STR) {
+                    lblSwitchBacklightOff(0);
+                } else if (isValidNumber(togglePattern)) {
+                    lblSetCurrentBrightnessSetting(ult::stof(togglePattern) / 100.0f);
+                }
+                lblExit();
+                return;
+            }
+            break;
+            
+        case 'c':
+            if (commandName == "cp" || commandName == "copy") {
+                handleCopyCommand(cmd, packagePath);
+                return;
+            }
+            if (commandName == "compare") {
+                if (cmdSize >= 4) {
+                    std::string path1 = cmd[1];
+                    preprocessPath(path1, packagePath);
+                    std::string path2 = cmd[2];
+                    preprocessPath(path2, packagePath);
+                    std::string outputPath = cmd[3];
+                    preprocessPath(outputPath, packagePath);
+                    if (path1.find('*') != std::string::npos)
+                        compareWildcardFilesLists(path1, path2, outputPath);
+                    else
+                        compareFilesLists(path1, path2, outputPath);
+                }
+                return;
+            }
+            if (cmdSize >= 2 && commandName == "clear") {
+                const std::string clearOption = getUnquoted(cmd, 1);
+                if (clearOption == "log") {
+                    #if USING_LOGGING_DIRECTIVE
+                    deleteFileOrDirectory(defaultLogFilePath);
+                    #endif
+                } else if (clearOption == "hex_sum_cache") {
+                    hexSumCache.clear();
+                }
+                return;
+            }
+            break;
+            
+        case 'd':
+            if (commandName == "del" || commandName == "delete") {
+                handleDeleteCommand(cmd, packagePath);
+                return;
+            }
+            if (commandName == "download") {
+                if (cmdSize >= 3) {
+                    std::string fileUrl = cmd[1];
+                    preprocessUrl(fileUrl);
+                    std::string destinationPath = cmd[2];
+                    preprocessPath(destinationPath, packagePath);
+                    bool downloadSuccess = false;
                     
+                    {
+                        for (size_t i = 0; i < 3; ++i) {
+                            downloadSuccess = downloadFile(fileUrl, destinationPath);
+                            if (abortDownload.load(std::memory_order_acquire)) {
+                                downloadSuccess = false;
+                                break;
+                            }
+                            if (downloadSuccess) break;
+                            
+                            if (i < 2) {
+                                svcSleepThread(200'000'000);
+                            }
+                        }
+                    }
+                    commandSuccess.store(
+                        downloadSuccess && commandSuccess.load(std::memory_order_acquire),
+                        std::memory_order_release
+                    );
+                }
+                return;
+            }
+            if (cmdSize >= 2 && commandName == "dot-clean") {
+                std::string path = cmd[1];
+                preprocessPath(path, packagePath);
+                dotCleanDirectory(path);
+                return;
+            }
+            break;
+            
+        case 'e':
+            if (cmdSize >= 2 && commandName == "exec") {
+                const std::string sectionName = getUnquoted(cmd, 1);
+                
+                if (cmdSize >= 3) {
+                    const std::string secondArg = getUnquoted(cmd, 2);
+                    
+                    if (secondArg.length() >= 4 && secondArg.substr(secondArg.length() - 4) == ".ini") {
+                        std::string iniPath = secondArg;
+                        preprocessPath(iniPath, packagePath);
+                        
+                        bool resetCommandSuccess = false;
+                        if (!commandSuccess.load(std::memory_order_acquire))
+                            resetCommandSuccess = true;
+                        
+                        executeIniCommands(iniPath, sectionName, packagePath);
+                        
+                        if (resetCommandSuccess)
+                            setCommandFailed();
+                    } else {
+                        setCommandFailed();
+                    }
+                } else {
                     bool resetCommandSuccess = false;
-                    if (!commandSuccess.load(std::memory_order_acquire)) 
+                    if (!commandSuccess.load(std::memory_order_acquire))
                         resetCommandSuccess = true;
                     
-                    executeIniCommands(iniPath, sectionName, packagePath);
+                    executeIniCommands(packagePath + BOOT_PACKAGE_FILENAME, sectionName, packagePath);
                     
                     if (resetCommandSuccess)
                         setCommandFailed();
-                } else {
-                    // Second arg exists but is not an INI - default to boot package
-                    setCommandFailed();
                 }
-            } else {
-                // Default behavior: exec <section> - uses boot package
-                bool resetCommandSuccess = false;
-                if (!commandSuccess.load(std::memory_order_acquire)) 
-                    resetCommandSuccess = true;
-                
-                executeIniCommands(packagePath + BOOT_PACKAGE_FILENAME, sectionName, packagePath);
-                
-                if (resetCommandSuccess)
-                    setCommandFailed();
-            }
-        }
-    } else if (commandName == "reboot") {
-        bool launchUpdaterPayload = false;
-        for (const std::string& file : PROTECTED_FILES) {
-            if (isFile(file + ".ultra")) {
-                launchUpdaterPayload = true;
-                break;
-            }
-        }
-    
-        if (launchUpdaterPayload) {
-            const std::string rebootOption = PAYLOADS_PATH + "ultrahand_updater.bin";
-            if (!isFile(rebootOption)) {
-                downloadFile(UPDATER_PAYLOAD_URL, PAYLOADS_PATH, true);
-                downloadPercentage.store(-1, std::memory_order_release);
-            }
-            if (isFile(rebootOption)) {
-                const std::string fileName = getNameFromPath(rebootOption);
-    
-                if (util::IsErista()) {
-                    Payload::PayloadConfig reboot_payload = { fileName, rebootOption };
-                    Payload::RebootToPayload(reboot_payload);
-                } else {
-                    std::string strippedRebootOption = rebootOption;
-                    if (strippedRebootOption.compare(0, ROOT_PATH.length(), ROOT_PATH) == 0) {
-                        strippedRebootOption.erase(0, ROOT_PATH.length());
-                    }
-                    
-                    const std::string iniPath = "/bootloader/ini/" + fileName + ".ini";
-                    deleteFileOrDirectory(iniPath);
-                    setIniFileValue(iniPath, fileName, "payload", strippedRebootOption);
-                    setIniFileValue(iniPath, fileName, "bootwait", "0");
-                    Payload::HekateConfigList iniConfigList = Payload::LoadIniConfigList();
-                    rebootToHekateConfig(iniConfigList, fileName, true);
-                }
-            } else {
-                launchUpdaterPayload = false;
-            }
-        }
-        if (!launchUpdaterPayload && (util::IsErista() || util::SupportsMarikoRebootToConfig())) {
-            std::string rebootOption;
-            if (cmdSize >= 2) {
-                rebootOption = getUnquoted(cmd, 1);
-                if (cmdSize >= 3) {
-                    const std::string option = getUnquoted(cmd, 2);
-                    if (rebootOption == "boot") {
-                        Payload::HekateConfigList bootConfigList = Payload::LoadHekateConfigList();
-                        rebootToHekateConfig(bootConfigList, option, false);
-                    } else if (rebootOption == "ini") {
-                        Payload::HekateConfigList iniConfigList = Payload::LoadIniConfigList();
-                        rebootToHekateConfig(iniConfigList, option, true);
-                    }
-                }
-                if (rebootOption == "UMS") {
-                    Payload::RebootToHekateUMS(Payload::UmsTarget_Sd);
-                } else if (rebootOption == "HEKATE" || rebootOption == "hekate") {
-                    Payload::RebootToHekateMenu();
-                } else if (isFile(rebootOption)) {
-                    const std::string fileName = getNameFromPath(rebootOption);
-                    if (util::IsErista()) {
-                        Payload::PayloadConfig reboot_payload = {fileName, rebootOption};
-                        Payload::RebootToPayload(reboot_payload);
-                    } else {
-                        std::string strippedRebootOption = rebootOption;
-                        if (strippedRebootOption.compare(0, ROOT_PATH.length(), ROOT_PATH) == 0) {
-                            strippedRebootOption.erase(0, ROOT_PATH.length());
-                        }
-                        
-                        const std::string iniPath = "/bootloader/ini/" + fileName + ".ini";
-                        setIniFileValue(iniPath, fileName, "payload", strippedRebootOption);
-                        setIniFileValue(iniPath, fileName, "bootwait", "0");
-                        Payload::HekateConfigList iniConfigList = Payload::LoadIniConfigList();
-                        rebootToHekateConfig(iniConfigList, fileName, true);
-                    }
-                }
-            }
-            if (rebootOption.empty())
-                Payload::RebootToHekate();
-        }
-        
-        i2cExit();
-        splExit();
-        fsdevUnmountAll();
-        spsmShutdown(SpsmShutdownMode_Reboot);
-        spsmExit();
-    } else if (commandName == "shutdown") {
-        if (cmdSize >= 2) {
-            const std::string selection = getUnquoted(cmd, 1);
-            if (selection == "controllers") {
-                powerOffAllControllers();
-            }
-        } else {
-            splExit();
-            fsdevUnmountAll();
-            spsmShutdown(SpsmShutdownMode_Normal);
-            spsmExit();
-        }
-    } else if (commandName == "exit") {
-        if (cmdSize >= 2) {
-            const std::string selection = getUnquoted(cmd, 1);
-            if (selection == "overlays") {
-                setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, IN_OVERLAY_STR, TRUE_STR);
-            } else if (selection == "packages") {
-                setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "to_packages", TRUE_STR);
-                setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, IN_OVERLAY_STR, TRUE_STR);
-            }
-        }
-        exitingUltrahand.store(true, std::memory_order_release);
-        ult::launchingOverlay.store(true, std::memory_order_release);
-        tsl::setNextOverlay(OVERLAY_PATH+"ovlmenu.ovl");
-        tsl::Overlay::get()->close(true);
-        return;
-    } else if (commandName == "back") {
-        goBackAfter.store(true, std::memory_order_release);
-        
-    } else if (commandName == "backlight") {
-        if (cmdSize >= 2) {
-            std::string togglePattern = getUnquoted(cmd, 1);
-            lblInitialize();
-            if (togglePattern == "auto") {
-                if (cmdSize >= 3) {
-                    togglePattern = cmd[2];
-                    if (togglePattern == ON_STR)
-                        lblEnableAutoBrightnessControl();
-                    else if (togglePattern == OFF_STR)
-                        lblDisableAutoBrightnessControl();
-                }
-            }
-            else if (togglePattern == ON_STR)
-                lblSwitchBacklightOn(0);
-            else if (togglePattern == OFF_STR)
-                lblSwitchBacklightOff(0);
-            else if (isValidNumber(togglePattern))
-                lblSetCurrentBrightnessSetting(ult::stof(togglePattern) / 100.0f);
-            
-            lblExit();
-        }
-    } else if (commandName == "volume") {
-        if (cmdSize >= 2) {
-            const std::string volumeInput = getUnquoted(cmd, 1);
-            
-            if (isValidNumber(volumeInput)) {
-                const float volumePercentage = ult::stof(volumeInput);
-                
-                if (volumePercentage < 0.0f || volumePercentage > 150.0f) {
-                    return;
-                }
-                
-                const float masterVolume = volumePercentage / 100.0f;
-                
-                audctlInitialize();
-                audctlSetSystemOutputMasterVolume(masterVolume);
-                audctlExit();
-            }
-        } else {
-            #if USING_LOGGING_DIRECTIVE
-            if (!disableLogging)
-                logMessage("Volume command missing required argument.");
-            #endif
-        }
-    } else if (commandName == "set-region") {
-        if (cmdSize > 1) {
-            const std::string regionStr = stringToUppercase(getUnquoted(cmd, 1));
-            
-            SetRegion region;
-            bool validRegion = true;
-            
-            if (regionStr == "JPN") {
-                region = SetRegion_JPN;
-            } else if (regionStr == "USA") {
-                region = SetRegion_USA;
-            } else if (regionStr == "EUR") {
-                region = SetRegion_EUR;
-            } else if (regionStr == "AUS") {
-                region = SetRegion_AUS;
-            } else if (regionStr == "HTK") {
-                region = SetRegion_HTK;
-            } else if (regionStr == "CHN") {
-                region = SetRegion_CHN;
-            } else {
-                validRegion = false;
-            }
-            
-            if (validRegion) {
-                if (R_FAILED(setsysSetRegionCode(region)))
-                    setCommandFailed();
-            } else {
-                setCommandFailed();
-            }
-        }
-    } else if (commandName == "open") {
-        if (cmdSize >= 2) {
-            std::string overlayPath = getUnquoted(cmd, 1);
-            preprocessPath(overlayPath, packagePath);
-            
-            if (!isFileOrDirectory(overlayPath)) {
-                #if USING_LOGGING_DIRECTIVE
-                if (!disableLogging)
-                    logMessage("Overlay file not found: " + overlayPath);
-                #endif
-                setCommandFailed();
                 return;
             }
+            if (commandName == "exit") {
+                if (cmdSize >= 2) {
+                    const std::string selection = getUnquoted(cmd, 1);
+                    if (selection == "overlays") {
+                        setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, IN_OVERLAY_STR, TRUE_STR);
+                    } else if (selection == "packages") {
+                        setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "to_packages", TRUE_STR);
+                        setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, IN_OVERLAY_STR, TRUE_STR);
+                    }
+                }
+                exitingUltrahand.store(true, std::memory_order_release);
+                ult::launchingOverlay.store(true, std::memory_order_release);
+                tsl::setNextOverlay(OVERLAY_PATH+"ovlmenu.ovl");
+                tsl::Overlay::get()->close(true);
+                return;
+            }
+            break;
             
-            std::string launchArgs;
-            if (cmdSize > 2) {
-                for (size_t i = 2; i < cmdSize; ++i) {
-                    if (i > 2) launchArgs += " ";
-                    launchArgs += getUnquoted(cmd, i);
+        case 'f':
+            if (commandName == "flag") {
+                if (cmdSize >= 3) {
+                    std::string wildcardPattern = cmd[1];
+                    preprocessPath(wildcardPattern, packagePath);
+                    std::string outputDir = cmd[2];
+                    preprocessPath(outputDir, packagePath);
+                    createFlagFiles(wildcardPattern, outputDir);
+                } else {
+                    #if USING_LOGGING_DIRECTIVE
+                    if (!disableLogging)
+                        logMessage("Usage: flag <wildcardPattern> <outputDir>");
+                    #endif
+                }
+                return;
+            }
+            break;
+            
+        case 'h':
+            if (commandName.compare(0, 7, "hex-by-") == 0) {
+                if (cmdSize >= 4) {
+                    std::string sourcePath = cmd[1];
+                    preprocessPath(sourcePath, packagePath);
+                    
+                    const std::string secondArg = getUnquoted(cmd, 2);
+                    const std::string thirdArg = getUnquoted(cmd, 3);
+                    
+                    std::string fourthArg;
+                    if (cmdSize >= 5)
+                        fourthArg = getUnquoted(cmd, 4);
+                    
+                    std::string fifthArg;
+                    if (cmdSize >= 6)
+                        fifthArg = getUnquoted(cmd, 5);
+                    
+                    if (commandName == "hex-by-custom-offset" || 
+                        commandName == "hex-by-custom-decimal-offset" || 
+                        commandName == "hex-by-custom-rdecimal-offset") {
+                        if (cmdSize >= 5) {
+                            const std::string customPattern = getUnquoted(cmd, 2);
+                            const std::string offset = getUnquoted(cmd, 3);
+                            const std::string hexDataReplacement = getUnquoted(cmd, 4);
+                            
+                            std::string byteGroupSize;
+                            if (cmdSize >= 6)
+                                byteGroupSize = getUnquoted(cmd, 5);
+                            
+                            handleHexByCustom(sourcePath, customPattern, offset, hexDataReplacement, commandName, byteGroupSize);
+                        }
+                    } else {
+                        handleHexEdit(sourcePath, secondArg, thirdArg, fourthArg, fifthArg, commandName, cmd);
+                    }
+                }
+                return;
+            }
+            break;
+            
+        case 'l':
+            if (commandName == "logging") {
+                interpreterLogging.store(true, std::memory_order_release);
+                return;
+            }
+            break;
+            
+        case 'm':
+            if (commandName == "mkdir" || commandName == "make") {
+                handleMakeDirCommand(cmd, packagePath);
+                return;
+            }
+            if (commandName == "mv" || commandName == "move") {
+                handleMoveCommand(cmd, packagePath);
+                return;
+            }
+            if (commandName.compare(0, 7, "mirror_") == 0) {
+                handleMirrorCommand(cmd, packagePath);
+                return;
+            }
+            break;
+            
+        case 'n':
+            if ((commandName == "notify" || commandName == "notification" || 
+                 commandName == "notify-now" || commandName == "notification-now")) {
+                if (cmdSize > 1) {
+                    const std::string text = getUnquoted(cmd, 1);
+                    
+                    int fontSize = 28;
+                    if (cmdSize > 2) {
+                        const std::string fontStr = getUnquoted(cmd, 2);
+                        if (isValidNumber(fontStr)) {
+                            fontSize = std::clamp(std::stoi(fontStr), 1, 34);
+                        }
+                    }
+                    
+                    if (tsl::notification) {
+                        const bool now = (commandName.find("-now") != std::string::npos);
+                        
+                        if (now)
+                            tsl::notification->showNow(text, fontSize);
+                        else
+                            tsl::notification->show(text, fontSize);
+                    }
+                }
+                return;
+            }
+            break;
+            
+        case 'o':
+            if (commandName == "open") {
+                if (cmdSize >= 2) {
+                    std::string overlayPath = getUnquoted(cmd, 1);
+                    preprocessPath(overlayPath, packagePath);
+                    
+                    if (!isFileOrDirectory(overlayPath)) {
+                        #if USING_LOGGING_DIRECTIVE
+                        if (!disableLogging)
+                            logMessage("Overlay file not found: " + overlayPath);
+                        #endif
+                        setCommandFailed();
+                        return;
+                    }
+                    
+                    std::string launchArgs;
+                    if (cmdSize > 2) {
+                        for (size_t i = 2; i < cmdSize; ++i) {
+                            if (i > 2) launchArgs += " ";
+                            launchArgs += getUnquoted(cmd, i);
+                        }
+                    }
+                    
+                    {
+                        std::lock_guard<std::mutex> lock(ult::overlayLaunchMutex);
+                        ult::requestedOverlayPath = overlayPath;
+                        ult::requestedOverlayArgs = launchArgs;
+                        ult::overlayLaunchRequested.store(true, std::memory_order_release);
+                    }
+                    
+                    #if USING_LOGGING_DIRECTIVE
+                    if (!disableLogging)
+                        logMessage("Requesting overlay launch: " + overlayPath + " with args: " + launchArgs);
+                    #endif
+                    
+                    return;
+                } else {
+                    #if USING_LOGGING_DIRECTIVE
+                    if (!disableLogging)
+                        logMessage("Usage: open <overlay_path> [launch_arguments...]");
+                    #endif
+                    setCommandFailed();
+                    return;
                 }
             }
+            break;
             
-            {
-                std::lock_guard<std::mutex> lock(ult::overlayLaunchMutex);
-                ult::requestedOverlayPath = overlayPath;
-                ult::requestedOverlayArgs = launchArgs;
-                ult::overlayLaunchRequested.store(true, std::memory_order_release);
-            }
-            
-            #if USING_LOGGING_DIRECTIVE
-            if (!disableLogging)
-                logMessage("Requesting overlay launch: " + overlayPath + " with args: " + launchArgs);
-            #endif
-
-            return;
-        } else {
-            #if USING_LOGGING_DIRECTIVE
-            if (!disableLogging)
-                logMessage("Usage: open <overlay_path> [launch_arguments...]");
-            #endif
-            setCommandFailed();
-        }
-    
-    } else if (commandName == "refresh") {
-        if (cmdSize == 1) {
-            refreshPage.store(true, std::memory_order_release);
-        } else {
-            const std::string refreshPattern = getUnquoted(cmd, 1);
-            if (refreshPattern == "theme")
-                tsl::initializeThemeVars();
-            else if (refreshPattern == "package")
-                refreshPackage.store(true, std::memory_order_release);
-            else if (refreshPattern == "wallpaper")
-                refreshWallpaperNow.store(true, std::memory_order_release);
-        }
-    } else if (commandName == "refresh-to") {
-        if (cmdSize > 1) {
-            const std::string refreshPattern = getUnquoted(cmd, 1);
-            std::string refreshPattern2 = "";
-            std::string refreshPattern3 = "";
-            
-            if (cmdSize > 2)
-                refreshPattern2 = getUnquoted(cmd, 2);
-            
-            if (cmdSize > 3)
-                refreshPattern3 = getUnquoted(cmd, 3);
-            
-            jumpItemName = refreshPattern;
-            jumpItemValue = refreshPattern2;
-            jumpItemExactMatch = !(refreshPattern3 == FALSE_STR);
-            skipJumpReset.store(true, std::memory_order_release);
-            refreshPage.store(true, std::memory_order_release);
-        }
-    } else if (commandName == "logging") {
-        interpreterLogging.store(true, std::memory_order_release);
-    } else if (commandName == "notify" || commandName == "notification") {
-        if (cmdSize > 1) {
-            const std::string text = getUnquoted(cmd, 1);
-            size_t fontSize = 28;
-            if (cmdSize > 2) {
-                const std::string fontSizeStr = getUnquoted(cmd, 2);
-                if (isValidNumber(fontSizeStr)) {
-                    fontSize = std::stoi(fontSizeStr);
-                    if (fontSize < 1) fontSize = 1;
-                    else if (fontSize > 34) fontSize = 34;
+        case 'p':
+            if (commandName == "pchtxt2ips") {
+                if (cmdSize >= 3) {
+                    std::string sourcePath = cmd[1];
+                    preprocessPath(sourcePath, packagePath);
+                    std::string destinationPath = cmd[2];
+                    preprocessPath(destinationPath, packagePath);
+                    commandSuccess.store(
+                        pchtxt2ips(sourcePath, destinationPath) && commandSuccess.load(std::memory_order_acquire),
+                        std::memory_order_release
+                    );
                 }
+                return;
             }
-            if (tsl::notification)
-                tsl::notification->show(text, fontSize);
-        }
-    } else if (commandName == "clear") {
-        if (cmdSize >= 2) {
-            const std::string clearOption = getUnquoted(cmd, 1);
-            if (clearOption == "log") {
-                #if USING_LOGGING_DIRECTIVE
-                deleteFileOrDirectory(defaultLogFilePath);
-                #endif
+            if (commandName == "pchtxt2cheat") {
+                if (cmdSize >= 2) {
+                    std::string sourcePath = cmd[1];
+                    preprocessPath(sourcePath, packagePath);
+                    commandSuccess.store(
+                        pchtxt2cheat(sourcePath) && commandSuccess.load(std::memory_order_acquire),
+                        std::memory_order_release
+                    );
+                }
+                return;
             }
-            else if (clearOption == "hex_sum_cache") 
-                hexSumCache.clear();
-        }
+            break;
+            
+        case 'r':
+            if (commandName == "rename") {
+                handleMoveCommand(cmd, packagePath);
+                return;
+            }
+            if (commandName == "rename-ini-section" || commandName == "remove-ini-section" || 
+                commandName == "remove-ini-key") {
+                handleIniCommands(cmd, packagePath);
+                return;
+            }
+            if (commandName == "refresh") {
+                if (cmdSize == 1) {
+                    refreshPage.store(true, std::memory_order_release);
+                } else {
+                    const std::string refreshPattern = getUnquoted(cmd, 1);
+                    if (refreshPattern == "theme")
+                        tsl::initializeThemeVars();
+                    else if (refreshPattern == "package")
+                        refreshPackage.store(true, std::memory_order_release);
+                    else if (refreshPattern == "wallpaper")
+                        refreshWallpaperNow.store(true, std::memory_order_release);
+                }
+                return;
+            }
+            if (cmdSize > 1 && commandName == "refresh-to") {
+                const std::string refreshPattern = getUnquoted(cmd, 1);
+                std::string refreshPattern2 = "";
+                std::string refreshPattern3 = "";
+                
+                if (cmdSize > 2)
+                    refreshPattern2 = getUnquoted(cmd, 2);
+                
+                if (cmdSize > 3)
+                    refreshPattern3 = getUnquoted(cmd, 3);
+                
+                jumpItemName = refreshPattern;
+                jumpItemValue = refreshPattern2;
+                jumpItemExactMatch = !(refreshPattern3 == FALSE_STR);
+                skipJumpReset.store(true, std::memory_order_release);
+                refreshPage.store(true, std::memory_order_release);
+                return;
+            }
+            if (commandName == "reboot") {
+                bool launchUpdaterPayload = false;
+                for (const std::string& file : PROTECTED_FILES) {
+                    if (isFile(file + ".ultra")) {
+                        launchUpdaterPayload = true;
+                        break;
+                    }
+                }
+                
+                if (launchUpdaterPayload) {
+                    const std::string rebootOption = PAYLOADS_PATH + "ultrahand_updater.bin";
+                    if (!isFile(rebootOption)) {
+                        downloadFile(UPDATER_PAYLOAD_URL, PAYLOADS_PATH, true);
+                        downloadPercentage.store(-1, std::memory_order_release);
+                    }
+                    if (isFile(rebootOption)) {
+                        const std::string fileName = getNameFromPath(rebootOption);
+                        
+                        if (util::IsErista()) {
+                            Payload::PayloadConfig reboot_payload = { fileName, rebootOption };
+                            Payload::RebootToPayload(reboot_payload);
+                        } else {
+                            std::string strippedRebootOption = rebootOption;
+                            if (strippedRebootOption.compare(0, ROOT_PATH.length(), ROOT_PATH) == 0) {
+                                strippedRebootOption.erase(0, ROOT_PATH.length());
+                            }
+                            
+                            const std::string iniPath = "/bootloader/ini/" + fileName + ".ini";
+                            deleteFileOrDirectory(iniPath);
+                            setIniFileValue(iniPath, fileName, "payload", strippedRebootOption);
+                            setIniFileValue(iniPath, fileName, "bootwait", "0");
+                            Payload::HekateConfigList iniConfigList = Payload::LoadIniConfigList();
+                            rebootToHekateConfig(iniConfigList, fileName, true);
+                        }
+                    } else {
+                        launchUpdaterPayload = false;
+                    }
+                }
+                if (!launchUpdaterPayload && (util::IsErista() || util::SupportsMarikoRebootToConfig())) {
+                    std::string rebootOption;
+                    if (cmdSize >= 2) {
+                        rebootOption = getUnquoted(cmd, 1);
+                        if (cmdSize >= 3) {
+                            const std::string option = getUnquoted(cmd, 2);
+                            if (rebootOption == "boot") {
+                                Payload::HekateConfigList bootConfigList = Payload::LoadHekateConfigList();
+                                rebootToHekateConfig(bootConfigList, option, false);
+                            } else if (rebootOption == "ini") {
+                                Payload::HekateConfigList iniConfigList = Payload::LoadIniConfigList();
+                                rebootToHekateConfig(iniConfigList, option, true);
+                            }
+                        }
+                        if (rebootOption == "UMS") {
+                            Payload::RebootToHekateUMS(Payload::UmsTarget_Sd);
+                        } else if (rebootOption == "HEKATE" || rebootOption == "hekate") {
+                            Payload::RebootToHekateMenu();
+                        } else if (isFile(rebootOption)) {
+                            const std::string fileName = getNameFromPath(rebootOption);
+                            if (util::IsErista()) {
+                                Payload::PayloadConfig reboot_payload = {fileName, rebootOption};
+                                Payload::RebootToPayload(reboot_payload);
+                            } else {
+                                std::string strippedRebootOption = rebootOption;
+                                if (strippedRebootOption.compare(0, ROOT_PATH.length(), ROOT_PATH) == 0) {
+                                    strippedRebootOption.erase(0, ROOT_PATH.length());
+                                }
+                                
+                                const std::string iniPath = "/bootloader/ini/" + fileName + ".ini";
+                                setIniFileValue(iniPath, fileName, "payload", strippedRebootOption);
+                                setIniFileValue(iniPath, fileName, "bootwait", "0");
+                                Payload::HekateConfigList iniConfigList = Payload::LoadIniConfigList();
+                                rebootToHekateConfig(iniConfigList, fileName, true);
+                            }
+                        }
+                    }
+                    if (rebootOption.empty())
+                        Payload::RebootToHekate();
+                }
+                
+                i2cExit();
+                splExit();
+                fsdevUnmountAll();
+                spsmShutdown(SpsmShutdownMode_Reboot);
+                spsmExit();
+                return;
+            }
+            break;
+            
+        case 's':
+            if (commandName == "set-ini-val" || commandName == "set-ini-value" || 
+                commandName == "set-ini-key") {
+                handleIniCommands(cmd, packagePath);
+                return;
+            }
+            if (commandName == "set-json-val" || commandName == "set-json-value" || 
+                commandName == "set-json-key") {
+                handleJsonCommands(cmd, packagePath);
+                return;
+            }
+            if (cmdSize >= 2 && commandName == "set-footer") {
+                const std::string desiredValue = getUnquoted(cmd, 1);
+                if (desiredValue.find(NULL_STR) != std::string::npos)
+                    setCommandFailed();
+                else
+                    setIniFileValue((packagePath + CONFIG_FILENAME), selectedCommand, FOOTER_STR, desiredValue);
+                return;
+            }
+            if (cmdSize > 1 && commandName == "set-region") {
+                const std::string regionStr = stringToUppercase(getUnquoted(cmd, 1));
+                
+                SetRegion region;
+                bool validRegion = true;
+                
+                if (regionStr == "JPN") {
+                    region = SetRegion_JPN;
+                } else if (regionStr == "USA") {
+                    region = SetRegion_USA;
+                } else if (regionStr == "EUR") {
+                    region = SetRegion_EUR;
+                } else if (regionStr == "AUS") {
+                    region = SetRegion_AUS;
+                } else if (regionStr == "HTK") {
+                    region = SetRegion_HTK;
+                } else if (regionStr == "CHN") {
+                    region = SetRegion_CHN;
+                } else {
+                    validRegion = false;
+                }
+                
+                if (validRegion) {
+                    if (R_FAILED(setsysSetRegionCode(region)))
+                        setCommandFailed();
+                } else {
+                    setCommandFailed();
+                }
+                return;
+            }
+            if (commandName == "shutdown") {
+                if (cmdSize >= 2) {
+                    const std::string selection = getUnquoted(cmd, 1);
+                    if (selection == "controllers") {
+                        powerOffAllControllers();
+                    }
+                } else {
+                    splExit();
+                    fsdevUnmountAll();
+                    spsmShutdown(SpsmShutdownMode_Normal);
+                    spsmExit();
+                }
+                return;
+            }
+            break;
+            
+        case 'u':
+            if (cmdSize >= 3 && commandName == "unzip") {
+                std::string sourcePath = cmd[1];
+                preprocessPath(sourcePath, packagePath);
+                std::string destinationPath = cmd[2];
+                preprocessPath(destinationPath, packagePath);
+                commandSuccess.store(
+                    unzipFile(sourcePath, destinationPath) && commandSuccess.load(std::memory_order_acquire),
+                    std::memory_order_release
+                );
+                return;
+            }
+            break;
+            
+        case 'v':
+            if (commandName == "volume") {
+                if (cmdSize >= 2) {
+                    const std::string volumeInput = getUnquoted(cmd, 1);
+                    
+                    if (isValidNumber(volumeInput)) {
+                        const float volumePercentage = ult::stof(volumeInput);
+                        
+                        if (volumePercentage < 0.0f || volumePercentage > 150.0f) {
+                            return;
+                        }
+                        
+                        const float masterVolume = volumePercentage / 100.0f;
+                        
+                        audctlInitialize();
+                        audctlSetSystemOutputMasterVolume(masterVolume);
+                        audctlExit();
+                    }
+                } else {
+                    #if USING_LOGGING_DIRECTIVE
+                    if (!disableLogging)
+                        logMessage("Volume command missing required argument.");
+                    #endif
+                }
+                return;
+            }
+            break;
     }
 }
 
@@ -4889,9 +4993,9 @@ void backgroundInterpreter(void* workPtr) {
     if (ult::isHidden.load(std::memory_order_acquire)) {
         if (tsl::notification) {
             if (commandSuccess.load(std::memory_order_acquire))
-                tsl::notification->show(std::string("  ")+"Task has completed!");
+                tsl::notification->show(NOTIFY_HEADER + TASK_IS_COMPLETE);
             else
-                tsl::notification->show(std::string("  ")+"Task has failed.");
+                tsl::notification->show(NOTIFY_HEADER + TASK_HAS_FAILED);
         }
     }
 

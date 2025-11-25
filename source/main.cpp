@@ -877,7 +877,7 @@ public:
             const std::string fullVersionLabel = cleanVersionLabel(parseValueFromIniSection((SETTINGS_PATH+"RELEASE.ini"), "Release Info", "latest_version"));
 
             if (isVersionGreaterOrEqual(fullVersionLabel.c_str(), APP_VERSION) && fullVersionLabel != APP_VERSION && tsl::notification) {
-                tsl::notification->showNow("  "+NEW_UPDATE_IS_AVAILABLE);
+                tsl::notification->showNow(NOTIFY_HEADER+NEW_UPDATE_IS_AVAILABLE);
             
             }
 
@@ -986,7 +986,7 @@ public:
             const char* ramColor = freeRamMB >= 9.0f ? "healthy_ram" : (freeRamMB >= 3.0f ? "neutral_ram" : "bad_ram");
             
             tableData.clear();
-            tableData = {{"System RAM", "", ramString}};
+            tableData = {{SYSTEM_RAM, "", ramString}};
             addTable(list, tableData, "", 165+2, 19-2, 19-2, 0, "header", ramColor, DEFAULT_STR, RIGHT_STR, true, true);
 
             //addGap(list, 12);
@@ -1048,7 +1048,7 @@ public:
             
             // Create the V2 trackbar
             auto* heapTrackbar = new tsl::elm::NamedStepTrackBarV2(
-                "Overlay Memory",
+                OVERLAY_MEMORY,
                 "",  // Empty packagePath - callback will handle everything
                 heapSizeLabels,
                 nullptr, nullptr, {}, "",  // No command system needed
@@ -1131,10 +1131,10 @@ public:
                         // Not enough memory - REJECT the change
                         if (tsl::notification) {
                             //if (!*notEnoughMemoryShown) {
-                            //    tsl::notification->showNow(std::string("  ")+"Not enough memory.");
+                            //    tsl::notification->showNow(NOTIFY_HEADER+"Not enough memory.");
                             //    *notEnoughMemoryShown = true;
                             //}
-                            tsl::notification->showNow(std::string("  ")+"Not enough memory.");
+                            tsl::notification->showNow(NOTIFY_HEADER + NOT_ENOUGH_MEMORY);
                         }
                         setOverlayHeapSize(currentHeapSize);
                         this->exitOnBack = false;
@@ -1154,38 +1154,38 @@ public:
                         if (previousSliderMB >= 8 && newMB < 8) {
                             // Wallpaper disabled
                             //if (!*wallpaperDisabledShown ) {
-                            //    tsl::notification->showNow(std::string("  ")+"Wallpaper support disabled.", 23);
+                            //    tsl::notification->showNow(NOTIFY_HEADER+"Wallpaper support disabled.", 23);
                             //    *wallpaperDisabledShown = true;
                             //}
                             //*wallpaperEnabledShown = false;
-                            tsl::notification->showNow(std::string("  ")+"Wallpaper support disabled.", 23);
+                            tsl::notification->showNow(NOTIFY_HEADER + WALLPAPER_SUPPORT_DISABLED, 23);
                         } else if (previousSliderMB >= 6 && newMB < 6) {
                             // Sound disabled
                             //if (!*soundDisabledShown) {
-                            //    tsl::notification->showNow(std::string("  ")+"Sound support disabled.", 23);
+                            //    tsl::notification->showNow(NOTIFY_HEADER+"Sound support disabled.", 23);
                             //    *soundDisabledShown = true;
                             //}
                             //*soundEnabledShown = false;
-                            tsl::notification->showNow(std::string("  ")+"Sound support disabled.", 23);
+                            tsl::notification->showNow(NOTIFY_HEADER + SOUND_SUPPORT_DISABLED, 23);
                         }
                     } else if (isSliderGrowing) {
                         // Going up - check for enabled features
                         if (previousSliderMB < 8 && newMB >= 8) {
                             // Wallpaper enabled
                             //if (!*wallpaperEnabledShown) {
-                            //    tsl::notification->showNow(std::string("  ")+"Wallpaper support enabled.", 23);
+                            //    tsl::notification->showNow(NOTIFY_HEADER+"Wallpaper support enabled.", 23);
                             //    *wallpaperEnabledShown = true;
                             //}
                             //*wallpaperDisabledShown = false;
-                            tsl::notification->showNow(std::string("  ")+"Wallpaper support enabled.", 23);
+                            tsl::notification->showNow(NOTIFY_HEADER + WALLPAPER_SUPPORT_ENABLED, 23);
                         } else if (previousSliderMB < 6 && newMB >= 6) {
                             // Sound enabled
                             //if (!*soundEnabledShown) {
-                            //    tsl::notification->showNow(std::string("  ")+"Sound support enabled.", 23);
+                            //    tsl::notification->showNow(NOTIFY_HEADER+"Sound support enabled.", 23);
                             //    *soundEnabledShown = true;
                             //}
                             //*soundDisabledShown = false;
-                            tsl::notification->showNow(std::string("  ")+"Sound support enabled.", 23);
+                            tsl::notification->showNow(NOTIFY_HEADER + SOUND_SUPPORT_ENABLED, 23);
                         }
                     }
                 }
@@ -1201,7 +1201,7 @@ public:
             addGap(list, 12);
 
             // Add an "Exit Overlay System" menu item
-            auto* exitItem = new tsl::elm::ListItem("Exit Overlay System", "", true);
+            auto* exitItem = new tsl::elm::ListItem(EXIT_OVERLAY_SYSTEM, "", true);
             exitItem->setValue("");
             exitItem->setClickListener([this, exitItem](uint64_t keys) {
                 if ((keys & KEY_A) && !(keys & ~KEY_A & ALL_KEYS_MASK)) {
@@ -1790,10 +1790,10 @@ public:
                 if (state && tsl::notification) {
                     // First time for THIS notification OR wait until not active
                     //if (!*forceSupportNotificationShown) {
-                    //    tsl::notification->showNow("  "+FORCED_SUPPORT_WARNING, 20);
+                    //    tsl::notification->showNow(NOTIFY_HEADER+FORCED_SUPPORT_WARNING, 20);
                     //    *forceSupportNotificationShown = true;
                     //}
-                    tsl::notification->showNow("  "+FORCED_SUPPORT_WARNING, 20);
+                    tsl::notification->showNow(NOTIFY_HEADER+FORCED_SUPPORT_WARNING, 20);
                 }
             }
         });
