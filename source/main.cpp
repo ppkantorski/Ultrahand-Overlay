@@ -877,7 +877,7 @@ public:
             const std::string fullVersionLabel = cleanVersionLabel(parseValueFromIniSection((SETTINGS_PATH+"RELEASE.ini"), "Release Info", "latest_version"));
 
             if (isVersionGreaterOrEqual(fullVersionLabel.c_str(), APP_VERSION) && fullVersionLabel != APP_VERSION && tsl::notification) {
-                tsl::notification->showNow(NOTIFY_HEADER+NEW_UPDATE_IS_AVAILABLE);
+                tsl::notification->showNow(NOTIFY_HEADER + NEW_UPDATE_IS_AVAILABLE);
             
             }
 
@@ -1851,7 +1851,7 @@ public:
 
         addGap(list, 12);
 
-        auto* deleteListItem = new tsl::elm::ListItem(isOverlay ? "Delete Overlay" : "Delete Package");
+        auto* deleteListItem = new tsl::elm::ListItem(isOverlay ? DELETE_OVERLAY : DELETE_PACKAGE);
         deleteListItem->setValue("");
         
         deleteListItem->setClickListener([this, deleteListItem](uint64_t keys) -> bool {
