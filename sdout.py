@@ -97,7 +97,6 @@ def main():
         folders = [
             "config/ultrahand",
             "config/ultrahand/downloads",
-            "config/ultrahand/expansion",
             "config/ultrahand/flags",
             "config/ultrahand/lang",
             "config/ultrahand/notifications",
@@ -114,31 +113,15 @@ def main():
             folder_path.mkdir(parents=True, exist_ok=True)
             print(f"Created {folder_path}")
         
-        # Step 2: Download and extract nx-ovlloader+.zip
-        ovlloader_plus_zip = Path(temp_dir) / "nx-ovlloader+.zip"
-        download_file(
-            "https://github.com/ppkantorski/nx-ovlloader/releases/latest/download/nx-ovlloader+.zip",
-            ovlloader_plus_zip
-        )
-        extract_zip(ovlloader_plus_zip, sdout_dir)
-        
-        # Step 3: Download nx-ovlloader.zip and nx-ovlloader+.zip for expansion folder
-        print("Downloading nx-ovlloader packages for expansion folder...")
-        expansion_dir = sdout_dir / "config/ultrahand/expansion"
-        
-        ovlloader_zip_dest = expansion_dir / "nx-ovlloader.zip"
+        # Step 2: Download and extract nx-ovlloader.zip
+        ovlloader_zip = Path(temp_dir) / "nx-ovlloader.zip"
         download_file(
             "https://github.com/ppkantorski/nx-ovlloader/releases/latest/download/nx-ovlloader.zip",
-            ovlloader_zip_dest
+            ovlloader_zip
         )
+        extract_zip(ovlloader_zip, sdout_dir)
         
-        ovlloader_plus_zip_dest = expansion_dir / "nx-ovlloader+.zip"
-        download_file(
-            "https://github.com/ppkantorski/nx-ovlloader/releases/latest/download/nx-ovlloader+.zip",
-            ovlloader_plus_zip_dest
-        )
-        
-        # Step 4: Download and process Ultrahand-Overlay
+        # Step 3: Download and process Ultrahand-Overlay
         ultrahand_zip = Path(temp_dir) / "ultrahand-main.zip"
         ultrahand_temp = Path(temp_dir) / "ultrahand_temp"
         
@@ -155,7 +138,7 @@ def main():
         
         ultrahand_root = extracted_folders[0]
         
-        # Step 5: Copy lang files
+        # Step 4: Copy lang files
         lang_source = ultrahand_root / "lang"
         lang_dest = sdout_dir / "config/ultrahand/lang"
         
@@ -165,7 +148,7 @@ def main():
                 shutil.copy2(json_file, lang_dest)
                 print(f"Copied {json_file.name}")
         
-        # Step 6: Copy ultrahand_updater.bin
+        # Step 5: Copy ultrahand_updater.bin
         payload_source = ultrahand_root / "payloads/ultrahand_updater.bin"
         payload_dest = sdout_dir / "config/ultrahand/payloads"
         
@@ -174,7 +157,7 @@ def main():
             shutil.copy2(payload_source, payload_dest)
             print(f"Copied ultrahand_updater.bin")
         
-        # Step 7: Copy theme files from the downloaded repository
+        # Step 6: Copy theme files from the downloaded repository
         print("Copying theme files...")
         theme_source = ultrahand_root / "themes"
         theme_dest = sdout_dir / "config/ultrahand/themes"
@@ -191,7 +174,7 @@ def main():
         else:
             print("Warning: themes folder not found in Ultrahand repository")
         
-        # Step 8: Copy sound files
+        # Step 7: Copy sound files
         print("Copying sound files...")
         sounds_source = ultrahand_root / "sounds"
         sounds_dest = sdout_dir / "config/ultrahand/sounds"
@@ -203,7 +186,7 @@ def main():
         else:
             print("Warning: sounds folder not found in Ultrahand repository")
         
-        # Step 9: Copy ovlmenu.ovl
+        # Step 8: Copy ovlmenu.ovl
         print("Copying ovlmenu.ovl...")
         ovlmenu_source = script_dir / "ovlmenu.ovl"
         ovlmenu_dest = sdout_dir / "switch/.overlays"
@@ -214,12 +197,12 @@ def main():
         else:
             print("Warning: ovlmenu.ovl not found in script directory")
         
-        # Step 10: Clean up temporary files
+        # Step 9: Clean up temporary files
         print("Cleaning up temporary files...")
         shutil.rmtree(temp_dir)
         print("Temporary files deleted")
         
-        # Step 11: Create final zip
+        # Step 10: Create final zip
         output_zip = script_dir / "sdout.zip"
         create_zip_without_metadata(sdout_dir, output_zip)
         
