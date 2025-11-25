@@ -877,7 +877,7 @@ public:
             const std::string fullVersionLabel = cleanVersionLabel(parseValueFromIniSection((SETTINGS_PATH+"RELEASE.ini"), "Release Info", "latest_version"));
 
             if (isVersionGreaterOrEqual(fullVersionLabel.c_str(), APP_VERSION) && fullVersionLabel != APP_VERSION && tsl::notification) {
-                tsl::notification->showImmediately("  "+NEW_UPDATE_IS_AVAILABLE);
+                tsl::notification->showNow("  "+NEW_UPDATE_IS_AVAILABLE);
             
             }
 
@@ -1131,10 +1131,10 @@ public:
                         // Not enough memory - REJECT the change
                         if (tsl::notification) {
                             //if (!*notEnoughMemoryShown) {
-                            //    tsl::notification->showImmediately(std::string("  ")+"Not enough memory.");
+                            //    tsl::notification->showNow(std::string("  ")+"Not enough memory.");
                             //    *notEnoughMemoryShown = true;
                             //}
-                            tsl::notification->showImmediately(std::string("  ")+"Not enough memory.");
+                            tsl::notification->showNow(std::string("  ")+"Not enough memory.");
                         }
                         setOverlayHeapSize(currentHeapSize);
                         this->exitOnBack = false;
@@ -1154,38 +1154,38 @@ public:
                         if (previousSliderMB >= 8 && newMB < 8) {
                             // Wallpaper disabled
                             //if (!*wallpaperDisabledShown ) {
-                            //    tsl::notification->showImmediately(std::string("  ")+"Wallpaper support disabled.", 23);
+                            //    tsl::notification->showNow(std::string("  ")+"Wallpaper support disabled.", 23);
                             //    *wallpaperDisabledShown = true;
                             //}
                             //*wallpaperEnabledShown = false;
-                            tsl::notification->showImmediately(std::string("  ")+"Wallpaper support disabled.", 23);
+                            tsl::notification->showNow(std::string("  ")+"Wallpaper support disabled.", 23);
                         } else if (previousSliderMB >= 6 && newMB < 6) {
                             // Sound disabled
                             //if (!*soundDisabledShown) {
-                            //    tsl::notification->showImmediately(std::string("  ")+"Sound support disabled.", 23);
+                            //    tsl::notification->showNow(std::string("  ")+"Sound support disabled.", 23);
                             //    *soundDisabledShown = true;
                             //}
                             //*soundEnabledShown = false;
-                            tsl::notification->showImmediately(std::string("  ")+"Sound support disabled.", 23);
+                            tsl::notification->showNow(std::string("  ")+"Sound support disabled.", 23);
                         }
                     } else if (isSliderGrowing) {
                         // Going up - check for enabled features
                         if (previousSliderMB < 8 && newMB >= 8) {
                             // Wallpaper enabled
                             //if (!*wallpaperEnabledShown) {
-                            //    tsl::notification->showImmediately(std::string("  ")+"Wallpaper support enabled.", 23);
+                            //    tsl::notification->showNow(std::string("  ")+"Wallpaper support enabled.", 23);
                             //    *wallpaperEnabledShown = true;
                             //}
                             //*wallpaperDisabledShown = false;
-                            tsl::notification->showImmediately(std::string("  ")+"Wallpaper support enabled.", 23);
+                            tsl::notification->showNow(std::string("  ")+"Wallpaper support enabled.", 23);
                         } else if (previousSliderMB < 6 && newMB >= 6) {
                             // Sound enabled
                             //if (!*soundEnabledShown) {
-                            //    tsl::notification->showImmediately(std::string("  ")+"Sound support enabled.", 23);
+                            //    tsl::notification->showNow(std::string("  ")+"Sound support enabled.", 23);
                             //    *soundEnabledShown = true;
                             //}
                             //*soundDisabledShown = false;
-                            tsl::notification->showImmediately(std::string("  ")+"Sound support enabled.", 23);
+                            tsl::notification->showNow(std::string("  ")+"Sound support enabled.", 23);
                         }
                     }
                 }
@@ -1775,11 +1775,12 @@ public:
     ) {
         if (currentValue.empty() && !initialState) currentValue = FALSE_STR;
 
-        auto forceSupportNotificationShown = std::make_shared<bool>(false);
+        //auto forceSupportNotificationShown = std::make_shared<bool>(false);
 
         auto* toggleListItem = new tsl::elm::ToggleListItem(label, initialState, ON, OFF);
         toggleListItem->setState(currentValue != FALSE_STR);
-        toggleListItem->setStateChangedListener([this, iniKey, listItem = toggleListItem, handleReload, forceSupportNotificationShown](bool state) {
+        toggleListItem->setStateChangedListener([this, iniKey, listItem = toggleListItem, handleReload](bool state) {
+        //toggleListItem->setStateChangedListener([this, iniKey, listItem = toggleListItem, handleReload, forceSupportNotificationShown](bool state) {
             tsl::Overlay::get()->getCurrentGui()->requestFocus(listItem, tsl::FocusDirection::None);
             setIniFileValue(this->settingsIniPath, this->entryName, iniKey, state ? TRUE_STR : FALSE_STR);
             if (handleReload) {
@@ -1788,10 +1789,11 @@ public:
             if (iniKey == "force_support") {
                 if (state && tsl::notification) {
                     // First time for THIS notification OR wait until not active
-                    if (!*forceSupportNotificationShown) {
-                        tsl::notification->showImmediately("  "+FORCED_SUPPORT_WARNING, 20);
-                        *forceSupportNotificationShown = true;
-                    }
+                    //if (!*forceSupportNotificationShown) {
+                    //    tsl::notification->showNow("  "+FORCED_SUPPORT_WARNING, 20);
+                    //    *forceSupportNotificationShown = true;
+                    //}
+                    tsl::notification->showNow("  "+FORCED_SUPPORT_WARNING, 20);
                 }
             }
         });
