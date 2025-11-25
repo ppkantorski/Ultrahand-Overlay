@@ -877,7 +877,7 @@ public:
             const std::string fullVersionLabel = cleanVersionLabel(parseValueFromIniSection((SETTINGS_PATH+"RELEASE.ini"), "Release Info", "latest_version"));
 
             if (isVersionGreaterOrEqual(fullVersionLabel.c_str(), APP_VERSION) && fullVersionLabel != APP_VERSION && tsl::notification) {
-                tsl::notification->show("  "+NEW_UPDATE_IS_AVAILABLE);
+                tsl::notification->showImmediately("  "+NEW_UPDATE_IS_AVAILABLE);
             
             }
 
@@ -1073,16 +1073,17 @@ public:
             auto lastSliderMB = std::make_shared<u32>(currentHeapMB);
             
             // Create trackers for each notification type
-            auto soundEnabledShown = std::make_shared<bool>(false);
-            auto wallpaperEnabledShown = std::make_shared<bool>(false);
-            auto wallpaperDisabledShown = std::make_shared<bool>(false);
-            auto soundDisabledShown = std::make_shared<bool>(false);
-            auto notEnoughMemoryShown = std::make_shared<bool>(false);
+            //auto soundEnabledShown = std::make_shared<bool>(false);
+            //auto wallpaperEnabledShown = std::make_shared<bool>(false);
+            //auto wallpaperDisabledShown = std::make_shared<bool>(false);
+            //auto soundDisabledShown = std::make_shared<bool>(false);
+            //auto notEnoughMemoryShown = std::make_shared<bool>(false);
             
             // Use simple callback - gets called when user releases the trackbar
-            heapTrackbar->setSimpleCallback([this, freeRamMB, lastSliderMB, soundEnabledShown, wallpaperEnabledShown, 
-                                              wallpaperDisabledShown, soundDisabledShown, notEnoughMemoryShown, 
-                                              customMemoryMB, hasIniEntry](s16 value, s16 index) {
+            heapTrackbar->setSimpleCallback([this, freeRamMB, lastSliderMB, customMemoryMB, hasIniEntry](s16 value, s16 index) {
+            //heapTrackbar->setSimpleCallback([this, freeRamMB, lastSliderMB, soundEnabledShown, wallpaperEnabledShown, 
+            //                                  wallpaperDisabledShown, soundDisabledShown, notEnoughMemoryShown, 
+            //                                  customMemoryMB, hasIniEntry](s16 value, s16 index) {
                 // Map step index → heap size
                 u64 newHeapBytes;
                 u32 newMB;
@@ -1129,10 +1130,11 @@ public:
                     if (static_cast<float>(newMB) > (totalAvailableMB - SAFETY_MARGIN_MB)) {
                         // Not enough memory - REJECT the change
                         if (tsl::notification) {
-                            if (!*notEnoughMemoryShown || !tsl::notification->isActive()) {
-                                tsl::notification->show(std::string("  ")+"Not enough memory.");
-                                *notEnoughMemoryShown = true;
-                            }
+                            //if (!*notEnoughMemoryShown) {
+                            //    tsl::notification->showImmediately(std::string("  ")+"Not enough memory.");
+                            //    *notEnoughMemoryShown = true;
+                            //}
+                            tsl::notification->showImmediately(std::string("  ")+"Not enough memory.");
                         }
                         setOverlayHeapSize(currentHeapSize);
                         this->exitOnBack = false;
@@ -1151,35 +1153,39 @@ public:
                         // Going down - check for disabled features
                         if (previousSliderMB >= 8 && newMB < 8) {
                             // Wallpaper disabled
-                            if (!*wallpaperDisabledShown || !tsl::notification->isActive()) {
-                                tsl::notification->show(std::string("  ")+"Wallpaper support disabled.", 23);
-                                *wallpaperDisabledShown = true;
-                            }
-                            *wallpaperEnabledShown = false;
+                            //if (!*wallpaperDisabledShown ) {
+                            //    tsl::notification->showImmediately(std::string("  ")+"Wallpaper support disabled.", 23);
+                            //    *wallpaperDisabledShown = true;
+                            //}
+                            //*wallpaperEnabledShown = false;
+                            tsl::notification->showImmediately(std::string("  ")+"Wallpaper support disabled.", 23);
                         } else if (previousSliderMB >= 6 && newMB < 6) {
                             // Sound disabled
-                            if (!*soundDisabledShown || !tsl::notification->isActive()) {
-                                tsl::notification->show(std::string("  ")+"Sound support disabled.", 23);
-                                *soundDisabledShown = true;
-                            }
-                            *soundEnabledShown = false;
+                            //if (!*soundDisabledShown) {
+                            //    tsl::notification->showImmediately(std::string("  ")+"Sound support disabled.", 23);
+                            //    *soundDisabledShown = true;
+                            //}
+                            //*soundEnabledShown = false;
+                            tsl::notification->showImmediately(std::string("  ")+"Sound support disabled.", 23);
                         }
                     } else if (isSliderGrowing) {
                         // Going up - check for enabled features
                         if (previousSliderMB < 8 && newMB >= 8) {
                             // Wallpaper enabled
-                            if (!*wallpaperEnabledShown || !tsl::notification->isActive()) {
-                                tsl::notification->show(std::string("  ")+"Wallpaper support enabled.", 23);
-                                *wallpaperEnabledShown = true;
-                            }
-                            *wallpaperDisabledShown = false;
+                            //if (!*wallpaperEnabledShown) {
+                            //    tsl::notification->showImmediately(std::string("  ")+"Wallpaper support enabled.", 23);
+                            //    *wallpaperEnabledShown = true;
+                            //}
+                            //*wallpaperDisabledShown = false;
+                            tsl::notification->showImmediately(std::string("  ")+"Wallpaper support enabled.", 23);
                         } else if (previousSliderMB < 6 && newMB >= 6) {
                             // Sound enabled
-                            if (!*soundEnabledShown || !tsl::notification->isActive()) {
-                                tsl::notification->show(std::string("  ")+"Sound support enabled.", 23);
-                                *soundEnabledShown = true;
-                            }
-                            *soundDisabledShown = false;
+                            //if (!*soundEnabledShown) {
+                            //    tsl::notification->showImmediately(std::string("  ")+"Sound support enabled.", 23);
+                            //    *soundEnabledShown = true;
+                            //}
+                            //*soundDisabledShown = false;
+                            tsl::notification->showImmediately(std::string("  ")+"Sound support enabled.", 23);
                         }
                     }
                 }
@@ -1782,8 +1788,8 @@ public:
             if (iniKey == "force_support") {
                 if (state && tsl::notification) {
                     // First time for THIS notification OR wait until not active
-                    if (!*forceSupportNotificationShown || !tsl::notification->isActive()) {
-                        tsl::notification->show("  "+FORCED_SUPPORT_WARNING, 20);
+                    if (!*forceSupportNotificationShown) {
+                        tsl::notification->showImmediately("  "+FORCED_SUPPORT_WARNING, 20);
                         *forceSupportNotificationShown = true;
                     }
                 }
