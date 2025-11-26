@@ -1666,7 +1666,7 @@ void drawTable(
 
             // Minimal branching, maximum cache efficiency
             if (useHeaderIndent) {
-                renderer->drawRect(x-2, y, 4, 22, (tsl::headerSeparatorColor));
+                renderer->drawRect(x-2, y, 4, 22, renderer->aWithOpacity(tsl::headerSeparatorColor));
             }
 
             // Convert to renderer colors once per frame
