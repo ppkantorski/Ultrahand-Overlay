@@ -4410,7 +4410,7 @@ void processCommand(const std::vector<std::string>& cmd, const std::string& pack
                 handleDeleteCommand(cmd, packagePath);
                 return;
             }
-            if (commandName == "download") {
+            if (commandName == "download" || commandName == "download-no-retry") {
                 if (cmdSize >= 3) {
                     std::string fileUrl = cmd[1];
                     preprocessUrl(fileUrl);
@@ -4418,20 +4418,22 @@ void processCommand(const std::vector<std::string>& cmd, const std::string& pack
                     preprocessPath(destinationPath, packagePath);
                     bool downloadSuccess = false;
                     
-                    {
-                        for (size_t i = 0; i < 3; ++i) {
-                            downloadSuccess = downloadFile(fileUrl, destinationPath);
-                            if (abortDownload.load(std::memory_order_acquire)) {
-                                downloadSuccess = false;
-                                break;
-                            }
-                            if (downloadSuccess) break;
-                            
-                            if (i < 2) {
-                                svcSleepThread(200'000'000);
-                            }
+                    const bool shouldRetry = (commandName == "download");
+                    const size_t maxAttempts = shouldRetry ? 3 : 1;
+                    
+                    for (size_t i = 0; i < maxAttempts; ++i) {
+                        downloadSuccess = downloadFile(fileUrl, destinationPath);
+                        if (abortDownload.load(std::memory_order_acquire)) {
+                            downloadSuccess = false;
+                            break;
+                        }
+                        if (downloadSuccess) break;
+                        
+                        if (shouldRetry && i < maxAttempts - 1) {
+                            svcSleepThread(200'000'000);
                         }
                     }
+                    
                     commandSuccess.store(
                         downloadSuccess && commandSuccess.load(std::memory_order_acquire),
                         std::memory_order_release

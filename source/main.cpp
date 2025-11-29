@@ -592,7 +592,7 @@ private:
                 
                 // Try #1: Update via update.ini
                 interpreterCommands.push_back({"delete", DOWNLOADS_PATH+"update.ini"});
-                interpreterCommands.push_back({"download", LATEST_UPDATER_INI_URL, DOWNLOADS_PATH}); // if fails, move to next try
+                interpreterCommands.push_back({"download-no-retry", LATEST_UPDATER_INI_URL, DOWNLOADS_PATH}); // if fails, move to next try
                 addBackupCommands();
                 interpreterCommands.push_back({"exec", "update", DOWNLOADS_PATH+"update.ini"});
                 interpreterCommands.push_back({"delete", DOWNLOADS_PATH+"update.ini"});
@@ -601,9 +601,9 @@ private:
                 
                 // Try #2: Update via sdout.zip
                 interpreterCommands.push_back({"try:"});
-                addBackupCommands();
                 interpreterCommands.push_back({"delete", DOWNLOADS_PATH+"sdout.zip"});
                 interpreterCommands.push_back({"download", ULTRAHAND_REPO_URL + "releases/latest/download/sdout.zip", DOWNLOADS_PATH});
+                addBackupCommands();
                 interpreterCommands.push_back({"unzip", DOWNLOADS_PATH+"sdout.zip", ROOT_PATH});
                 interpreterCommands.push_back({"delete", DOWNLOADS_PATH+"sdout.zip"});
                 addRestoreAndLoaderCommands();
