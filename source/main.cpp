@@ -7869,7 +7869,7 @@ int main(int argc, char* argv[]) {
         
         if (strcmp(argv[arg], "--package") == 0 && arg + 1 < argc) {
             selectedPackage.clear();
-            selectedPackage.reserve(128); // Reserve reasonable amount
+            selectedPackage.reserve(64); // Reserve reasonable amount
             
             for (u8 nextArg = arg + 1; nextArg < argc && argv[nextArg][0] != '-'; nextArg++) {
                 if (!selectedPackage.empty()) selectedPackage += ' ';
