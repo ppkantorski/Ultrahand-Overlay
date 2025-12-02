@@ -6549,37 +6549,44 @@ public:
                     // Check for single key press (no other keys)
                     const s64 cleanKeys = keys & ALL_KEYS_MASK;
                     
-                    if ((keys & KEY_A && cleanKeys == KEY_A) && !requiresAMS110Handling) {
-                        disableSound.store(true, std::memory_order_release);
-                        
-                        std::string useOverlayLaunchArgs, overlayLaunchArgs;
-                        {
-                            auto overlaysIniData = getParsedDataFromIniFile(OVERLAYS_INI_FILEPATH);
-                            auto sectionIt = overlaysIniData.find(overlayFileName);
-                            if (sectionIt != overlaysIniData.end()) {
-                                auto useArgsIt = sectionIt->second.find(USE_LAUNCH_ARGS_STR);
-                                if (useArgsIt != sectionIt->second.end()) useOverlayLaunchArgs = useArgsIt->second;
-                                auto argsIt = sectionIt->second.find(LAUNCH_ARGS_STR);
-                                if (argsIt != sectionIt->second.end()) overlayLaunchArgs = argsIt->second;
+                    if ((keys & KEY_A && cleanKeys == KEY_A)) {
+                        if (!requiresAMS110Handling) {
+                            disableSound.store(true, std::memory_order_release);
+                            
+                            std::string useOverlayLaunchArgs, overlayLaunchArgs;
+                            {
+                                auto overlaysIniData = getParsedDataFromIniFile(OVERLAYS_INI_FILEPATH);
+                                auto sectionIt = overlaysIniData.find(overlayFileName);
+                                if (sectionIt != overlaysIniData.end()) {
+                                    auto useArgsIt = sectionIt->second.find(USE_LAUNCH_ARGS_STR);
+                                    if (useArgsIt != sectionIt->second.end()) useOverlayLaunchArgs = useArgsIt->second;
+                                    auto argsIt = sectionIt->second.find(LAUNCH_ARGS_STR);
+                                    if (argsIt != sectionIt->second.end()) overlayLaunchArgs = argsIt->second;
+                                }
+                                removeQuotes(overlayLaunchArgs);
                             }
-                            removeQuotes(overlayLaunchArgs);
-                        }
+                            
+                            {
+                                auto iniData = getParsedDataFromIniFile(ULTRAHAND_CONFIG_INI_PATH);
+                                auto& ultrahandSection = iniData[ULTRAHAND_PROJECT_NAME];
+                                if (inHiddenMode.load(std::memory_order_acquire)) ultrahandSection[IN_HIDDEN_OVERLAY_STR] = TRUE_STR;
+                                ultrahandSection[IN_OVERLAY_STR] = TRUE_STR;
+                                saveIniFileData(ULTRAHAND_CONFIG_INI_PATH, iniData);
+                            }
+                            
+                            launchComboHasTriggered.store(true, std::memory_order_acquire);
+                            ult::launchingOverlay.store(true, std::memory_order_release);
+                            if (useOverlayLaunchArgs == TRUE_STR) tsl::setNextOverlay(overlayFile, overlayLaunchArgs);
+                            else tsl::setNextOverlay(overlayFile);
+                            
+                            tsl::Overlay::get()->close(true);
+                            return true;
                         
-                        {
-                            auto iniData = getParsedDataFromIniFile(ULTRAHAND_CONFIG_INI_PATH);
-                            auto& ultrahandSection = iniData[ULTRAHAND_PROJECT_NAME];
-                            if (inHiddenMode.load(std::memory_order_acquire)) ultrahandSection[IN_HIDDEN_OVERLAY_STR] = TRUE_STR;
-                            ultrahandSection[IN_OVERLAY_STR] = TRUE_STR;
-                            saveIniFileData(ULTRAHAND_CONFIG_INI_PATH, iniData);
+                        } else {
+                            if (tsl::notification) {
+                                tsl::notification->showNow(ult::NOTIFY_HEADER+INCOMPATIBLE_WARNING, 22);
+                            }
                         }
-                        
-                        launchComboHasTriggered.store(true, std::memory_order_acquire);
-                        ult::launchingOverlay.store(true, std::memory_order_release);
-                        if (useOverlayLaunchArgs == TRUE_STR) tsl::setNextOverlay(overlayFile, overlayLaunchArgs);
-                        else tsl::setNextOverlay(overlayFile);
-                
-                        tsl::Overlay::get()->close(true);
-                        return true;
                     }
                     
                     if (keys & STAR_KEY && cleanKeys == STAR_KEY) {
