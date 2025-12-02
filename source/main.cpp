@@ -90,7 +90,7 @@ static size_t nestedMenuCount = 0;
 
 // Command mode globals
 static const std::vector<std::string> commandSystems = {DEFAULT_STR, ERISTA_STR, MARIKO_STR};
-static const std::vector<std::string> commandModes = {DEFAULT_STR, SLOT_STR, TOGGLE_STR, OPTION_STR, FORWARDER_STR, TEXT_STR, TABLE_STR, TRACKBAR_STR, STEP_TRACKBAR_STR, NAMED_STEP_TRACKBAR_STR};
+static const std::vector<std::string> commandModes = {DEFAULT_STR, HOLD_STR, SLOT_STR, TOGGLE_STR, OPTION_STR, FORWARDER_STR, TEXT_STR, TABLE_STR, TRACKBAR_STR, STEP_TRACKBAR_STR, NAMED_STEP_TRACKBAR_STR};
 static const std::vector<std::string> commandGroupings = {DEFAULT_STR, "split", "split2", "split3", "split4", "split5"};
 static const std::string MODE_PATTERN = ";mode=";
 static const std::string GROUPING_PATTERN = ";grouping=";
@@ -312,13 +312,83 @@ bool handleRunningInterpreter(uint64_t& keysDown, uint64_t& keysHeld) {
 
 
 
-// Forward declaration of the MainMenu class.
-class MainMenu;
 
-
+static u64 holdStartTick = 0;
 static std::string lastSelectedListItemFooter;
+static std::vector<std::vector<std::string>> storedCommands;
+
+bool processHold(uint64_t keysDown, uint64_t keysHeld, u64& holdStartTick, bool& isHolding,
+                        std::function<void()> onComplete,
+                        std::function<void()> onRelease = nullptr,
+                        bool resetStoredCommands = false) {
+
+    if (!lastSelectedListItem) {
+        isHolding = false;
+        return false;
+    }
+
+    if (!(keysHeld & KEY_A)) {
+        // Key released — reset everything
+        triggerExitFeedback();
+        isHolding = false;
+        displayPercentage.store(0, std::memory_order_release);
+        runningInterpreter.store(false, std::memory_order_release);
+
+        if (resetStoredCommands) {
+            storedCommands.clear();
+            lastCommandMode.clear();
+            lastKeyName.clear();
+        }
+
+        if (lastSelectedListItem) {
+            lastSelectedListItem->setValue(resetStoredCommands ? lastSelectedListItemFooter : "", true);
+            if (resetStoredCommands) lastSelectedListItemFooter.clear();
+            lastSelectedListItem = nullptr;
+        }
+
+        if (onRelease) onRelease();
+        return true;
+    }
+
+    // Directional feedback
+    if (keysDown & KEY_UP) lastSelectedListItem->shakeHighlight(tsl::FocusDirection::Up);
+    else if (keysDown & KEY_DOWN) lastSelectedListItem->shakeHighlight(tsl::FocusDirection::Down);
+    else if (keysDown & KEY_LEFT) lastSelectedListItem->shakeHighlight(tsl::FocusDirection::Left);
+    else if (keysDown & KEY_RIGHT) lastSelectedListItem->shakeHighlight(tsl::FocusDirection::Right);
+
+    // Update hold progress
+    const u64 elapsedMs = armTicksToNs(armGetSystemTick() - holdStartTick) / 1000000;
+    const int percentage = std::min(100, static_cast<int>((elapsedMs * 100) / 5000));
+    displayPercentage.store(percentage, std::memory_order_release);
+
+    if (percentage > 20 && (percentage % 30) == 0)
+        triggerRumbleDoubleClick.store(true, std::memory_order_release);
+
+    // Completed hold
+    if (percentage >= 100) {
+        isHolding = false;
+        displayPercentage.store(-1, std::memory_order_release);
+
+        if (lastSelectedListItem) {
+            lastSelectedListItem->enableClickAnimation();
+            lastSelectedListItem->triggerClickAnimation();
+            lastSelectedListItem->disableClickAnimation();
+        }
+
+        if (onComplete) onComplete();
+
+        //lastSelectedListItem = nullptr;
+        return true;
+    }
+
+    return true; // Continue holding
+}
+
 static std::string returnJumpItemName;
 static std::string returnJumpItemValue;
+
+// Forward declaration of the MainMenu class.
+class MainMenu;
 
 class UltrahandSettingsMenu : public tsl::Gui {
 private:
@@ -1202,7 +1272,7 @@ public:
 
             // Add an "Exit Overlay System" menu item
             auto* exitItem = new tsl::elm::ListItem(EXIT_OVERLAY_SYSTEM, "", true);
-            exitItem->setValue("");
+            exitItem->setValue("", true);
             exitItem->setClickListener([this, exitItem](uint64_t keys) {
                 if ((keys & KEY_A) && !(keys & ~KEY_A & ALL_KEYS_MASK)) {
 
@@ -1531,68 +1601,12 @@ public:
         
         // Handle delete item continuous hold behavior
         if (isHolding) {
-            // Check if A key is still being held
-            if ((keysHeld & KEY_A)) {
-                if (keysDown & KEY_UP)
-                    lastSelectedListItem->shakeHighlight(tsl::FocusDirection::Up);
-                else if (keysDown & KEY_DOWN)
-                    lastSelectedListItem->shakeHighlight(tsl::FocusDirection::Down);
-                else if (keysDown & KEY_LEFT)
-                    lastSelectedListItem->shakeHighlight(tsl::FocusDirection::Left);
-                else if (keysDown & KEY_RIGHT)
-                    lastSelectedListItem->shakeHighlight(tsl::FocusDirection::Right);
-
-                // Update progress continuously using libnx timing
-                const u64 currentTick = armGetSystemTick();
-                const u64 elapsedTicks = currentTick - holdStartTick;
-                const u64 elapsedNs = armTicksToNs(elapsedTicks);
-                const u64 elapsedMs = elapsedNs / 1000000; // Convert nanoseconds to milliseconds
-                const int percentage = std::min(100, static_cast<int>((elapsedMs / 5000.0) * 100));
-                displayPercentage.store(percentage, std::memory_order_release);
-                if (percentage > 20 && percentage % 30 == 0) {
-                    triggerRumbleDoubleClick.store(true, std::memory_order_release);
+            processHold(keysDown, keysHeld, holdStartTick, isHolding, [this]() {
+                if (requestOverlayExit()) {
+                    ult::launchingOverlay.store(true, std::memory_order_release);
+                    tsl::Overlay::get()->close();
                 }
-
-                // Check if we've reached 100%
-                if (percentage >= 100) {
-                    isHolding = false;
-                    displayPercentage.store(0, std::memory_order_release);
-                    
-                    
-                    // Show completion
-                    if (lastSelectedListItem) {
-                        lastSelectedListItem->triggerClickAnimation();
-                        lastSelectedListItem->setValue(CHECKMARK_SYMBOL);
-                        lastSelectedListItem = nullptr;
-                    }
-                    //triggerRumbleDoubleClick.store(true, std::memory_order_release);
-                    //triggerMoveSound.store(true, std::memory_order_release);
-                    
-                    if (requestOverlayExit()) {
-                        // Optional: show toast "Exiting overlay system..."
-                        //tsl::goBack(4); // Go back to close current menu
-                        ult::launchingOverlay.store(true, std::memory_order_release);
-                        tsl::Overlay::get()->close(); // Close the overlay
-                    }
-
-                    return true;
-                }
-                
-                return true; // Continue holding
-            } else {
-                //triggerRumbleDoubleClick.store(true, std::memory_order_release);
-                //triggerExitSound.store(true, std::memory_order_release);
-                triggerExitFeedback();
-                // Key released - reset everything
-                isHolding = false;
-                displayPercentage.store(0, std::memory_order_release);
-                runningInterpreter.store(false, release);
-                if (lastSelectedListItem) {
-                    lastSelectedListItem->setValue("");
-                    lastSelectedListItem = nullptr;
-                }
-                return true;
-            }
+            });
         }
 
         const bool isRunningInterp = runningInterpreter.load(acquire);
@@ -1852,7 +1866,7 @@ public:
         addGap(list, 12);
 
         auto* deleteListItem = new tsl::elm::ListItem(isOverlay ? DELETE_OVERLAY : DELETE_PACKAGE);
-        deleteListItem->setValue("");
+        deleteListItem->setValue("", true);
         
         deleteListItem->setClickListener([this, deleteListItem](uint64_t keys) -> bool {
             if (runningInterpreter.load(std::memory_order_acquire))
@@ -2276,91 +2290,38 @@ public:
 
         // Handle delete item continuous hold behavior
         if (isHolding) {
-            // Check if A key is still being held
-            if ((keysHeld & KEY_A)) {
-                if (keysDown & KEY_UP)
-                    lastSelectedListItem->shakeHighlight(tsl::FocusDirection::Up);
-                else if (keysDown & KEY_DOWN)
-                    lastSelectedListItem->shakeHighlight(tsl::FocusDirection::Down);
-                else if (keysDown & KEY_LEFT)
-                    lastSelectedListItem->shakeHighlight(tsl::FocusDirection::Left);
-                else if (keysDown & KEY_RIGHT)
-                    lastSelectedListItem->shakeHighlight(tsl::FocusDirection::Right);
-
-                // Update progress continuously using libnx timing
-                const u64 currentTick = armGetSystemTick();
-                const u64 elapsedTicks = currentTick - holdStartTick;
-                const u64 elapsedNs = armTicksToNs(elapsedTicks);
-                const u64 elapsedMs = elapsedNs / 1000000; // Convert nanoseconds to milliseconds
-                const int percentage = std::min(100, static_cast<int>((elapsedMs / 5000.0) * 100));
-                displayPercentage.store(percentage, std::memory_order_release);
-                if (percentage > 20 && percentage % 30 == 0) {
+            processHold(keysDown, keysHeld, holdStartTick, isHolding, [this]() {
+                std::string targetPath;
+                bool hasTarget = false;
+        
+                if (!entryName.empty() && entryMode == OVERLAY_STR) {
+                    targetPath = OVERLAY_PATH + entryName;
+                    hasTarget = true;
+                } else if (!entryName.empty()) {
+                    targetPath = PACKAGE_PATH + entryName + "/";
+                    hasTarget = true;
+                }
+        
+                if (hasTarget) {
+                    deleteFileOrDirectory(targetPath);
+                    removeIniSection(settingsIniPath, entryName);
+        
+                    if (lastSelectedListItem) {
+                        //lastSelectedListItem->enableClickAnimation();
+                        //lastSelectedListItem->triggerClickAnimation();
+                        lastSelectedListItem->setValue(CHECKMARK_SYMBOL);
+                        //lastSelectedListItem->disableClickAnimation();
+                        lastSelectedListItem = nullptr;
+                    }
+        
                     triggerRumbleDoubleClick.store(true, std::memory_order_release);
-                }
-
-                // Check if we've reached 100%
-                if (percentage >= 100) {
-                    isHolding = false;
-                    displayPercentage.store(0, std::memory_order_release);
-                    
-                    // Determine what to delete based on current menu context
-                    std::string targetPath;
-                    bool hasTarget = false;
-                    
-                    // Check if we're in settings menu with an overlay selected
-                    if (!entryName.empty() && entryMode == OVERLAY_STR) {
-                        // Delete overlay file
-                        targetPath = OVERLAY_PATH + entryName;
-                        hasTarget = true;
-                    } else if (!entryName.empty()) {
-                        // Delete package folder
-                        targetPath = PACKAGE_PATH + entryName + "/";
-                        hasTarget = true;
-                    }
-                    
-                    if (hasTarget) {
-                        // Perform the deletion
-                        deleteFileOrDirectory(targetPath);
-
-                        // Remove ini settings
-                        removeIniSection(settingsIniPath, entryName);
-                        
-                        // Show completion
-                        if (lastSelectedListItem) {
-                            lastSelectedListItem->triggerClickAnimation();
-                            lastSelectedListItem->setValue(CHECKMARK_SYMBOL);
-                            lastSelectedListItem = nullptr;
-                        }
-                        triggerRumbleDoubleClick.store(true, std::memory_order_release);
-                        triggerMoveSound.store(true, std::memory_order_release);
-
-                        runAfter = true; // perform transition after
-                    } else {
-                        // No valid target found
-                        if (lastSelectedListItem) {
-                            lastSelectedListItem->setValue(CROSSMARK_SYMBOL);
-                            lastSelectedListItem = nullptr;
-                        }
-                    }
-                    
-                    return true;
-                }
-                
-                return true; // Continue holding
-            } else {
-                //triggerRumbleDoubleClick.store(true, std::memory_order_release);
-                //triggerExitSound.store(true, std::memory_order_release);
-                triggerExitFeedback();
-                // Key released - reset everything
-                isHolding = false;
-                displayPercentage.store(0, std::memory_order_release);
-                runningInterpreter.store(false, release);
-                if (lastSelectedListItem) {
-                    lastSelectedListItem->setValue("");
+                    triggerMoveSound.store(true, std::memory_order_release);
+                    runAfter = true;
+                } else if (lastSelectedListItem) {
+                    lastSelectedListItem->setValue(CROSSMARK_SYMBOL);
                     lastSelectedListItem = nullptr;
                 }
-                return true;
-            }
+            }, nullptr, false); // false = do NOT reset storedCommands
         }
 
 
@@ -4074,6 +4035,10 @@ struct ReturnContext {
     }
 };
 
+
+//static std::vector<std::vector<std::string>> storedCommands;
+
+
 //ReturnContext returnTo;
 static std::stack<ReturnContext> returnContextStack;
 
@@ -5329,18 +5294,21 @@ bool drawCommandsMenu(
                     if (!isDirectory(tmpSelectedItem))
                         dropExtension(itemName);
                     parentDirName = getParentDirNameFromPath(selectedItem);
-                    if (commandMode == DEFAULT_STR  || commandMode == SLOT_STR || commandMode == OPTION_STR) { // for handiling toggles
+                    if (commandMode == DEFAULT_STR  || commandMode == SLOT_STR || commandMode == OPTION_STR || commandMode == HOLD_STR) { // for handiling toggles
                         cleanOptionName = optionName;
                         //removeTag(cleanOptionName);
                         tsl::elm::ListItem* listItem = new tsl::elm::ListItem(cleanOptionName, "", isMini, true);
-                        if (commandMode == DEFAULT_STR)
+                        if (commandMode == DEFAULT_STR || commandMode == HOLD_STR)
                             listItem->setValue(footer, true);
                         else
                             listItem->setValue(footer);
                         
-                        
+
+                        if (commandMode == HOLD_STR)
+                            listItem->disableClickAnimation();
+
                         listItem->setClickListener([i, commands, keyName = originalOptionName, cleanOptionName, packagePath, packageName,
-                            selectedItem, listItem, lastPackageHeader, commandMode, showWidget](uint64_t keys) {
+                            selectedItem, listItem, lastPackageHeader, commandMode, footer, showWidget](uint64_t keys) {
                             
                             if (runningInterpreter.load(acquire)) {
                                 return false;
@@ -5351,13 +5319,25 @@ bool drawCommandsMenu(
                             }
 
                             if (((keys & KEY_A && !(keys & ~KEY_A & ALL_KEYS_MASK)))) {
-                                
                                 isDownloadCommand.store(false, release);
                                 runningInterpreter.store(true, release);
+
+                                auto modifiedCmds = getSourceReplacement(commands, selectedItem, i, packagePath);
+                                if (commandMode == HOLD_STR) {
+                                    lastSelectedListItemFooter = footer;
+                                    listItem->setValue(INPROGRESS_SYMBOL);
+                                    lastSelectedListItem = listItem;
+                                    holdStartTick = armGetSystemTick();
+                                    storedCommands = std::move(modifiedCmds);
+                                    lastCommandMode = commandMode;
+                                    lastKeyName = keyName;
+                                    return true;
+                                }
+
                                 //logMessage("selectedItem: "+selectedItem+" keyName: "+keyName);
-                                executeInterpreterCommands(getSourceReplacement(commands, selectedItem, i, packagePath), packagePath, keyName);
+                                executeInterpreterCommands(std::move(modifiedCmds), packagePath, keyName);
                                 //startInterpreterThread(packagePath);
-                                listItem->disableClickAnimation();
+                                //listItem->disableClickAnimation();
                                 listItem->setValue(INPROGRESS_SYMBOL);
                                 
                                 //lastSelectedListItem = nullptr;
@@ -5372,18 +5352,6 @@ bool drawCommandsMenu(
                                 return true;
                             }  else if (keys & SCRIPT_KEY && !(keys & ~SCRIPT_KEY & ALL_KEYS_MASK)) {
                                 const bool isFromMainMenu = (packagePath == PACKAGE_PATH);
-                                //if (inMainMenu) {
-                                //    isFromMainMenu = true;
-                                //    inMainMenu.store(false, std::memory_order_release);
-                                //}
-                                //if (inPackageMenu) {
-                                //    inPackageMenu = false;
-                                //    lastMenu = "packageMenu";
-                                //}
-                                //if (inSubPackageMenu) {
-                                //    inSubPackageMenu = false;
-                                //    lastMenu = "subPackageMenu";
-                                //}
                                 auto modifiedCmds = getSourceReplacement(commands, selectedItem, i, packagePath);
                                 applyPlaceholderReplacementsToCommands(modifiedCmds, packagePath);
                                 tsl::changeTo<ScriptOverlay>(std::move(modifiedCmds), packagePath, keyName, isFromMainMenu ? "main" : "package", false, lastPackageHeader, showWidget);
@@ -5709,7 +5677,27 @@ public:
      * @return `true` if the input was handled within the overlay, `false` otherwise.
      */
     virtual bool handleInput(uint64_t keysDown, uint64_t keysHeld, touchPosition touchInput, JoystickPosition leftJoyStick, JoystickPosition rightJoyStick) override {
-    
+        
+        bool isHolding = (lastCommandMode == HOLD_STR && runningInterpreter.load(std::memory_order_acquire));
+        if (isHolding) {
+            processHold(keysDown, keysHeld, holdStartTick, isHolding, [&]() {
+                // Execute interpreter commands if needed
+                displayPercentage.store(-1, std::memory_order_release);
+                lastCommandMode.clear();
+                lastKeyName.clear();
+                lastSelectedListItem->setValue(INPROGRESS_SYMBOL);
+                //lastSelectedListItemFooter.clear();
+                //lastSelectedListItem->enableClickAnimation();
+                //lastSelectedListItem->triggerClickAnimation();
+                //lastSelectedListItem->disableClickAnimation();
+                triggerEnterFeedback();
+                executeInterpreterCommands(std::move(storedCommands), packagePath, lastKeyName);
+                lastRunningInterpreter.store(true, std::memory_order_release);
+            }, nullptr, true); // true = reset storedCommands
+            return true;
+        }
+        
+
         const bool isRunningInterp = runningInterpreter.load(acquire);
         const bool isTouching = stillTouching.load(acquire);
         
@@ -6685,14 +6673,14 @@ public:
             #if !USING_FSTREAM_DIRECTIVE
             FILE* packageFileOut = fopen((PACKAGE_PATH + PACKAGE_FILENAME).c_str(), "w");
             if (packageFileOut) {
-                static constexpr const char packageContent[] = "[*Reboot To]\n[*Boot Entry]\nini_file_source /bootloader/hekate_ipl.ini\nfilter config\nreboot boot '{ini_file_source(*)}'\n[hekate - \uE073]\nreboot HEKATE\n[hekate UMS - \uE073\uE08D]\nreboot UMS\n\n[Commands]\n[Shutdown - \uE0F3]\nshutdown\n";
+                static constexpr const char packageContent[] = "[*Reboot To]\n[*Boot Entry]\nini_file_source /bootloader/hekate_ipl.ini\nfilter config\nreboot boot '{ini_file_source(*)}'\n[hekate - \uE073]\nreboot HEKATE\n[hekate UMS - \uE073\uE08D]\nreboot UMS\n\n[Commands]\n[Shutdown - ]\n;mode=hold\nshutdown\n";
                 fwrite(packageContent, sizeof(packageContent) - 1, 1, packageFileOut);
                 fclose(packageFileOut);
             }
             #else
             std::ofstream packageFileOut(PACKAGE_PATH + PACKAGE_FILENAME);
             if (packageFileOut) {
-                packageFileOut << "[*Reboot To]\n[*Boot Entry]\nini_file_source /bootloader/hekate_ipl.ini\nfilter config\nreboot boot '{ini_file_source(*)}'\n[hekate - \uE073]\nreboot HEKATE\n[hekate UMS - \uE073\uE08D]\nreboot UMS\n\n[Commands]\n[Shutdown - \uE0F3]\nshutdown\n";
+                packageFileOut << "[*Reboot To]\n[*Boot Entry]\nini_file_source /bootloader/hekate_ipl.ini\nfilter config\nreboot boot '{ini_file_source(*)}'\n[hekate - \uE073]\nreboot HEKATE\n[hekate UMS - \uE073\uE08D]\nreboot UMS\n\n[Commands]\n[Shutdown - ]\n;mode=hold\nshutdown\n";
                 packageFileOut.close();
             }
             #endif
@@ -7036,6 +7024,26 @@ public:
      * @return `true` if the input was handled within the overlay, `false` otherwise.
      */
     virtual bool handleInput(uint64_t keysDown, uint64_t keysHeld, touchPosition touchInput, JoystickPosition leftJoyStick, JoystickPosition rightJoyStick) override {
+        
+        bool isHolding = (lastCommandMode == HOLD_STR && runningInterpreter.load(std::memory_order_acquire));
+        if (isHolding) {
+            processHold(keysDown, keysHeld, holdStartTick, isHolding, [&]() {
+                // Execute interpreter commands if needed
+                displayPercentage.store(-1, std::memory_order_release);
+                lastCommandMode.clear();
+                lastKeyName.clear();
+                lastSelectedListItem->setValue(INPROGRESS_SYMBOL);
+                //lastSelectedListItemFooter.clear();
+                //lastSelectedListItem->enableClickAnimation();
+                //lastSelectedListItem->triggerClickAnimation();
+                //lastSelectedListItem->disableClickAnimation();
+                triggerEnterFeedback();
+                executeInterpreterCommands(std::move(storedCommands), packageIniPath, lastKeyName);
+                lastRunningInterpreter.store(true, std::memory_order_release);
+            }, nullptr, true); // true = reset storedCommands
+            return true;
+        }
+
         if (ult::launchingOverlay.load(acquire)) return true;
 
         const bool isRunningInterp = runningInterpreter.load(acquire);

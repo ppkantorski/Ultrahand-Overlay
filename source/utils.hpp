@@ -3094,6 +3094,10 @@ bool applyPlaceholderReplacements(std::vector<std::string>& cmd, const std::stri
             //std::string hexValue = placeholder.substr(startPos, placeholder.find(")") - startPos);
             return returnOrNull(hexToDecimal(placeholder.substr(startPos, placeholder.find(")") - startPos)));
         }},
+        {"{base64_decode(", [&](const std::string& placeholder) {
+            const size_t startPos = placeholder.find("(") + 1;
+            return returnOrNull(decodeBase64ToString(placeholder.substr(startPos, placeholder.find(")") - startPos)));
+        }},
         {"{random(", [&](const std::string& placeholder) {
             std::srand(std::time(0));
             
