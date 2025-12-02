@@ -6586,6 +6586,8 @@ public:
                             if (tsl::notification) {
                                 tsl::notification->showNow(ult::NOTIFY_HEADER+INCOMPATIBLE_WARNING, 22);
                             }
+                            
+                            return true;
                         }
                     }
                     
