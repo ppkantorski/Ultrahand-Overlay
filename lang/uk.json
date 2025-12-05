@@ -75,7 +75,7 @@
     "VENDOR": "Виробник",
     "MODEL": "Модель",
     "STORAGE": "Сховище",
-    "INCOMPATIBLE_WARNING": "Incompatible on AMS v1.10+",
+    "INCOMPATIBLE_WARNING": "Несумісно з AMS v1.10+",
     "SYSTEM_RAM": "ОЗУ системи",
     "FREE": "вільно",
     "OVERLAY_MEMORY": "Пам’ять оверлея",
