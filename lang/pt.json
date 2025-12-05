@@ -76,7 +76,7 @@
     "MODEL": "Modelo",
     "STORAGE": "Armazenamento",
     "NOTICE": "Aviso",
-    "UTILIZES": "Utiliza",
+    "INCOMPATIBLE_WARNING": "Incompatible on AMS v1.10+",
     "SYSTEM_RAM": "RAM do sistema",
     "FREE": "livre",
     "OVERLAY_MEMORY": "Memória de sobreposição",
