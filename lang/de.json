@@ -77,6 +77,7 @@
     "STORAGE": "Speicherplatz",
     "NOTICE": "Hinweis",
     "UTILIZES": "Verwendet",
+    "INCOMPATIBLE_WARNING": "Incompatible on AMS v1.10+",
     "SYSTEM_RAM": "System-RAM",
     "FREE": "frei",
     "OVERLAY_MEMORY": "Overlay-Speicher",
