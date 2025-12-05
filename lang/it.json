@@ -77,6 +77,7 @@
     "STORAGE": "Archiviazione",
     "NOTICE": "Nota",
     "UTILIZES": "Utilizza",
+    "INCOMPATIBLE_WARNING": "Incompatible on AMS v1.10+",
     "SYSTEM_RAM": "RAM sistema",
     "FREE": "libero",
     "OVERLAY_MEMORY": "Memoria sovrapposizione",
