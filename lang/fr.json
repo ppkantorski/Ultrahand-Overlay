@@ -75,7 +75,6 @@
     "VENDOR": "Fabricant",
     "MODEL": "Modèle",
     "STORAGE": "Stockage",
-    "NOTICE": "Note",
     "INCOMPATIBLE_WARNING": "Incompatible on AMS v1.10+",
     "SYSTEM_RAM": "RAM système",
     "FREE": "libre",
