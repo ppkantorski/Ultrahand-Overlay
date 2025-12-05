@@ -75,7 +75,7 @@
     "VENDOR": "ベンダー",
     "MODEL": "モデル",
     "STORAGE": "ストレージ",
-    "INCOMPATIBLE_WARNING": "Incompatible on AMS v1.10+",
+    "INCOMPATIBLE_WARNING": "AMS v1.10+ と互換性がありません",
     "SYSTEM_RAM": "システムRAM",
     "FREE": "空き",
     "OVERLAY_MEMORY": "オーバーレイメモリ",
