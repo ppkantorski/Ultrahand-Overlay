@@ -75,7 +75,7 @@
     "VENDOR": "厂商",
     "MODEL": "型号",
     "STORAGE": "存储",
-    "INCOMPATIBLE_WARNING": "Incompatible on AMS v1.10+",
+    "INCOMPATIBLE_WARNING": "与 AMS v1.10+ 不兼容",
     "SYSTEM_RAM": "系统内存",
     "FREE": "剩余",
     "OVERLAY_MEMORY": "插件内存",
