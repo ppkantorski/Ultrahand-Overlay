@@ -2652,7 +2652,7 @@ public:
             constexpr size_t tableColumnOffset = 163;
             constexpr size_t tableStartGap = 20;
             constexpr size_t tableEndGap = 9;
-            constexpr size_t tableSpacing = 10;
+            constexpr size_t tableSpacing = 4;
             const std::string& tableSectionTextColor = DEFAULT_STR;
             const std::string& tableInfoTextColor = DEFAULT_STR;
             const std::string& tableAlignment = LEFT_STR;
@@ -2676,7 +2676,7 @@ public:
 
             if (!packageSourcePath.empty()) {
 
-                std::vector<std::string> sourceCommands = readListFromFile(packageSourcePath);
+                std::vector<std::string> sourceCommands = readListFromFile(packageSourcePath, 0, true);
                 sectionLines.clear();
                 //sectionLines.shrink_to_fit();
                 infoLines.clear();
@@ -2933,7 +2933,14 @@ public:
         bool inEristaSection = false;
         bool inMarikoSection = false;
         std::string currentSection = GLOBAL_STR;
-        std::string iniFilePath;
+
+        // Track all source file paths for placeholder replacement
+        std::string _iniFilePath;
+        std::string _hexFilePath;
+        std::string _listString;
+        std::string _listFilePath;
+        std::string _jsonString;
+        std::string _jsonFilePath;
         
         
         // Use string_view for read-only operations to avoid copying
@@ -2947,15 +2954,28 @@ public:
         static const size_t GROUPING_PATTERN_LEN = GROUPING_PATTERN.length();
         static const size_t SELECTION_MINI_PATTERN_LEN = SELECTION_MINI_PATTERN.length();
         static const size_t PROGRESS_PATTERN_LEN = PROGRESS_PATTERN.length();
-    
-        updateGeneralPlaceholders();
+        
+        bool afterSource = false;
+        //updateGeneralPlaceholders();
         
         for (auto& cmd : selectionCommands) {
-            // Apply placeholder replacements in-place
-            for (auto& arg : cmd) {
-                replacePlaceholdersInArg(arg, generalPlaceholders);
+
+            if (afterSource) {
+                // Apply placeholder replacements in-place
+                for (auto& arg : cmd) {
+                    replacePlaceholdersInArg(arg, generalPlaceholders);
+                }
+                static bool runOnce = true;
+                if (runOnce) {
+                    _iniFilePath = "";
+                    _hexFilePath = "";
+                    _listString = "";
+                    _listFilePath = "";
+                    _jsonString = "";
+                    _jsonFilePath = "";
+                }
             }
-    
+
             const std::string& commandName = cmd[0]; // Now assigns to string_view - no copy
     
             // Keep original case-insensitive logic
@@ -3005,13 +3025,35 @@ public:
                 }
     
                 if (cmd.size() > 1) {
-                    if (!iniFilePath.empty()) {
-                        applyReplaceIniPlaceholder(cmd[1], INI_FILE_STR, iniFilePath);
-                    }
+                    // Apply ALL placeholder replacements using the comprehensive function
+                    // This handles nesting, recursion, and proper order automatically
+                    if (!afterSource)
+                        applyPlaceholderReplacements(cmd, _hexFilePath, _iniFilePath, _listString, _listFilePath, _jsonString, _jsonFilePath);
     
+                    // Now handle source declarations
                     if (commandName == "ini_file") {
-                        iniFilePath = cmd[1];
-                        preprocessPath(iniFilePath, filePath);
+                        _iniFilePath = cmd[1];
+                        preprocessPath(_iniFilePath, filePath);
+                        continue;
+                    } else if (commandName == "hex_file") {
+                        _hexFilePath = cmd[1];
+                        preprocessPath(_hexFilePath, filePath);
+                        continue;
+                    } else if (commandName == "list") {
+                        _listString = cmd[1];
+                        removeQuotes(_listString);
+                        continue;
+                    } else if (commandName == "list_file") {
+                        _listFilePath = cmd[1];
+                        preprocessPath(_listFilePath, filePath);
+                        continue;
+                    } else if (commandName == "json") {
+                        _jsonString = cmd[1];
+                        removeQuotes(_jsonString);
+                        continue;
+                    } else if (commandName == "json_file") {
+                        _jsonFilePath = cmd[1];
+                        preprocessPath(_jsonFilePath, filePath);
                         continue;
                     } else if (commandName == "filter") {
                         // Avoid copying by directly assigning and then processing
@@ -3085,6 +3127,7 @@ public:
                             //tempFiles.clear();
                             sourceTypeOff = FILE_STR;
                         }
+                        afterSource = true;
                     } else if (commandName == "json_file_source") {
                         sourceType = JSON_FILE_STR;
                         if (currentSection == GLOBAL_STR) {
@@ -3105,6 +3148,7 @@ public:
                             if (cmd.size() > 2)
                                 jsonKeyOff = cmd[2];
                         }
+                        afterSource = true;
                     } else if (commandName == "list_file_source") {
                         sourceType = LIST_FILE_STR;
                         if (currentSection == GLOBAL_STR) {
@@ -3119,6 +3163,7 @@ public:
                             preprocessPath(listPathOff, filePath);
                             sourceTypeOff = LIST_FILE_STR;
                         }
+                        afterSource = true;
                     } else if (commandName == "list_source") {
                         sourceType = LIST_STR;
                         if (currentSection == GLOBAL_STR) {
@@ -3133,6 +3178,7 @@ public:
                             removeQuotes(listStringOff);
                             sourceTypeOff = LIST_STR;
                         }
+                        afterSource = true;
                     } else if (commandName == "ini_file_source") {
                         sourceType = INI_FILE_STR;
                         if (currentSection == GLOBAL_STR) {
@@ -3147,6 +3193,7 @@ public:
                             preprocessPath(iniPathOff, filePath);
                             sourceTypeOff = INI_FILE_STR;
                         }
+                        afterSource = true;
                     } else if (commandName == "json_source") {
                         sourceType = JSON_STR;
                         if (currentSection == GLOBAL_STR) {
@@ -3173,6 +3220,7 @@ public:
                                 removeQuotes(jsonKeyOff);
                             }
                         }
+                        afterSource = true;
                     }
                 }
 
@@ -3619,6 +3667,8 @@ public:
     
                         auto modifiedCmds = getSourceReplacement(selectionCommands, selectedItem, i, filePath);
                         applyPlaceholderReplacementsToCommands(modifiedCmds, filePath);
+                        tsl::elm::g_cachedTop.disabled = true;
+                        tsl::elm::g_cachedBottom.disabled = true;
                         tsl::changeTo<ScriptOverlay>(std::move(modifiedCmds), filePath, itemName, "selection", false, currentPackageHeader, showWidget);
                         return true;
                     }
@@ -3727,6 +3777,8 @@ public:
                     // Custom logic for SCRIPT_KEY handling
                     auto modifiedCmds = getSourceReplacement(state ? selectionCommandsOn : selectionCommandsOff, currentSelectedItems[i], i, filePath);
                     applyPlaceholderReplacementsToCommands(modifiedCmds, filePath);
+                    tsl::elm::g_cachedTop.disabled = true;
+                    tsl::elm::g_cachedBottom.disabled = true;
                     tsl::changeTo<ScriptOverlay>(std::move(modifiedCmds), filePath, itemName, "selection", false, currentPackageHeader, showWidget);
                 });
     
@@ -3825,7 +3877,7 @@ public:
                 }
         
                 lastSelectedListItem->enableClickAnimation();
-                lastSelectedListItem = nullptr;
+                //lastSelectedListItem = nullptr;
             }
         
             closeInterpreterThread();
@@ -6673,7 +6725,7 @@ public:
             #if !USING_FSTREAM_DIRECTIVE
             FILE* packageFileOut = fopen((PACKAGE_PATH + PACKAGE_FILENAME).c_str(), "w");
             if (packageFileOut) {
-                static constexpr const char packageContent[] = "[*Reboot To]\n[*Boot Entry]\nini_file_source /bootloader/hekate_ipl.ini\nfilter config\nreboot boot '{ini_file_source(*)}'\n[hekate - \uE073]\nreboot HEKATE\n[hekate UMS - \uE073\uE08D]\nreboot UMS\n\n[Commands]\n[Shutdown - ]\n;mode=hold\nshutdown\n";
+                constexpr const char packageContent[] = "[*Reboot To]\n[*Boot Entry]\nini_file_source /bootloader/hekate_ipl.ini\nfilter config\nreboot boot '{ini_file_source(*)}'\n[hekate - \uE073]\nreboot HEKATE\n[hekate UMS - \uE073\uE08D]\nreboot UMS\n\n[Commands]\n[Shutdown - ]\n;mode=hold\nshutdown\n";
                 fwrite(packageContent, sizeof(packageContent) - 1, 1, packageFileOut);
                 fclose(packageFileOut);
             }
@@ -7002,7 +7054,7 @@ public:
             
             const PackageHeader packageHeader = getPackageHeaderFromIni(PACKAGE_PATH);
             noClickableItems = drawCommandsMenu(list, packageIniPath, packageConfigIniPath, packageHeader, "", pageLeftName, pageRightName,
-                PACKAGE_PATH, "left", "package.ini", this->dropdownSection, 0, pathPattern, pathPatternOn, pathPatternOff, usingPages, false);
+                PACKAGE_PATH, LEFT_STR, "package.ini", this->dropdownSection, 0, pathPattern, pathPatternOn, pathPatternOff, usingPages, false);
     
             if (!hideUserGuide && dropdownSection.empty()) addHelpInfo(list);
         }
@@ -7763,24 +7815,8 @@ public:
         // Default behavior - load main menu
         return initially<MainMenu>();
     }
-
-
-    //static constexpr SocketInitConfig socketInitConfig = {
-    //    // TCP buffers
-    //    .tcp_tx_buf_size     = 32768,   // 0x8000 = 32 KB
-    //    .tcp_rx_buf_size     = 32768,   // 0x8000 = 32 KB
-    //    .tcp_tx_buf_max_size = 131072/2,  // 0x20000 = 128 KB
-    //    .tcp_rx_buf_max_size = 131072/2,  // 0x20000 = 128 KB
-    //
-    //    // UDP buffers
-    //    .udp_tx_buf_size     = 512,    // 0x400 = 1 KB
-    //    .udp_rx_buf_size     = 512,    // 0x400 = 1 KB
-    //
-    //    // Socket buffer efficiency
-    //    .sb_efficiency       = 1,       // 1 = prioritize memory efficiency
-    //    .bsd_service_type    = BsdServiceType_Auto
-    //};
-
+    
+    
     /**
      * @brief Initializes essential services and resources.
      *

@@ -1269,6 +1269,7 @@ std::string getFirstSectionText(const std::vector<std::vector<std::string>>& tab
             } else if (commandName == JSON_STR) {
                 if (cmdSize >= 2) {
                     jsonString = cmd[1];
+                    removeQuotes(jsonString);
                     // Process jsonString if needed
                 }
             } else if (commandName == JSON_FILE_STR) {
@@ -1513,7 +1514,7 @@ static bool buildTableDrawerLines(
                 if (cmd[0] == "list_file_source" && cmd.size() >= 2 && listFileSourcePath.empty()) {
                     listFileSourcePath = cmd[1];
                     preprocessPath(listFileSourcePath, packagePath);
-                    lines = readListFromFile(listFileSourcePath);
+                    lines = readListFromFile(listFileSourcePath, 0, true);
                     for (const auto& line : lines) {
                         baseSection.push_back(line);
                         baseInfo.push_back("");
@@ -1529,6 +1530,7 @@ static bool buildTableDrawerLines(
                 }
                 else if (cmd[0] == JSON_STR && cmd.size() >= 2) {
                     jsonString = cmd[1];
+                    removeQuotes(jsonString);
                 }
                 else if (cmd[0] == JSON_FILE_STR && cmd.size() >= 2) {
                     jsonPath = cmd[1];
@@ -2230,17 +2232,6 @@ void applyReplaceIniPlaceholder(std::string& arg, const std::string& commandName
  * @brief Replaces a JSON source placeholder with the actual JSON source.
  *
  * Optimized version with variables moved to usage scope to avoid repeated allocations.
- *
- * @param arg The input string containing the placeholder.
- * @param commandName The name of the JSON command (e.g., "json", "json_file").
- * @param jsonPathOrString The path to the JSON file or the JSON string itself.
- * @return std::string The input string with the placeholder replaced by the actual JSON source,
- *                   or the original input string if replacement failed or jsonDict is nullptr.
- */
-/**
- * @brief Replaces a JSON source placeholder with the actual JSON source.
- *
- * Optimized version with variables moved outside loops to avoid repeated allocations.
  *
  * @param arg The input string containing the placeholder.
  * @param commandName The name of the JSON command (e.g., "json", "json_file").
@@ -2967,9 +2958,9 @@ bool replacePlaceholdersRecursively(
 
                 // Call the replacer on the resolved placeholder
                 replacement = replacer(resolvedPlaceholder);
-                if (replacement.empty()) {
-                    replacement = NULL_STR; // preserve your NULL_STR convention
-                }
+                //if (replacement.empty()) {
+                //    replacement = NULL_STR; // preserve your NULL_STR convention
+                //}
 
                 // Perform replacement if it changes anything
                 const std::string before = arg;
@@ -3334,6 +3325,7 @@ bool applyPlaceholderReplacementsToCommands(std::vector<std::vector<std::string>
             shouldKeep = false;
         } else if (commandName == JSON_STR && cmdSize >= 2) {
             jsonString = cmd[1];
+            removeQuotes(jsonString);
             shouldKeep = false;
         } else if (commandName == JSON_FILE_STR && cmdSize >= 2) {
             jsonPath = cmd[1];
@@ -3641,6 +3633,7 @@ bool interpretAndExecuteCommands(std::vector<std::vector<std::string>>&& command
         else if (commandName == JSON_STR) {
             if (cmdSize >= 2) {
                 jsonString = cmd[1];
+                removeQuotes(jsonString);  // ADD THIS LINE
             }
         } 
         else if (commandName == JSON_FILE_STR) {
@@ -4131,12 +4124,7 @@ void handleIniCommands(const std::vector<std::string>& cmd, const std::string& p
         std::string desiredKey = cmd[3];
         removeQuotes(desiredKey);
         
-        std::string desiredValue;
-        for (size_t i = 4; i < cmdSize; ++i) {
-            if (i > 4)
-                desiredValue += ' ';
-            desiredValue += cmd[i];
-        }
+        std::string desiredValue = cmd[4];
         removeQuotes(desiredValue);
         
         setIniFileValue(sourcePath, desiredSection, desiredKey, desiredValue);
@@ -4145,15 +4133,36 @@ void handleIniCommands(const std::vector<std::string>& cmd, const std::string& p
         std::string desiredKey = cmd[3];
         removeQuotes(desiredKey);
         
-        std::string desiredNewKey;
-        for (size_t i = 4; i < cmdSize; ++i) {
-            if (i > 4)
-                desiredNewKey += ' ';
-            desiredNewKey += cmd[i];
-        }
+        std::string desiredNewKey = cmd[4];
         removeQuotes(desiredNewKey);
         
         setIniFileKey(sourcePath, desiredSection, desiredKey, desiredNewKey);
+    } else if (command == "set-ini-val-matching-key" && cmdSize >= 5) {
+        // set-ini-val-matching-key <file> <patternKey> <newKey> <newValue>
+        // desiredSection is used as patternKey here (empty string = all sections)
+        std::string desiredKey = cmd[3];
+        removeQuotes(desiredKey);
+        
+        std::string desiredValue = cmd[4];
+        removeQuotes(desiredValue);
+        
+        if (!ult::isFile(sourcePath))
+            commandSuccess.store(false, std::memory_order_release);
+
+        // desiredSection here is the pattern key
+        addKeyToMatchingSections(sourcePath, desiredSection, desiredKey, desiredValue);
+        
+    } else if (command == "remove-ini-key-matching-key" && cmdSize >= 4) {
+        // remove-ini-key-matching-key <file> <patternKey> <keyToRemove>
+        // desiredSection is used as patternKey here (empty string = all sections)
+        std::string desiredKey = cmd[3];
+        removeQuotes(desiredKey);
+        
+        if (!ult::isFile(sourcePath))
+            commandSuccess.store(false, std::memory_order_release);
+
+        // desiredSection here is the pattern key
+        removeKeyFromMatchingSections(sourcePath, desiredSection, desiredKey);
     }
 }
 
@@ -4503,6 +4512,7 @@ void processCommand(const std::vector<std::string>& cmd, const std::string& pack
                 tsl::Overlay::get()->close(true);
                 return;
             }
+
             break;
             
         case 'f':
@@ -4659,6 +4669,17 @@ void processCommand(const std::vector<std::string>& cmd, const std::string& pack
             break;
             
         case 'p':
+            if (commandName == "path_exists") {
+                if (cmdSize >= 2) {
+                    std::string sourcePath = cmd[1];
+                    preprocessPath(sourcePath, packagePath);
+                    if (ult::isFileOrDirectory(sourcePath)) {
+                        commandSuccess.store(true, std::memory_order_release);
+                    } else {
+                        commandSuccess.store(false, std::memory_order_release);
+                    }
+                }
+            }
             if (commandName == "pchtxt2ips") {
                 if (cmdSize >= 3) {
                     std::string sourcePath = cmd[1];
@@ -4691,7 +4712,7 @@ void processCommand(const std::vector<std::string>& cmd, const std::string& pack
                 return;
             }
             if (commandName == "rename-ini-section" || commandName == "remove-ini-section" || 
-                commandName == "remove-ini-key") {
+                commandName == "remove-ini-key" || commandName == "remove-ini-key-matching-key") {
                 handleIniCommands(cmd, packagePath);
                 return;
             }
@@ -4817,7 +4838,7 @@ void processCommand(const std::vector<std::string>& cmd, const std::string& pack
             
         case 's':
             if (commandName == "set-ini-val" || commandName == "set-ini-value" || 
-                commandName == "set-ini-key") {
+                commandName == "set-ini-key" || commandName == "set-ini-val-matching-key") {
                 handleIniCommands(cmd, packagePath);
                 return;
             }
