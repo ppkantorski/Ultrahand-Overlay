@@ -75,7 +75,7 @@
     "VENDOR": "Producent",
     "MODEL": "Model",
     "STORAGE": "Pamięć masowa",
-    "INCOMPATIBLE_WARNING": "Incompatible on AMS v1.10+",
+    "INCOMPATIBLE_WARNING": "Niezgodny z AMS v1.10+",
     "SYSTEM_RAM": "RAM systemu",
     "FREE": "wolne",
     "OVERLAY_MEMORY": "Pamięć nakładki",
