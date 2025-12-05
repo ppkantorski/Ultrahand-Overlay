@@ -76,7 +76,7 @@
     "MODEL": "Model",
     "STORAGE": "Opslag",
     "NOTICE": "Mededeling",
-    "UTILIZES": "Gebruikt",
+    "INCOMPATIBLE_WARNING": "Incompatible on AMS v1.10+",
     "SYSTEM_RAM": "Systeem-RAM",
     "FREE": "vrij",
     "OVERLAY_MEMORY": "Overlay-geheugen",
