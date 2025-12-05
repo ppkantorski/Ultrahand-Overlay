@@ -1208,7 +1208,7 @@ public:
                         }
                         setOverlayHeapSize(currentHeapSize);
                         this->exitOnBack = false;
-                        // Don't update lastSliderMB since change was rejected
+                        *lastSliderMB = newMB;
                         return;
                     }
                 }
