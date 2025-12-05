@@ -76,7 +76,7 @@
     "MODEL": "Модель",
     "STORAGE": "Хранилище",
     "NOTICE": "Уведомление",
-    "UTILIZES": "Использует",
+    "INCOMPATIBLE_WARNING": "Incompatible on AMS v1.10+",
     "SYSTEM_RAM": "ОЗУ системы",
     "FREE": "свободно",
     "OVERLAY_MEMORY": "Память оверлея",
