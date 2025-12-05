@@ -76,7 +76,7 @@
     "MODEL": "型号",
     "STORAGE": "存储",
     "NOTICE": "提示",
-    "UTILIZES": "占用",
+    "INCOMPATIBLE_WARNING": "Incompatible on AMS v1.10+",
     "SYSTEM_RAM": "系统内存",
     "FREE": "剩余",
     "OVERLAY_MEMORY": "插件内存",
