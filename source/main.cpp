@@ -1100,7 +1100,7 @@ public:
             }
             
             // Get current heap size in MB
-            u32 currentHeapMB = bytesToMB(static_cast<u64>(currentHeapSize));
+            const u32 currentHeapMB = bytesToMB(static_cast<u64>(currentHeapSize));
             
             // Check if current heap is larger than 8MB but no INI entry exists
             // This handles the case where memory was set but INI was removed/not present
@@ -3261,7 +3261,7 @@ public:
         std::string currentPackageHeader;
         
     
-        if (commandMode == DEFAULT_STR || commandMode == OPTION_STR) {
+        if (commandMode == DEFAULT_STR || commandMode == OPTION_STR || commandMode == HOLD_STR) {
             if (sourceType == FILE_STR) {
                 selectedItemsList = std::move(filesList);
                 filesList.shrink_to_fit();
@@ -3399,7 +3399,7 @@ public:
         size_t pos;
         std::string parentDirName;
         std::string footer;
-        std::string optionName;
+        //std::string optionName;
     
         if (selectedItemsList.empty()) {
             if (commandGrouping != DEFAULT_STR) {
@@ -3581,7 +3581,7 @@ public:
             //    }
             }
     
-            if (commandMode == DEFAULT_STR || commandMode == OPTION_STR) {
+            if (commandMode == DEFAULT_STR || commandMode == OPTION_STR || commandMode == HOLD_STR) {
                 if (sourceType != FILE_STR && commandGrouping != "split2" && commandGrouping != "split3" && commandGrouping != "split4" && commandGrouping != "split5") {
                     pos = selectedItem.find(" - ");
                     footer = "";
@@ -3594,20 +3594,20 @@ public:
                     footer = getNameFromPath(selectedItem);
                     dropExtension(footer);
                 }
-    
+                
                 tsl::elm::ListItem* listItem = new tsl::elm::ListItem(itemName, "", isMini);
-    
+                
                 // for handling footers that use translations / replacements
                 applyLangReplacements(footer, true);
                 convertComboToUnicode(footer);
                 applyLangReplacements(specifiedFooterKey, true);
                 convertComboToUnicode(specifiedFooterKey);
-    
+                
                 applyLangReplacements(itemName, true);
                 convertComboToUnicode(itemName);
                 applyLangReplacements(selectedFooterDict[specifiedFooterKey], true);
                 convertComboToUnicode(selectedFooterDict[specifiedFooterKey]);
-    
+                
                 if (commandMode == OPTION_STR) {
                     if (selectedFooterDict[specifiedFooterKey] == itemName) {
                         lastSelectedListItem = listItem;
@@ -3623,24 +3623,39 @@ public:
                 } else {
                     listItem->setValue(footer, true);
                 }
-    
+
+                if (commandMode == HOLD_STR)
+                    listItem->disableClickAnimation();
+                
                 listItem->setClickListener([this, i, selectedItem, footer, listItem, currentPackageHeader, itemName](uint64_t keys) {
-    
+                    
                     if (runningInterpreter.load(acquire)) {
                         return false;
                     }
-    
+                    
                     if (((keys & KEY_A) && !(keys & ~KEY_A & ALL_KEYS_MASK))) {
                         
                         isDownloadCommand.store(false, release);
                         runningInterpreter.store(true, release);
-    
-                        executeInterpreterCommands(getSourceReplacement(selectionCommands, selectedItem, i, filePath), filePath, specificKey);
+                        
+                        auto modifiedCmds = getSourceReplacement(selectionCommands, selectedItem, i, filePath);
+                        if (commandMode == HOLD_STR) {
+                            lastSelectedListItemFooter = footer;
+                            listItem->setValue(INPROGRESS_SYMBOL);
+                            lastSelectedListItem = listItem;
+                            holdStartTick = armGetSystemTick();
+                            storedCommands = std::move(modifiedCmds);
+                            lastCommandMode = commandMode;
+                            lastKeyName = specificKey;
+                            return true;
+                        }
+
+                        executeInterpreterCommands(std::move(modifiedCmds), filePath, specificKey);
                         listItem->disableClickAnimation();
                         //startInterpreterThread(filePath);
-    
+                        
                         listItem->setValue(INPROGRESS_SYMBOL);
-    
+                        
                         
                         if (commandMode == OPTION_STR) {
                             selectedFooterDict[specifiedFooterKey] = listItem->getText();
@@ -3846,6 +3861,25 @@ public:
 
     virtual bool handleInput(u64 keysDown, u64 keysHeld, touchPosition touchInput, JoystickPosition leftJoyStick, JoystickPosition rightJoyStick) override {
         
+        bool isHolding = (lastCommandMode == HOLD_STR && runningInterpreter.load(std::memory_order_acquire));
+        if (isHolding) {
+            processHold(keysDown, keysHeld, holdStartTick, isHolding, [&]() {
+                // Execute interpreter commands if needed
+                displayPercentage.store(-1, std::memory_order_release);
+                lastCommandMode.clear();
+                lastKeyName.clear();
+                lastSelectedListItem->setValue(INPROGRESS_SYMBOL);
+                //lastSelectedListItemFooter.clear();
+                //lastSelectedListItem->enableClickAnimation();
+                //lastSelectedListItem->triggerClickAnimation();
+                //lastSelectedListItem->disableClickAnimation();
+                triggerEnterFeedback();
+                executeInterpreterCommands(std::move(storedCommands), filePath, lastKeyName);
+                lastRunningInterpreter.store(true, std::memory_order_release);
+            }, nullptr, true); // true = reset storedCommands
+            return true;
+        }
+
         const bool isRunningInterp = runningInterpreter.load(acquire);
         
         if (isRunningInterp) {
