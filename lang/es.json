@@ -75,7 +75,7 @@
     "VENDOR": "Fabricante",
     "MODEL": "Modelo",
     "STORAGE": "Almacenamiento",
-    "INCOMPATIBLE_WARNING": "Incompatible on AMS v1.10+",
+    "INCOMPATIBLE_WARNING": "Incompatible con AMS v1.10+",
     "SYSTEM_RAM": "RAM del sistema",
     "FREE": "libre",
     "OVERLAY_MEMORY": "Memoria superposición",
