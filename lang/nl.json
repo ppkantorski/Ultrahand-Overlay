@@ -75,7 +75,7 @@
     "VENDOR": "Fabrikant",
     "MODEL": "Model",
     "STORAGE": "Opslag",
-    "INCOMPATIBLE_WARNING": "Incompatible on AMS v1.10+",
+    "INCOMPATIBLE_WARNING": "Incompatibel met AMS v1.10+",
     "SYSTEM_RAM": "Systeem-RAM",
     "FREE": "vrij",
     "OVERLAY_MEMORY": "Overlay-geheugen",
