@@ -3682,8 +3682,8 @@ public:
     
                         auto modifiedCmds = getSourceReplacement(selectionCommands, selectedItem, i, filePath);
                         applyPlaceholderReplacementsToCommands(modifiedCmds, filePath);
-                        tsl::elm::g_cachedTop.disabled = true;
-                        tsl::elm::g_cachedBottom.disabled = true;
+                        //tsl::elm::g_cachedTop.disabled = true;
+                        //tsl::elm::g_cachedBottom.disabled = true;
                         tsl::changeTo<ScriptOverlay>(std::move(modifiedCmds), filePath, itemName, "selection", false, currentPackageHeader, showWidget);
                         return true;
                     }
@@ -3792,8 +3792,8 @@ public:
                     // Custom logic for SCRIPT_KEY handling
                     auto modifiedCmds = getSourceReplacement(state ? selectionCommandsOn : selectionCommandsOff, currentSelectedItems[i], i, filePath);
                     applyPlaceholderReplacementsToCommands(modifiedCmds, filePath);
-                    tsl::elm::g_cachedTop.disabled = true;
-                    tsl::elm::g_cachedBottom.disabled = true;
+                    //tsl::elm::g_cachedTop.disabled = true;
+                    //tsl::elm::g_cachedBottom.disabled = true;
                     tsl::changeTo<ScriptOverlay>(std::move(modifiedCmds), filePath, itemName, "selection", false, currentPackageHeader, showWidget);
                 });
     
@@ -3851,7 +3851,7 @@ public:
     
         list->jumpToItem(jumpItemName, jumpItemValue, jumpItemExactMatch.load(acquire));
         
-        list->disableCaching();
+        list->disableCaching(true);
         rootFrame->setContent(list);
         if (showWidget)
             rootFrame->m_showWidget = true;
