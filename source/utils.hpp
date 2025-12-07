@@ -952,62 +952,48 @@ void initializeTheme(const std::string& themeIniPath = THEME_CONFIG_INI_PATH) {
 
 
 /**
- * @brief Copy Tesla key combo to Ultrahand settings.
+ * @brief Synchronize Tesla and Ultrahand key combos.
  *
- * This function retrieves the key combo from Tesla settings and copies it to Ultrahand settings.
+ * This function synchronizes key combos between Tesla and Ultrahand settings.
+ * - If Tesla has a combo and Ultrahand doesn't: copy Tesla → Ultrahand
+ * - If Ultrahand has a combo and Tesla doesn't or differs: copy Ultrahand → Tesla
+ * - If neither has a combo: do nothing
+ * 
+ * @return true if neither config has a combo, false otherwise
  */
-void copyTeslaKeyComboToUltrahand() {
-    std::string keyCombo = ULTRAHAND_COMBO_STR;
-    std::map<std::string, std::map<std::string, std::string>> parsedData;
-    
-    const bool teslaConfigExists = isFileOrDirectory(TESLA_CONFIG_INI_PATH);
-    const bool ultrahandConfigExists = isFileOrDirectory(ULTRAHAND_CONFIG_INI_PATH);
-
-    bool initializeTesla = false;
-    std::string teslaKeyCombo = keyCombo;
-
-    if (teslaConfigExists) {
-        parsedData = getParsedDataFromIniFile(TESLA_CONFIG_INI_PATH);
-        if (parsedData.count(TESLA_STR) > 0) {
-            auto& teslaSection = parsedData[TESLA_STR];
-            if (teslaSection.count(KEY_COMBO_STR) > 0) {
-                teslaKeyCombo = teslaSection[KEY_COMBO_STR];
-            } else {
-                initializeTesla = true;
-            }
-        } else {
-            initializeTesla = true;
-        }
-    } else {
-        initializeTesla = true;
+bool copyTeslaKeyComboToUltrahand() {
+    // Check for Tesla key combo
+    bool hasTeslaKeyCombo = false;
+    std::string teslaKeyCombo;
+    if (isFile(TESLA_CONFIG_INI_PATH)) {
+        teslaKeyCombo = parseValueFromIniSection(TESLA_CONFIG_INI_PATH, TESLA_STR, KEY_COMBO_STR);
+        hasTeslaKeyCombo = !teslaKeyCombo.empty();
     }
     
-    bool initializeUltrahand = false;
-    if (ultrahandConfigExists) {
-        parsedData = getParsedDataFromIniFile(ULTRAHAND_CONFIG_INI_PATH);
-        if (parsedData.count(ULTRAHAND_PROJECT_NAME) > 0) {
-            auto& ultrahandSection = parsedData[ULTRAHAND_PROJECT_NAME];
-            if (ultrahandSection.count(KEY_COMBO_STR) > 0) {
-                keyCombo = ultrahandSection[KEY_COMBO_STR];
-            } else {
-                initializeUltrahand = true;
-            }
-        } else {
-            initializeUltrahand = true;
-        }
-    } else {
-        initializeUltrahand = true;
+    // Check for Ultrahand key combo
+    bool hasUltrahandKeyCombo = false;
+    std::string ultrahandKeyCombo;
+    if (isFile(ULTRAHAND_CONFIG_INI_PATH)) {
+        ultrahandKeyCombo = parseValueFromIniSection(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, KEY_COMBO_STR);
+        hasUltrahandKeyCombo = !ultrahandKeyCombo.empty();
     }
-
-    if (initializeTesla || (teslaKeyCombo != keyCombo)) {
-        setIniFileValue(TESLA_CONFIG_INI_PATH, TESLA_STR, KEY_COMBO_STR, keyCombo);
+    
+    // Apply sync logic
+    if (hasTeslaKeyCombo && !hasUltrahandKeyCombo) {
+        // Tesla has combo, Ultrahand doesn't → copy Tesla to Ultrahand
+        setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, KEY_COMBO_STR, teslaKeyCombo);
+    } else if (hasUltrahandKeyCombo && (!hasTeslaKeyCombo || teslaKeyCombo != ultrahandKeyCombo)) {
+        // Ultrahand has combo and (Tesla doesn't OR they differ) → copy Ultrahand to Tesla
+        setIniFileValue(TESLA_CONFIG_INI_PATH, TESLA_STR, KEY_COMBO_STR, ultrahandKeyCombo);
     }
-
-    if (initializeUltrahand) {
-        setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, KEY_COMBO_STR, keyCombo);
+    
+    // Return true if neither has a combo
+    if (!hasTeslaKeyCombo && !hasUltrahandKeyCombo) {
+        return true;
     }
-
+    
     tsl::impl::parseOverlaySettings();
+    return false;
 }
 
 
