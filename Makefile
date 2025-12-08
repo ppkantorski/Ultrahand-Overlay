@@ -57,7 +57,7 @@ include $(DEVKITPRO)/libnx/switch_rules
 #---------------------------------------------------------------------------------
 APP_TITLE	:= Ultrahand
 APP_AUTHOR	:= ppkantorski
-APP_VERSION	:= 2.2.2
+APP_VERSION	:= 2.2.3-pre-release
 TARGET		:= ovlmenu
 BUILD		:= build
 SOURCES		:= source common
