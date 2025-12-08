@@ -2707,7 +2707,7 @@ public:
         auto* rootFrame = new tsl::elm::OverlayFrame(packageName,
            !lastPackageHeader.empty() ? lastPackageHeader + "?Ultrahand Script" : (packageVersion.empty() ? CAPITAL_ULTRAHAND_PROJECT_NAME + " Script" : packageVersion + " "+DIVIDER_SYMBOL+" " + CAPITAL_ULTRAHAND_PROJECT_NAME + " Script"),
            noClickableItems);
-        list->disableCaching(!isFromSelectionMenu);
+        //list->disableCaching(!isFromSelectionMenu);
         rootFrame->setContent(list);
         if (showWidget)
             rootFrame->m_showWidget = true;
@@ -3851,7 +3851,7 @@ public:
     
         list->jumpToItem(jumpItemName, jumpItemValue, jumpItemExactMatch.load(acquire));
         
-        list->disableCaching(true);
+        //list->disableCaching(true);
         rootFrame->setContent(list);
         if (showWidget)
             rootFrame->m_showWidget = true;
