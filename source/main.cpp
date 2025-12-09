@@ -3790,7 +3790,7 @@ public:
     
                     //inSelectionMenu = false;
                     // Custom logic for SCRIPT_KEY handling
-                    auto modifiedCmds = getSourceReplacement(state ? selectionCommandsOn : selectionCommandsOff, currentSelectedItems[i], i, filePath);
+                    auto modifiedCmds = getSourceReplacement(!state ? selectionCommandsOn : selectionCommandsOff, currentSelectedItems[i], i, filePath);
                     applyPlaceholderReplacementsToCommands(modifiedCmds, filePath);
                     //tsl::elm::g_cachedTop.disabled = true;
                     //tsl::elm::g_cachedBottom.disabled = true;
