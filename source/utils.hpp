@@ -3038,12 +3038,12 @@ bool applyPlaceholderReplacements(std::vector<std::string>& cmd, const std::stri
     std::vector<std::pair<std::string, std::function<std::string(const std::string&)>>> placeholders = {
         {"{hex_file(", [&](const std::string& placeholder) { 
             std::string result = replaceHexPlaceholder(placeholder, hexPath);
-            return result;
+            return returnOrNull(result);
         }},
         {"{ini_file(", [&](const std::string& placeholder) { 
             std::string result = placeholder;
             applyReplaceIniPlaceholder(result, INI_FILE_STR, iniPath); 
-            return result;
+            return returnOrNull(result);
         }},
         {"{list(", [&](const std::string& placeholder) {
             const size_t startPos = placeholder.find('(') + 1;
@@ -3056,7 +3056,7 @@ bool applyPlaceholderReplacements(std::vector<std::string>& cmd, const std::stri
             if (idx >= items.size()) {
                 return NULL_STR;
             }
-            return items[idx];
+            return returnOrNull(items[idx]);
         }},
         {"{list_file(", [&](const std::string& placeholder) {
             const size_t startPos = placeholder.find('(') + 1;
@@ -3064,13 +3064,13 @@ bool applyPlaceholderReplacements(std::vector<std::string>& cmd, const std::stri
             if (!isValidNumber(indexStr)) {
                 return NULL_STR;
             }
-            return getEntryFromListFile(listPath, ult::stoi(indexStr));
+            return returnOrNull(getEntryFromListFile(listPath, ult::stoi(indexStr)));
         }},
         {"{json(", [&](const std::string& placeholder) { 
-            return replaceJsonPlaceholder(placeholder, JSON_STR, jsonString); 
+            return returnOrNull(replaceJsonPlaceholder(placeholder, JSON_STR, jsonString)); 
         }},
         {"{json_file(", [&](const std::string& placeholder) { 
-            return replaceJsonPlaceholder(placeholder, JSON_FILE_STR, jsonPath); 
+            return returnOrNull(replaceJsonPlaceholder(placeholder, JSON_FILE_STR, jsonPath)); 
         }},
         {"{timestamp(", [&](const std::string& placeholder) {
             const size_t startPos = placeholder.find("(") + 1;
@@ -3078,7 +3078,7 @@ bool applyPlaceholderReplacements(std::vector<std::string>& cmd, const std::stri
             std::string format = (endPos != std::string::npos) ? 
                 placeholder.substr(startPos, endPos - startPos) : "%Y-%m-%d %H:%M:%S";
             removeQuotes(format);
-            return getCurrentTimestamp(format);
+            return returnOrNull(getCurrentTimestamp(format));
         }},
         {"{decimal_to_hex(", [&](const std::string& placeholder) {
             const size_t startPos = placeholder.find("(") + 1;
@@ -3099,29 +3099,29 @@ bool applyPlaceholderReplacements(std::vector<std::string>& cmd, const std::stri
             }
             
             if (order.empty()) {
-                return decimalToHex(decimalValue);
+                return returnOrNull(decimalToHex(decimalValue));
             } else {
                 if (!isValidNumber(order)) {
                     return NULL_STR;
                 }
-                return decimalToHex(decimalValue, ult::stoi(order));
+                return returnOrNull(decimalToHex(decimalValue, ult::stoi(order)));
             }
         }},
         {"{ascii_to_hex(", [&](const std::string& placeholder) {
             const size_t startPos = placeholder.find("(") + 1;
-            return asciiToHex(placeholder.substr(startPos, placeholder.find(")") - startPos));
+            return returnOrNull(asciiToHex(placeholder.substr(startPos, placeholder.find(")") - startPos)));
         }},
         {"{hex_to_rhex(", [&](const std::string& placeholder) {
             const size_t startPos = placeholder.find("(") + 1;
-            return hexToReversedHex(placeholder.substr(startPos, placeholder.find(")") - startPos));
+            return returnOrNull(hexToReversedHex(placeholder.substr(startPos, placeholder.find(")") - startPos)));
         }},
         {"{hex_to_decimal(", [&](const std::string& placeholder) {
             const size_t startPos = placeholder.find("(") + 1;
-            return hexToDecimal(placeholder.substr(startPos, placeholder.find(")") - startPos));
+            return returnOrNull(hexToDecimal(placeholder.substr(startPos, placeholder.find(")") - startPos)));
         }},
         {"{base64_decode(", [&](const std::string& placeholder) {
             const size_t startPos = placeholder.find("(") + 1;
-            return decodeBase64ToString(placeholder.substr(startPos, placeholder.find(")") - startPos));
+            return returnOrNull(decodeBase64ToString(placeholder.substr(startPos, placeholder.find(")") - startPos)));
         }},
         {"{random(", [&](const std::string& placeholder) {
             std::srand(std::time(0));
@@ -3141,9 +3141,9 @@ bool applyPlaceholderReplacements(std::vector<std::string>& cmd, const std::stri
                 
                 const int lowValue = ult::stoi(lowStr);
                 const int highValue = ult::stoi(highStr);
-                return ult::to_string(lowValue + rand() % (highValue - lowValue + 1));
+                return returnOrNull(ult::to_string(lowValue + rand() % (highValue - lowValue + 1)));
             }
-            return placeholder;
+            return returnOrNull(placeholder);
         }},
         {"{slice(", [&](const std::string& placeholder) {
             const size_t startPos = placeholder.find('(');
@@ -3183,7 +3183,7 @@ bool applyPlaceholderReplacements(std::vector<std::string>& cmd, const std::stri
                 return NULL_STR;
             }
         
-            return sliceString(strPart, sliceStart, sliceEnd);
+            return returnOrNull(sliceString(strPart, sliceStart, sliceEnd));
         }},
         {"{split(", [&](const std::string& placeholder) {
             const size_t openParen = placeholder.find('(');
