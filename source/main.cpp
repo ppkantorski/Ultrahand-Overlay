@@ -2960,20 +2960,24 @@ public:
         
         for (auto& cmd : selectionCommands) {
 
-            if (afterSource) {
-                // Apply placeholder replacements in-place
-                for (auto& arg : cmd) {
-                    replacePlaceholdersInArg(arg, generalPlaceholders);
-                }
-                static bool runOnce = true;
-                if (runOnce) {
-                    _iniFilePath = "";
-                    _hexFilePath = "";
-                    _listString = "";
-                    _listFilePath = "";
-                    _jsonString = "";
-                    _jsonFilePath = "";
-                }
+            //if (afterSource) {
+            //    // Apply placeholder replacements in-place
+            //    for (auto& arg : cmd) {
+            //        replacePlaceholdersInArg(arg, generalPlaceholders);
+            //    }
+            //    static bool runOnce = true;
+            //    if (runOnce) {
+            //        _iniFilePath = "";
+            //        _hexFilePath = "";
+            //        _listString = "";
+            //        _listFilePath = "";
+            //        _jsonString = "";
+            //        _jsonFilePath = "";
+            //    }
+            //}
+            // Apply placeholder replacements in-place
+            for (auto& arg : cmd) {
+                replacePlaceholdersInArg(arg, generalPlaceholders);
             }
 
             const std::string& commandName = cmd[0]; // Now assigns to string_view - no copy
