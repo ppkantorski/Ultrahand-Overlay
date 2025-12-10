@@ -565,7 +565,7 @@ std::string getLocalIpAddress() {
 // Function to remove all empty command strings
 void removeEmptyCommands(std::vector<std::vector<std::string>>& commands) {
     commands.erase(std::remove_if(commands.begin(), commands.end(),
-        [](const std::vector<std::string>& vec) {
+        [](const std::vector<std::string>& vec) noexcept {
             return vec.empty();
         }),
         commands.end());

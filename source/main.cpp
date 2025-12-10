@@ -94,6 +94,9 @@ static const std::vector<std::string> commandModes = {DEFAULT_STR, HOLD_STR, SLO
 static const std::vector<std::string> commandGroupings = {DEFAULT_STR, "split", "split2", "split3", "split4", "split5"};
 static const std::string MODE_PATTERN = ";mode=";
 static const std::string GROUPING_PATTERN = ";grouping=";
+static const std::string FOOTER_PATTERN = ";footer=";
+static const std::string FOOTER_HIGHLIGHT_PATTERN = ";footer_highlight=";
+static const std::string HOLD_PATTERN = ";hold=";
 static const std::string SYSTEM_PATTERN = ";system=";
 static const std::string WIDGET_PATTERN = ";widget=";
 
@@ -130,6 +133,42 @@ static const std::string UNITS_PATTERN = ";units=";
 static const std::string UNLOCKED_PATTERN = ";unlocked=";
 static const std::string ON_EVERY_TICK_PATTERN = ";on_every_tick=";
 
+
+static const size_t SYSTEM_PATTERN_LEN = SYSTEM_PATTERN.length();
+static const size_t MODE_PATTERN_LEN = MODE_PATTERN.length();
+static const size_t GROUPING_PATTERN_LEN = GROUPING_PATTERN.length();
+static const size_t FOOTER_PATTERN_LEN = FOOTER_PATTERN.length();
+static const size_t FOOTER_HIGHLIGHT_PATTERN_LEN = FOOTER_HIGHLIGHT_PATTERN.length();
+static const size_t HOLD_PATTERN_LEN = HOLD_PATTERN.length();
+static const size_t MINI_PATTERN_LEN = MINI_PATTERN.length();
+static const size_t SELECTION_MINI_PATTERN_LEN = SELECTION_MINI_PATTERN.length();
+static const size_t PROGRESS_PATTERN_LEN = PROGRESS_PATTERN.length();
+static const size_t POLLING_PATTERN_LEN = POLLING_PATTERN.length();
+static const size_t SCROLLABLE_PATTERN_LEN = SCROLLABLE_PATTERN.length();
+static const size_t TOP_PIVOT_PATTERN_LEN = TOP_PIVOT_PATTERN.length();
+static const size_t BOTTOM_PIVOT_PATTERN_LEN = BOTTOM_PIVOT_PATTERN.length();
+static const size_t BACKGROUND_PATTERN_LEN = BACKGROUND_PATTERN.length();
+static const size_t HEADER_INDENT_PATTERN_LEN = HEADER_INDENT_PATTERN.length();
+static const size_t START_GAP_PATTERN_LEN = START_GAP_PATTERN.length();
+static const size_t END_GAP_PATTERN_LEN = END_GAP_PATTERN.length();
+static const size_t END_GAP_PATTERN_ALIAS_LEN = END_GAP_PATTERN_ALIAS.length();
+static const size_t OFFSET_PATTERN_LEN = OFFSET_PATTERN.length();
+static const size_t SPACING_PATTERN_LEN = SPACING_PATTERN.length();
+static const size_t SECTION_TEXT_COLOR_PATTERN_LEN = SECTION_TEXT_COLOR_PATTERN.length();
+static const size_t INFO_TEXT_COLOR_PATTERN_LEN = INFO_TEXT_COLOR_PATTERN.length();
+static const size_t ALIGNMENT_PATTERN_LEN = ALIGNMENT_PATTERN.length();
+static const size_t WRAPPING_MODE_PATTERN_LEN = WRAPPING_MODE_PATTERN.length();
+static const size_t WRAPPING_INDENT_PATTERN_LEN = WRAPPING_INDENT_PATTERN.length();
+static const size_t MIN_VALUE_PATTERN_LEN = MIN_VALUE_PATTERN.length();
+static const size_t MAX_VALUE_PATTERN_LEN = MAX_VALUE_PATTERN.length();
+static const size_t UNITS_PATTERN_LEN = UNITS_PATTERN.length();
+static const size_t STEPS_PATTERN_LEN = STEPS_PATTERN.length();
+static const size_t UNLOCKED_PATTERN_LEN = UNLOCKED_PATTERN.length();
+static const size_t ON_EVERY_TICK_PATTERN_LEN = ON_EVERY_TICK_PATTERN.length();
+static const size_t TRUE_STR_LEN = TRUE_STR.length();
+static const size_t FALSE_STR_LEN = FALSE_STR.length();
+
+
 static std::string currentMenu = OVERLAYS_STR;
 //static std::string lastPage = LEFT_STR;
 //static std::string lastPackagePath;
@@ -147,7 +186,9 @@ static bool hideDelete = false;
 static bool hideUnsupported = false;
 
 static std::string lastCommandMode;
-
+static bool lastCommandIsHold;
+static bool lastFooterHighlight;
+static bool lastFooterHighlightDefined; 
 
 static std::unordered_map<std::string, std::string> selectedFooterDict;
 
@@ -321,66 +362,68 @@ bool processHold(uint64_t keysDown, uint64_t keysHeld, u64& holdStartTick, bool&
                         std::function<void()> onComplete,
                         std::function<void()> onRelease = nullptr,
                         bool resetStoredCommands = false) {
-
     if (!lastSelectedListItem) {
         isHolding = false;
         return false;
     }
-
     if (!(keysHeld & KEY_A)) {
         // Key released — reset everything
         triggerExitFeedback();
         isHolding = false;
         displayPercentage.store(0, std::memory_order_release);
         runningInterpreter.store(false, std::memory_order_release);
-
         if (resetStoredCommands) {
             storedCommands.clear();
             lastCommandMode.clear();
+            lastCommandIsHold = false;
             lastKeyName.clear();
         }
-
         if (lastSelectedListItem) {
-            lastSelectedListItem->setValue(resetStoredCommands ? lastSelectedListItemFooter : "", true);
-            if (resetStoredCommands) lastSelectedListItemFooter.clear();
+            if (resetStoredCommands) {
+                // Use lastFooterHighlightDefined to determine the highlight parameter
+                // If not defined, infer from lastCommandMode
+                bool highlightParam;
+                if (lastFooterHighlightDefined) {
+                    highlightParam = !lastFooterHighlight;
+                } else {
+                    // Default behavior based on command mode
+                    highlightParam = (lastCommandMode == DEFAULT_STR);
+                }
+                lastSelectedListItem->setValue(lastSelectedListItemFooter, highlightParam);
+                lastSelectedListItemFooter.clear();
+            } else {
+                lastSelectedListItem->setValue("", true);
+            }
             lastSelectedListItem = nullptr;
+            lastFooterHighlight = lastFooterHighlightDefined = false;
         }
-
         if (onRelease) onRelease();
         return true;
     }
-
     // Directional feedback
     if (keysDown & KEY_UP) lastSelectedListItem->shakeHighlight(tsl::FocusDirection::Up);
     else if (keysDown & KEY_DOWN) lastSelectedListItem->shakeHighlight(tsl::FocusDirection::Down);
     else if (keysDown & KEY_LEFT) lastSelectedListItem->shakeHighlight(tsl::FocusDirection::Left);
     else if (keysDown & KEY_RIGHT) lastSelectedListItem->shakeHighlight(tsl::FocusDirection::Right);
-
     // Update hold progress
     const u64 elapsedMs = armTicksToNs(armGetSystemTick() - holdStartTick) / 1000000;
     const int percentage = std::min(100, static_cast<int>((elapsedMs * 100) / 5000));
     displayPercentage.store(percentage, std::memory_order_release);
-
     if (percentage > 20 && (percentage % 30) == 0)
         triggerRumbleDoubleClick.store(true, std::memory_order_release);
-
     // Completed hold
     if (percentage >= 100) {
         isHolding = false;
         displayPercentage.store(-1, std::memory_order_release);
-
         if (lastSelectedListItem) {
             lastSelectedListItem->enableClickAnimation();
             lastSelectedListItem->triggerClickAnimation();
             lastSelectedListItem->disableClickAnimation();
         }
-
         if (onComplete) onComplete();
-
         //lastSelectedListItem = nullptr;
         return true;
     }
-
     return true; // Continue holding
 }
 
@@ -2895,6 +2938,7 @@ private:
     bool showWidget = false;
 
     bool usingProgress = false;
+    bool isHold = false;
     bool isMini = false;
 
     size_t maxItemsLimit = 250;     // 0 = uncapped, any other value = max size
@@ -2949,11 +2993,12 @@ public:
         std::vector<std::string> matchedFiles, tempFiles;
     
         // Pre-cache pattern lengths for better performance
-        static const size_t SYSTEM_PATTERN_LEN = SYSTEM_PATTERN.length();
-        static const size_t MODE_PATTERN_LEN = MODE_PATTERN.length();
-        static const size_t GROUPING_PATTERN_LEN = GROUPING_PATTERN.length();
-        static const size_t SELECTION_MINI_PATTERN_LEN = SELECTION_MINI_PATTERN.length();
-        static const size_t PROGRESS_PATTERN_LEN = PROGRESS_PATTERN.length();
+        //static const size_t SYSTEM_PATTERN_LEN = SYSTEM_PATTERN.length();
+        //static const size_t MODE_PATTERN_LEN = MODE_PATTERN.length();
+        //static const size_t GROUPING_PATTERN_LEN = GROUPING_PATTERN.length();
+        //static const size_t SELECTION_MINI_PATTERN_LEN = SELECTION_MINI_PATTERN.length();
+        //static const size_t HOLD_PATTERN_LEN = HOLD_PATTERN.length();
+        //static const size_t PROGRESS_PATTERN_LEN = PROGRESS_PATTERN.length();
         
         bool afterSource = false;
         //updateGeneralPlaceholders();
@@ -3016,6 +3061,9 @@ public:
                 } else if (commandName.size() > SELECTION_MINI_PATTERN_LEN && 
                            commandName.compare(0, SELECTION_MINI_PATTERN_LEN, SELECTION_MINI_PATTERN) == 0) {
                     isMini = (commandName.substr(SELECTION_MINI_PATTERN_LEN) == TRUE_STR);
+                } else if (commandName.size() > HOLD_PATTERN_LEN && 
+                           commandName.compare(0, HOLD_PATTERN_LEN, HOLD_PATTERN) == 0) {
+                    isHold = (commandName.substr(HOLD_PATTERN_LEN) == TRUE_STR);
                 } else if (commandName.size() > PROGRESS_PATTERN_LEN && 
                            commandName.compare(0, PROGRESS_PATTERN_LEN, PROGRESS_PATTERN) == 0) {
                     usingProgress = (commandName.substr(PROGRESS_PATTERN_LEN) == TRUE_STR);
@@ -3265,7 +3313,7 @@ public:
         std::string currentPackageHeader;
         
     
-        if (commandMode == DEFAULT_STR || commandMode == OPTION_STR || commandMode == HOLD_STR) {
+        if (commandMode == DEFAULT_STR || commandMode == OPTION_STR) {
             if (sourceType == FILE_STR) {
                 selectedItemsList = std::move(filesList);
                 filesList.shrink_to_fit();
@@ -3585,7 +3633,7 @@ public:
             //    }
             }
     
-            if (commandMode == DEFAULT_STR || commandMode == OPTION_STR || commandMode == HOLD_STR) {
+            if (commandMode == DEFAULT_STR || commandMode == OPTION_STR) {
                 if (sourceType != FILE_STR && commandGrouping != "split2" && commandGrouping != "split3" && commandGrouping != "split4" && commandGrouping != "split5") {
                     pos = selectedItem.find(" - ");
                     footer = "";
@@ -3628,7 +3676,7 @@ public:
                     listItem->setValue(footer, true);
                 }
 
-                if (commandMode == HOLD_STR)
+                if (isHold)
                     listItem->disableClickAnimation();
                 
                 listItem->setClickListener([this, i, selectedItem, footer, listItem, currentPackageHeader, itemName](uint64_t keys) {
@@ -3643,13 +3691,16 @@ public:
                         runningInterpreter.store(true, release);
                         
                         auto modifiedCmds = getSourceReplacement(selectionCommands, selectedItem, i, filePath);
-                        if (commandMode == HOLD_STR) {
+                        if (isHold) {
                             lastSelectedListItemFooter = footer;
+                            //lastFooterHighlight = commandFooterHighlight;  // STORE THE VALUE
+                            //lastFooterHighlightDefined = commandFooterHighlightDefined;  // STORE WHETHER IT WAS DEFINED
                             listItem->setValue(INPROGRESS_SYMBOL);
                             lastSelectedListItem = listItem;
                             holdStartTick = armGetSystemTick();
                             storedCommands = std::move(modifiedCmds);
                             lastCommandMode = commandMode;
+                            lastCommandIsHold = true;
                             lastKeyName = specificKey;
                             return true;
                         }
@@ -3673,6 +3724,8 @@ public:
                         }
                         
                         lastSelectedListItem = listItem;
+                        //lastFooterHighlight = commandFooterHighlight;  // STORE THE VALUE
+                        //lastFooterHighlightDefined = commandFooterHighlightDefined;  // STORE WHETHER IT WAS DEFINED
                         shiftItemFocus(listItem);
     
                         lastRunningInterpreter.store(true, std::memory_order_release);
@@ -3865,13 +3918,14 @@ public:
 
     virtual bool handleInput(u64 keysDown, u64 keysHeld, touchPosition touchInput, JoystickPosition leftJoyStick, JoystickPosition rightJoyStick) override {
         
-        bool isHolding = (lastCommandMode == HOLD_STR && runningInterpreter.load(std::memory_order_acquire));
+        bool isHolding = (lastCommandIsHold && runningInterpreter.load(std::memory_order_acquire));
         if (isHolding) {
             processHold(keysDown, keysHeld, holdStartTick, isHolding, [&]() {
                 // Execute interpreter commands if needed
                 displayPercentage.store(-1, std::memory_order_release);
-                lastCommandMode.clear();
-                lastKeyName.clear();
+                //lastCommandMode.clear();
+                lastCommandIsHold = false;
+                //lastKeyName.clear();
                 lastSelectedListItem->setValue(INPROGRESS_SYMBOL);
                 //lastSelectedListItemFooter.clear();
                 //lastSelectedListItem->enableClickAnimation();
@@ -4160,7 +4214,7 @@ bool drawCommandsMenu(
     //tsl::elm::ListItem* listItem;
     //auto toggleListItem = new tsl::elm::ToggleListItem("", true, "", "");
     
-    
+
     bool toggleStateOn;
     
     bool skipSection = false;
@@ -4171,6 +4225,9 @@ bool drawCommandsMenu(
     
     std::string commandName;
     std::string commandFooter;
+    bool commandFooterHighlight;
+    bool commandFooterHighlightDefined;
+    bool isHold;
     std::string commandSystem;
     std::string commandMode;
     std::string commandGrouping;
@@ -4244,10 +4301,13 @@ bool drawCommandsMenu(
         auto& option = options[i];
         
         optionName = std::move(option.first);
-        option.first.shrink_to_fit();
+        //option.first.shrink_to_fit();
 
         commands = std::move(option.second);
-        option.second.shrink_to_fit();
+        //option.second.shrink_to_fit();
+
+        // Remove all empty command strings
+        //removeEmptyCommands(commands);
 
         //option.first.clear();
         //option.second.clear();
@@ -4286,6 +4346,9 @@ bool drawCommandsMenu(
         unlockedTrackbar = true;
         onEveryTick = false;
         commandFooter = "";
+        commandFooterHighlight = false;
+        commandFooterHighlightDefined = false;
+        isHold = false;
         commandSystem = DEFAULT_STR;
         commandMode = DEFAULT_STR;
         commandGrouping = DEFAULT_STR;
@@ -4328,34 +4391,44 @@ bool drawCommandsMenu(
                     bool modeIsSlot = false;
                     bool miniValue = false;
                     
-                    // Scan all commands for mini/mode patterns
                     for (const auto& command : commands) {
                         if (!command.empty()) {
                             const std::string& commandName = command[0];
+                            const size_t cmdLen = commandName.length();
                             
-                            // Check for mini pattern
-                            if (commandName.starts_with(MINI_PATTERN)) {
-                                const size_t expectedMinLength = MINI_PATTERN.length() + TRUE_STR.length();
-                                if (commandName.length() >= expectedMinLength) {
-                                    const std::string suffix = commandName.substr(MINI_PATTERN.length());
-                                    if (suffix == TRUE_STR) {
-                                        foundMini = true;
-                                        miniValue = true;
-                                    } else if (suffix == FALSE_STR) {
-                                        foundMini = true;
-                                        miniValue = false;
+                            if (cmdLen > 1 && commandName[0] == ';' && commandName[1] == 'm') {
+                                // Check for ;mini=
+                                if (!foundMini && cmdLen >= MINI_PATTERN_LEN + TRUE_STR_LEN && commandName[2] == 'i') {
+                                    if (commandName.compare(0, MINI_PATTERN_LEN, MINI_PATTERN) == 0) {
+                                        switch (commandName[MINI_PATTERN_LEN]) {
+                                            case 't':
+                                                if (commandName.compare(MINI_PATTERN_LEN, TRUE_STR_LEN, TRUE_STR) == 0) {
+                                                    foundMini = true;
+                                                    miniValue = true;
+                                                }
+                                                break;
+                                            case 'f':
+                                                if (commandName.compare(MINI_PATTERN_LEN, FALSE_STR_LEN, FALSE_STR) == 0) {
+                                                    foundMini = true;
+                                                    miniValue = false;
+                                                }
+                                                break;
+                                        }
                                     }
                                 }
-                            }
-                            // Check for mode pattern  
-                            else if (commandName.starts_with(MODE_PATTERN)) {
-                                const size_t expectedMinLength = MODE_PATTERN.length() + 4; // "slot"
-                                if (commandName.length() >= expectedMinLength) {
-                                    foundMode = true;
-                                    const std::string suffix = commandName.substr(MODE_PATTERN.length());
-                                    if (suffix == "slot") {
-                                        modeIsSlot = true;
+                                
+                                // Check for ;mode=
+                                if (!foundMode && cmdLen >= MODE_PATTERN_LEN + SLOT_STR.length() && commandName[2] == 'o') {
+                                    if (commandName.compare(0, MODE_PATTERN_LEN, MODE_PATTERN) == 0) {
+                                        foundMode = true;
+                                        if (commandName[MODE_PATTERN_LEN] == 's') {
+                                            modeIsSlot = (commandName.compare(MODE_PATTERN_LEN, SLOT_STR.length(), SLOT_STR) == 0);
+                                        }
                                     }
+                                }
+                                
+                                if (foundMini && foundMode) {
+                                    break;
                                 }
                             }
                         }
@@ -4392,39 +4465,49 @@ bool drawCommandsMenu(
                     bool modeIsSlot = false;
                     bool miniValue = false;
                     
-                    // Scan all commands for mini/mode patterns
                     for (const auto& command : commands) {
                         if (!command.empty()) {
                             const std::string& commandName = command[0];
+                            const size_t cmdLen = commandName.length();
                             
-                            // Check for mini pattern
-                            if (commandName.starts_with(MINI_PATTERN)) {
-                                const size_t expectedMinLength = MINI_PATTERN.length() + TRUE_STR.length();
-                                if (commandName.length() >= expectedMinLength) {
-                                    const std::string suffix = commandName.substr(MINI_PATTERN.length());
-                                    if (suffix == TRUE_STR) {
-                                        foundMini = true;
-                                        miniValue = true;
-                                    } else if (suffix == FALSE_STR) {
-                                        foundMini = true;
-                                        miniValue = false;
+                            if (cmdLen > 1 && commandName[0] == ';' && commandName[1] == 'm') {
+                                // Check for ;mini=
+                                if (!foundMini && cmdLen >= MINI_PATTERN_LEN + TRUE_STR_LEN && commandName[2] == 'i') {
+                                    if (commandName.compare(0, MINI_PATTERN_LEN, MINI_PATTERN) == 0) {
+                                        switch (commandName[MINI_PATTERN_LEN]) {
+                                            case 't':
+                                                if (commandName.compare(MINI_PATTERN_LEN, TRUE_STR_LEN, TRUE_STR) == 0) {
+                                                    foundMini = true;
+                                                    miniValue = true;
+                                                }
+                                                break;
+                                            case 'f':
+                                                if (commandName.compare(MINI_PATTERN_LEN, FALSE_STR_LEN, FALSE_STR) == 0) {
+                                                    foundMini = true;
+                                                    miniValue = false;
+                                                }
+                                                break;
+                                        }
                                     }
                                 }
-                            }
-                            // Check for mode pattern  
-                            else if (commandName.starts_with(MODE_PATTERN)) {
-                                const size_t expectedMinLength = MODE_PATTERN.length() + 4; // "slot"
-                                if (commandName.length() >= expectedMinLength) {
-                                    foundMode = true;
-                                    const std::string suffix = commandName.substr(MODE_PATTERN.length());
-                                    if (suffix == "slot") {
-                                        modeIsSlot = true;
+                                
+                                // Check for ;mode=
+                                if (!foundMode && cmdLen >= MODE_PATTERN_LEN + SLOT_STR.length() && commandName[2] == 'o') {
+                                    if (commandName.compare(0, MODE_PATTERN_LEN, MODE_PATTERN) == 0) {
+                                        foundMode = true;
+                                        if (commandName[MODE_PATTERN_LEN] == 's') {
+                                            modeIsSlot = (commandName.compare(MODE_PATTERN_LEN, SLOT_STR.length(), SLOT_STR) == 0);
+                                        }
                                     }
+                                }
+                                
+                                if (foundMini && foundMode) {
+                                    break;
                                 }
                             }
                         }
                     }
-                    
+
                     // Apply the settings
                     if (foundMini) {
                         isMini = miniValue;
@@ -4462,17 +4545,81 @@ bool drawCommandsMenu(
                             lastSection = "Commands";
                         }
                         //commandFooter = parseValueFromIniSection(packageConfigIniPath, optionName, FOOTER_STR);
-
-                        packageConfigData = getParsedDataFromIniFile(packageConfigIniPath); // reuse variable (better memory management)
+                        
+                        // First, scan for patterns to establish defaults
+                        bool foundFooter = false;
+                        bool foundFooterHighlight = false;
+                        
+                        for (const auto& command : commands) {
+                            if (!command.empty()) {
+                                const std::string& _commandName = command[0];
+                                const size_t cmdLen = _commandName.length();
+                                
+                                // Quick check: if starts with ';' and has at least one more char
+                                if (cmdLen > 1 && _commandName[0] == ';') {
+                                    const char secondChar = _commandName[1];
+                                    
+                                    switch (secondChar) {
+                                        case 'f':
+                                            // Could be ;footer= or ;footer_highlight=
+                                            if (!foundFooter && cmdLen > FOOTER_PATTERN_LEN && _commandName[7] == '=') {
+                                                if (_commandName.compare(0, FOOTER_PATTERN_LEN, FOOTER_PATTERN) == 0) {
+                                                    commandFooter = _commandName.substr(FOOTER_PATTERN_LEN);
+                                                    removeQuotes(commandFooter);
+                                                    foundFooter = true;
+                                                    if (foundFooterHighlight) break; // Early exit
+                                                }
+                                            }
+                                            
+                                            if (!foundFooterHighlight && cmdLen >= FOOTER_HIGHLIGHT_PATTERN_LEN + TRUE_STR_LEN && _commandName[7] == '_') {
+                                                if (_commandName.compare(0, FOOTER_HIGHLIGHT_PATTERN_LEN, FOOTER_HIGHLIGHT_PATTERN) == 0) {
+                                                    switch (_commandName[FOOTER_HIGHLIGHT_PATTERN_LEN]) {
+                                                        case 't':
+                                                            if (_commandName.compare(FOOTER_HIGHLIGHT_PATTERN_LEN, TRUE_STR_LEN, TRUE_STR) == 0) {
+                                                                commandFooterHighlight = true;
+                                                                commandFooterHighlightDefined = true;
+                                                                foundFooterHighlight = true;
+                                                            }
+                                                            break;
+                                                        case 'f':
+                                                            if (_commandName.compare(FOOTER_HIGHLIGHT_PATTERN_LEN, FALSE_STR_LEN, FALSE_STR) == 0) {
+                                                                commandFooterHighlight = false;
+                                                                commandFooterHighlightDefined = true;
+                                                                foundFooterHighlight = true;
+                                                            }
+                                                            break;
+                                                    }
+                                                }
+                                            }
+                                            break;
+                                    }
+                                    
+                                    // Early exit if both found
+                                    if (foundFooter && foundFooterHighlight) {
+                                        break;
+                                    }
+                                }
+                            }
+                        }
+                    
+                        // Then, load from config INI (overwrites defaults if they exist)
+                        packageConfigData = getParsedDataFromIniFile(packageConfigIniPath);
                         auto optionIt = packageConfigData.find(optionName);
                         if (optionIt != packageConfigData.end()) {
                             auto footerIt = optionIt->second.find(FOOTER_STR);
                             if (footerIt != optionIt->second.end()) {
                                 commandFooter = footerIt->second;
                             }
+                    
+                            // Load footer_highlight from config INI if it exists
+                            auto footerHighlightIt = optionIt->second.find("footer_highlight");
+                            if (footerHighlightIt != optionIt->second.end()) {
+                                commandFooterHighlight = (footerHighlightIt->second == TRUE_STR);
+                                commandFooterHighlightDefined = true;
+                            }
                         }
                         packageConfigData.clear();
-
+                    
                         // override loading of the command footer
 
                         tsl::elm::ListItem* listItem;
@@ -4481,7 +4628,7 @@ bool drawCommandsMenu(
                             cleanOptionName = optionName.substr(1);
                             //removeTag(cleanOptionName);
                             listItem = new tsl::elm::ListItem(cleanOptionName, "", isMini, true);
-                            listItem->setValue(footer);
+                            listItem->setValue(footer, commandFooterHighlightDefined ? !commandFooterHighlight : false); 
                         } else {
                             footer = !isSlot ? DROPDOWN_SYMBOL : OPTION_SYMBOL;
                             cleanOptionName = optionName.substr(1);
@@ -4621,137 +4768,375 @@ bool drawCommandsMenu(
             inMarikoSection = false;
             
             // Remove all empty command strings
-            removeEmptyCommands(commands);
+            //removeEmptyCommands(commands);
 
             // Initial processing of commands (DUPLICATE CODE)
             for (auto& cmd : commands) {
-                //for (auto& arg : cmd) {
-                //    // Replace general placeholders
-                //    replacePlaceholdersInArg(arg, generalPlaceholders);
-                //}
-                
                 if (cmd.empty()) continue;
-
+            
                 commandName = cmd[0];
                 
-                commandNameLower = stringToLowercase(commandName);
-                if (commandNameLower == "erista:") {
-                    inEristaSection = true;
-                    inMarikoSection = false;
-                    continue;
-                } else if (commandNameLower == "mariko:") {
-                    inEristaSection = false;
-                    inMarikoSection = true;
-                    continue;
+                // Quick check for section markers
+                if (commandName.length() == 7) {
+                    if ((commandName[0] == 'e' || commandName[0] == 'E') && 
+                        commandName[1] == 'r' && commandName[2] == 'i' && 
+                        commandName[3] == 's' && commandName[4] == 't' && 
+                        commandName[5] == 'a' && commandName[6] == ':') {
+                        inEristaSection = true;
+                        inMarikoSection = false;
+                        continue;
+                    } else if ((commandName[0] == 'm' || commandName[0] == 'M') && 
+                               commandName[1] == 'a' && commandName[2] == 'r' && 
+                               commandName[3] == 'i' && commandName[4] == 'k' && 
+                               commandName[5] == 'o' && commandName[6] == ':') {
+                        inEristaSection = false;
+                        inMarikoSection = true;
+                        continue;
+                    }
                 }
                 
                 if ((inEristaSection && !inMarikoSection && usingErista) || 
                     (!inEristaSection && inMarikoSection && usingMariko) || 
                     (!inEristaSection && !inMarikoSection)) {
                     
-                    if (commandName.find(SYSTEM_PATTERN) == 0) {
-                        commandSystem = commandName.substr(SYSTEM_PATTERN.length());
-                        if (std::find(commandSystems.begin(), commandSystems.end(), commandSystem) == commandSystems.end())
-                            commandSystem = commandSystems[0];
-                        continue;
-                    } else if (commandName.find(MODE_PATTERN) == 0) {
-                        commandMode = commandName.substr(MODE_PATTERN.length());
-                        if (commandMode.find(TOGGLE_STR) != std::string::npos) {
-                            delimiterPos = commandMode.find('?');
-                            if (delimiterPos != std::string::npos) {
-                                defaultToggleState = commandMode.substr(delimiterPos + 1);
-                            }
-                            commandMode = TOGGLE_STR;
-                        } else if (std::find(commandModes.begin(), commandModes.end(), commandMode) == commandModes.end()) {
-                            commandMode = commandModes[0];
+                    // Quick check: if starts with ';' and has at least one more char
+                    if (commandName.length() > 1 && commandName[0] == ';') {
+                        const char secondChar = commandName[1];
+                        
+                        // Branch on second character for faster pattern matching
+                        switch (secondChar) {
+                            case 's':
+                                if (commandName.compare(0, SYSTEM_PATTERN_LEN, SYSTEM_PATTERN) == 0) {
+                                    commandSystem = commandName.substr(SYSTEM_PATTERN_LEN);
+                                    if (std::find(commandSystems.begin(), commandSystems.end(), commandSystem) == commandSystems.end())
+                                        commandSystem = commandSystems[0];
+                                    continue;
+                                }
+                                if (commandName.compare(0, SCROLLABLE_PATTERN_LEN, SCROLLABLE_PATTERN) == 0) {
+                                    switch (commandName[SCROLLABLE_PATTERN_LEN]) {
+                                        case 't':
+                                            if (commandName.compare(SCROLLABLE_PATTERN_LEN, TRUE_STR_LEN, TRUE_STR) == 0) {
+                                                isScrollableTable = true;
+                                            }
+                                            break;
+                                        case 'f':
+                                            if (commandName.compare(SCROLLABLE_PATTERN_LEN, FALSE_STR_LEN, FALSE_STR) == 0) {
+                                                isScrollableTable = false;
+                                            }
+                                            break;
+                                    }
+                                    continue;
+                                }
+                                if (commandName.compare(0, START_GAP_PATTERN_LEN, START_GAP_PATTERN) == 0) {
+                                    tableStartGap = ult::stoi(commandName.substr(START_GAP_PATTERN_LEN));
+                                    continue;
+                                }
+                                if (commandName.compare(0, SPACING_PATTERN_LEN, SPACING_PATTERN) == 0) {
+                                    tableSpacing = ult::stoi(commandName.substr(SPACING_PATTERN_LEN));
+                                    continue;
+                                }
+                                if (commandName.compare(0, SECTION_TEXT_COLOR_PATTERN_LEN, SECTION_TEXT_COLOR_PATTERN) == 0) {
+                                    tableSectionTextColor = commandName.substr(SECTION_TEXT_COLOR_PATTERN_LEN);
+                                    continue;
+                                }
+                                if (commandName.compare(0, STEPS_PATTERN_LEN, STEPS_PATTERN) == 0) {
+                                    steps = ult::stoi(commandName.substr(STEPS_PATTERN_LEN));
+                                    continue;
+                                }
+                                break;
+                                
+                            case 'm':
+                                if (commandName.compare(0, MODE_PATTERN_LEN, MODE_PATTERN) == 0) {
+                                    commandMode = commandName.substr(MODE_PATTERN_LEN);
+                                    if (commandMode.find(TOGGLE_STR) != std::string::npos) {
+                                        delimiterPos = commandMode.find('?');
+                                        if (delimiterPos != std::string::npos) {
+                                            defaultToggleState = commandMode.substr(delimiterPos + 1);
+                                        }
+                                        commandMode = TOGGLE_STR;
+                                    } else if (std::find(commandModes.begin(), commandModes.end(), commandMode) == commandModes.end()) {
+                                        commandMode = commandModes[0];
+                                    }
+                                    continue;
+                                }
+                                if (commandName.compare(0, MINI_PATTERN_LEN, MINI_PATTERN) == 0) {
+                                    switch (commandName[MINI_PATTERN_LEN]) {
+                                        case 't':
+                                            if (commandName.compare(MINI_PATTERN_LEN, TRUE_STR_LEN, TRUE_STR) == 0) {
+                                                isMini = true;
+                                            }
+                                            break;
+                                        case 'f':
+                                            if (commandName.compare(MINI_PATTERN_LEN, FALSE_STR_LEN, FALSE_STR) == 0) {
+                                                isMini = false;
+                                            }
+                                            break;
+                                    }
+                                    continue;
+                                }
+                                if (commandName.compare(0, MIN_VALUE_PATTERN_LEN, MIN_VALUE_PATTERN) == 0) {
+                                    minValue = ult::stoi(commandName.substr(MIN_VALUE_PATTERN_LEN));
+                                    continue;
+                                }
+                                if (commandName.compare(0, MAX_VALUE_PATTERN_LEN, MAX_VALUE_PATTERN) == 0) {
+                                    maxValue = ult::stoi(commandName.substr(MAX_VALUE_PATTERN_LEN));
+                                    continue;
+                                }
+                                break;
+                                
+                            case 'g':
+                                if (commandName.compare(0, GROUPING_PATTERN_LEN, GROUPING_PATTERN) == 0) {
+                                    commandGrouping = commandName.substr(GROUPING_PATTERN_LEN);
+                                    if (std::find(commandGroupings.begin(), commandGroupings.end(), commandGrouping) == commandGroupings.end())
+                                        commandGrouping = commandGroupings[0];
+                                    continue;
+                                }
+                                if (commandName.compare(0, END_GAP_PATTERN_ALIAS_LEN, END_GAP_PATTERN_ALIAS) == 0) {
+                                    tableEndGap = ult::stoi(commandName.substr(END_GAP_PATTERN_ALIAS_LEN));
+                                    continue;
+                                }
+                                break;
+                                
+                            case 'f':
+                                if (commandName.compare(0, FOOTER_HIGHLIGHT_PATTERN_LEN, FOOTER_HIGHLIGHT_PATTERN) == 0) {
+                                    switch (commandName[FOOTER_HIGHLIGHT_PATTERN_LEN]) {
+                                        case 't':
+                                            if (commandName.compare(FOOTER_HIGHLIGHT_PATTERN_LEN, TRUE_STR_LEN, TRUE_STR) == 0) {
+                                                commandFooterHighlight = true;
+                                                commandFooterHighlightDefined = true;
+                                            }
+                                            break;
+                                        case 'f':
+                                            if (commandName.compare(FOOTER_HIGHLIGHT_PATTERN_LEN, FALSE_STR_LEN, FALSE_STR) == 0) {
+                                                commandFooterHighlight = false;
+                                                commandFooterHighlightDefined = true;
+                                            }
+                                            break;
+                                    }
+                                    continue;
+                                }
+                                if (commandName.compare(0, FOOTER_PATTERN_LEN, FOOTER_PATTERN) == 0) {
+                                    commandFooter = commandName.substr(FOOTER_PATTERN_LEN);
+                                    removeQuotes(commandFooter);
+                                    continue;
+                                }
+                                break;
+                                
+                            case 'h':
+                                if (commandName.compare(0, HOLD_PATTERN_LEN, HOLD_PATTERN) == 0) {
+                                    switch (commandName[HOLD_PATTERN_LEN]) {
+                                        case 't':
+                                            if (commandName.compare(HOLD_PATTERN_LEN, TRUE_STR_LEN, TRUE_STR) == 0) {
+                                                isHold = true;
+                                            }
+                                            break;
+                                        case 'f':
+                                            if (commandName.compare(HOLD_PATTERN_LEN, FALSE_STR_LEN, FALSE_STR) == 0) {
+                                                isHold = false;
+                                            }
+                                            break;
+                                    }
+                                    continue;
+                                }
+                                if (commandName.compare(0, HEADER_INDENT_PATTERN_LEN, HEADER_INDENT_PATTERN) == 0) {
+                                    switch (commandName[HEADER_INDENT_PATTERN_LEN]) {
+                                        case 't':
+                                            if (commandName.compare(HEADER_INDENT_PATTERN_LEN, TRUE_STR_LEN, TRUE_STR) == 0) {
+                                                useHeaderIndent = true;
+                                            }
+                                            break;
+                                        case 'f':
+                                            if (commandName.compare(HEADER_INDENT_PATTERN_LEN, FALSE_STR_LEN, FALSE_STR) == 0) {
+                                                useHeaderIndent = false;
+                                            }
+                                            break;
+                                    }
+                                    continue;
+                                }
+                                break;
+                                
+                            case 'p':
+                                if (commandName.compare(0, PROGRESS_PATTERN_LEN, PROGRESS_PATTERN) == 0) {
+                                    switch (commandName[PROGRESS_PATTERN_LEN]) {
+                                        case 't':
+                                            if (commandName.compare(PROGRESS_PATTERN_LEN, TRUE_STR_LEN, TRUE_STR) == 0) {
+                                                usingProgress = true;
+                                            }
+                                            break;
+                                        case 'f':
+                                            if (commandName.compare(PROGRESS_PATTERN_LEN, FALSE_STR_LEN, FALSE_STR) == 0) {
+                                                usingProgress = false;
+                                            }
+                                            break;
+                                    }
+                                    continue;
+                                }
+                                if (commandName.compare(0, POLLING_PATTERN_LEN, POLLING_PATTERN) == 0) {
+                                    switch (commandName[POLLING_PATTERN_LEN]) {
+                                        case 't':
+                                            if (commandName.compare(POLLING_PATTERN_LEN, TRUE_STR_LEN, TRUE_STR) == 0) {
+                                                isPolling = true;
+                                            }
+                                            break;
+                                        case 'f':
+                                            if (commandName.compare(POLLING_PATTERN_LEN, FALSE_STR_LEN, FALSE_STR) == 0) {
+                                                isPolling = false;
+                                            }
+                                            break;
+                                    }
+                                    continue;
+                                }
+                                break;
+                                
+                            case 't':
+                                if (commandName.compare(0, TOP_PIVOT_PATTERN_LEN, TOP_PIVOT_PATTERN) == 0) {
+                                    switch (commandName[TOP_PIVOT_PATTERN_LEN]) {
+                                        case 't':
+                                            if (commandName.compare(TOP_PIVOT_PATTERN_LEN, TRUE_STR_LEN, TRUE_STR) == 0) {
+                                                usingTopPivot = true;
+                                            }
+                                            break;
+                                        case 'f':
+                                            if (commandName.compare(TOP_PIVOT_PATTERN_LEN, FALSE_STR_LEN, FALSE_STR) == 0) {
+                                                usingTopPivot = false;
+                                            }
+                                            break;
+                                    }
+                                    continue;
+                                }
+                                break;
+                                
+                            case 'b':
+                                if (commandName.compare(0, BOTTOM_PIVOT_PATTERN_LEN, BOTTOM_PIVOT_PATTERN) == 0) {
+                                    switch (commandName[BOTTOM_PIVOT_PATTERN_LEN]) {
+                                        case 't':
+                                            if (commandName.compare(BOTTOM_PIVOT_PATTERN_LEN, TRUE_STR_LEN, TRUE_STR) == 0) {
+                                                usingBottomPivot = true;
+                                            }
+                                            break;
+                                        case 'f':
+                                            if (commandName.compare(BOTTOM_PIVOT_PATTERN_LEN, FALSE_STR_LEN, FALSE_STR) == 0) {
+                                                usingBottomPivot = false;
+                                            }
+                                            break;
+                                    }
+                                    continue;
+                                }
+                                if (commandName.compare(0, BACKGROUND_PATTERN_LEN, BACKGROUND_PATTERN) == 0) {
+                                    switch (commandName[BACKGROUND_PATTERN_LEN]) {
+                                        case 't':
+                                            if (commandName.compare(BACKGROUND_PATTERN_LEN, TRUE_STR_LEN, TRUE_STR) == 0) {
+                                                hideTableBackground = false;
+                                            }
+                                            break;
+                                        case 'f':
+                                            if (commandName.compare(BACKGROUND_PATTERN_LEN, FALSE_STR_LEN, FALSE_STR) == 0) {
+                                                hideTableBackground = true;
+                                            }
+                                            break;
+                                    }
+                                    continue;
+                                }
+                                break;
+                                
+                            case 'e':
+                                if (commandName.compare(0, END_GAP_PATTERN_LEN, END_GAP_PATTERN) == 0) {
+                                    tableEndGap = ult::stoi(commandName.substr(END_GAP_PATTERN_LEN));
+                                    continue;
+                                }
+                                break;
+                                
+                            case 'o':
+                                if (commandName.compare(0, OFFSET_PATTERN_LEN, OFFSET_PATTERN) == 0) {
+                                    tableColumnOffset = ult::stoi(commandName.substr(OFFSET_PATTERN_LEN));
+                                    continue;
+                                }
+                                if (commandName.compare(0, ON_EVERY_TICK_PATTERN_LEN, ON_EVERY_TICK_PATTERN) == 0) {
+                                    switch (commandName[ON_EVERY_TICK_PATTERN_LEN]) {
+                                        case 't':
+                                            if (commandName.compare(ON_EVERY_TICK_PATTERN_LEN, TRUE_STR_LEN, TRUE_STR) == 0) {
+                                                onEveryTick = true;
+                                            }
+                                            break;
+                                        case 'f':
+                                            if (commandName.compare(ON_EVERY_TICK_PATTERN_LEN, FALSE_STR_LEN, FALSE_STR) == 0) {
+                                                onEveryTick = false;
+                                            }
+                                            break;
+                                    }
+                                    continue;
+                                }
+                                break;
+                                
+                            case 'i':
+                                if (commandName.compare(0, INFO_TEXT_COLOR_PATTERN_LEN, INFO_TEXT_COLOR_PATTERN) == 0) {
+                                    tableInfoTextColor = commandName.substr(INFO_TEXT_COLOR_PATTERN_LEN);
+                                    continue;
+                                }
+                                break;
+                                
+                            case 'a':
+                                if (commandName.compare(0, ALIGNMENT_PATTERN_LEN, ALIGNMENT_PATTERN) == 0) {
+                                    tableAlignment = commandName.substr(ALIGNMENT_PATTERN_LEN);
+                                    continue;
+                                }
+                                break;
+                                
+                            case 'w':
+                                if (commandName.compare(0, WRAPPING_MODE_PATTERN_LEN, WRAPPING_MODE_PATTERN) == 0) {
+                                    tableWrappingMode = commandName.substr(WRAPPING_MODE_PATTERN_LEN);
+                                    continue;
+                                }
+                                if (commandName.compare(0, WRAPPING_INDENT_PATTERN_LEN, WRAPPING_INDENT_PATTERN) == 0) {
+                                    switch (commandName[WRAPPING_INDENT_PATTERN_LEN]) {
+                                        case 't':
+                                            if (commandName.compare(WRAPPING_INDENT_PATTERN_LEN, TRUE_STR_LEN, TRUE_STR) == 0) {
+                                                useWrappingIndent = true;
+                                            }
+                                            break;
+                                        case 'f':
+                                            if (commandName.compare(WRAPPING_INDENT_PATTERN_LEN, FALSE_STR_LEN, FALSE_STR) == 0) {
+                                                useWrappingIndent = false;
+                                            }
+                                            break;
+                                    }
+                                    continue;
+                                }
+                                break;
+                                
+                            case 'u':
+                                if (commandName.compare(0, UNITS_PATTERN_LEN, UNITS_PATTERN) == 0) {
+                                    units = commandName.substr(UNITS_PATTERN_LEN);
+                                    removeQuotes(units);
+                                    continue;
+                                }
+                                if (commandName.compare(0, UNLOCKED_PATTERN_LEN, UNLOCKED_PATTERN) == 0) {
+                                    switch (commandName[UNLOCKED_PATTERN_LEN]) {
+                                        case 't':
+                                            if (commandName.compare(UNLOCKED_PATTERN_LEN, TRUE_STR_LEN, TRUE_STR) == 0) {
+                                                unlockedTrackbar = true;
+                                            }
+                                            break;
+                                        case 'f':
+                                            if (commandName.compare(UNLOCKED_PATTERN_LEN, FALSE_STR_LEN, FALSE_STR) == 0) {
+                                                unlockedTrackbar = false;
+                                            }
+                                            break;
+                                    }
+                                    continue;
+                                }
+                                break;
                         }
-                        continue;
-                    } else if (commandName.find(GROUPING_PATTERN) == 0) {
-                        commandGrouping = commandName.substr(GROUPING_PATTERN.length());
-                        if (std::find(commandGroupings.begin(), commandGroupings.end(), commandGrouping) == commandGroupings.end())
-                            commandGrouping = commandGroupings[0];
-                        continue;
-                    } else if (commandName.find(MINI_PATTERN) == 0) {
-                        isMini = (commandName.substr(MINI_PATTERN.length()) == TRUE_STR);
-                        continue;
-                    } else if (commandName.find(PROGRESS_PATTERN) == 0) {
-                        usingProgress = (commandName.substr(PROGRESS_PATTERN.length()) == TRUE_STR);
-                        continue;
-                    } else if (commandName.find(POLLING_PATTERN) == 0) {
-                        isPolling = (commandName.substr(POLLING_PATTERN.length()) == TRUE_STR);
-                        continue;
-                    } else if (commandName.find(SCROLLABLE_PATTERN) == 0) {
-                        isScrollableTable = (commandName.substr(SCROLLABLE_PATTERN.length()) != FALSE_STR);
-                        continue;
-                    } else if (commandName.find(TOP_PIVOT_PATTERN) == 0) {
-                        usingTopPivot = (commandName.substr(TOP_PIVOT_PATTERN.length()) == TRUE_STR);
-                        continue;
-                    } else if (commandName.find(BOTTOM_PIVOT_PATTERN) == 0) {
-                        usingBottomPivot = (commandName.substr(BOTTOM_PIVOT_PATTERN.length()) == TRUE_STR);
-                        continue;
-                    } else if (commandName.find(BACKGROUND_PATTERN) == 0) {
-                        hideTableBackground = (commandName.substr(BACKGROUND_PATTERN.length()) == FALSE_STR);
-                        continue;
-                    } else if (commandName.find(HEADER_INDENT_PATTERN) == 0) {
-                        useHeaderIndent = (commandName.substr(HEADER_INDENT_PATTERN.length()) == TRUE_STR);
-                        continue;
-                    } else if (commandName.find(START_GAP_PATTERN) == 0) {
-                        tableStartGap = ult::stoi(commandName.substr(START_GAP_PATTERN.length()));
-                        continue;
-                    } else if (commandName.find(END_GAP_PATTERN) == 0) {
-                        tableEndGap = ult::stoi(commandName.substr(END_GAP_PATTERN.length()));
-                        continue;
-                    } else if (commandName.find(END_GAP_PATTERN_ALIAS) == 0) {
-                        tableEndGap = ult::stoi(commandName.substr(END_GAP_PATTERN_ALIAS.length()));
-                        continue;
-                    } else if (commandName.find(OFFSET_PATTERN) == 0) {
-                        tableColumnOffset = ult::stoi(commandName.substr(OFFSET_PATTERN.length()));
-                        continue;
-                    } else if (commandName.find(SPACING_PATTERN) == 0) {
-                        tableSpacing = ult::stoi(commandName.substr(SPACING_PATTERN.length()));
-                        continue;
-                    } else if (commandName.find(SECTION_TEXT_COLOR_PATTERN) == 0) {
-                        tableSectionTextColor = commandName.substr(SECTION_TEXT_COLOR_PATTERN.length());
-                        continue;
-                    } else if (commandName.find(INFO_TEXT_COLOR_PATTERN) == 0) {
-                        tableInfoTextColor = commandName.substr(INFO_TEXT_COLOR_PATTERN.length());
-                        continue;
-                    } else if (commandName.find(ALIGNMENT_PATTERN) == 0) {
-                        tableAlignment = commandName.substr(ALIGNMENT_PATTERN.length());
-                        continue;
-                    } else if (commandName.find(WRAPPING_MODE_PATTERN) == 0) {
-                        tableWrappingMode = commandName.substr(WRAPPING_MODE_PATTERN.length());
-                        continue;
-                    } else if (commandName.find(WRAPPING_INDENT_PATTERN) == 0) {
-                        useWrappingIndent = (commandName.substr(WRAPPING_INDENT_PATTERN.length()) == TRUE_STR);
-                        continue;
-                    } else if (commandName.find(MIN_VALUE_PATTERN) == 0) {
-                        minValue = ult::stoi(commandName.substr(MIN_VALUE_PATTERN.length()));
-                        continue;
-                    } else if (commandName.find(MAX_VALUE_PATTERN) == 0) {
-                        maxValue = ult::stoi(commandName.substr(MAX_VALUE_PATTERN.length()));
-                        continue;
-                    } else if (commandName.find(UNITS_PATTERN) == 0) {
-                        units = commandName.substr(UNITS_PATTERN.length());
-                        removeQuotes(units);
-                        continue;
-                    } else if (commandName.find(STEPS_PATTERN) == 0) {
-                        steps = ult::stoi(commandName.substr(STEPS_PATTERN.length()));
-                        continue;
-                    } else if (commandName.find(UNLOCKED_PATTERN) == 0) {
-                        unlockedTrackbar = (commandName.substr(UNLOCKED_PATTERN.length()) == TRUE_STR);
-                        continue;
-                    } else if (commandName.find(ON_EVERY_TICK_PATTERN) == 0) {
-                        onEveryTick = (commandName.substr(ON_EVERY_TICK_PATTERN.length()) == TRUE_STR);
-                        continue;
-                    } else if (commandName.find(";") == 0) {
+                        
+                        // If we got here, it's a `;` command that didn't match any pattern
+                        // Treat it as a comment and skip it
                         continue;
                     }
                     
                     if (commandMode == TOGGLE_STR) {
-                        if (commandName.find("on:") == 0)
+                        if (commandName.compare(0, 3, "on:") == 0)
                             currentSection = ON_STR;
-                        else if (commandName.find("off:") == 0)
+                        else if (commandName.compare(0, 4, "off:") == 0)
                             currentSection = OFF_STR;
                         
                         if (currentSection == GLOBAL_STR) {
@@ -4766,14 +5151,10 @@ bool drawCommandsMenu(
                         tableData.push_back(cmd);
                         continue;
                     } else if (commandMode == TRACKBAR_STR || commandMode == STEP_TRACKBAR_STR || commandMode == NAMED_STEP_TRACKBAR_STR) {
-                        //commands.push_back(cmd);
                         continue;
                     }
                     
                     if (cmd.size() > 1) {
-                        //if (commandName == "ini_file") {
-                        //    iniFilePath = cmd[1];
-                        //    preprocessPath(iniFilePath, packagePath);
                         if (commandName == "file_source") {
                             if (currentSection == GLOBAL_STR) {
                                 pathPattern = cmd[1];
@@ -4800,11 +5181,34 @@ bool drawCommandsMenu(
             if (isFile(packageConfigIniPath)) {
                 packageConfigData = getParsedDataFromIniFile(packageConfigIniPath);
                 
-                syncIniValue(packageConfigData, packageConfigIniPath, optionName, SYSTEM_STR, commandSystem);
-                syncIniValue(packageConfigData, packageConfigIniPath, optionName, MODE_STR, commandMode);
-                syncIniValue(packageConfigData, packageConfigIniPath, optionName, GROUPING_STR, commandGrouping);
-                syncIniValue(packageConfigData, packageConfigIniPath, optionName, FOOTER_STR, commandFooter);
+                //bool shouldSaveINI = false;
+                bool shouldSaveINI = syncIniValue(packageConfigData, packageConfigIniPath, optionName, SYSTEM_STR, commandSystem);
+                shouldSaveINI |= syncIniValue(packageConfigData, packageConfigIniPath, optionName, MODE_STR, commandMode);
+                shouldSaveINI |= syncIniValue(packageConfigData, packageConfigIniPath, optionName, GROUPING_STR, commandGrouping);
                 
+                // Only sync footer if pattern was provided
+                shouldSaveINI |= syncIniValue(packageConfigData, packageConfigIniPath, optionName, FOOTER_STR, commandFooter);
+                
+                // Only sync footer_highlight if the pattern was defined in package INI
+                if (commandFooterHighlightDefined) {
+                    std::string footerHighlightStr = commandFooterHighlight ? TRUE_STR : FALSE_STR;
+            
+                    const bool existed = !syncIniValue(
+                        packageConfigData, packageConfigIniPath, optionName,
+                        "footer_highlight", footerHighlightStr
+                    );
+            
+                    // only load the value if it existed
+                    if (existed) {
+                        commandFooterHighlight = (footerHighlightStr == TRUE_STR);
+                    }
+            
+                    shouldSaveINI |= !existed;
+                }
+                
+                // Save all changes in one batch write
+                if (shouldSaveINI)
+                    saveIniFileData(packageConfigIniPath, packageConfigData);
                 packageConfigData.clear();
             } else { // write default data if settings are not loaded
                 // Load any existing data first (might be empty if file doesn't exist)
@@ -4814,6 +5218,16 @@ bool drawCommandsMenu(
                 packageConfigData[optionName][SYSTEM_STR] = commandSystem;
                 packageConfigData[optionName][MODE_STR] = commandMode;
                 packageConfigData[optionName][GROUPING_STR] = commandGrouping;
+                
+                // Only add footer if pattern was provided
+                if (!commandFooter.empty() && commandFooter != NULL_STR) {
+                    packageConfigData[optionName][FOOTER_STR] = commandFooter;
+                }
+
+                // Only add footer_highlight if it was defined in package INI
+                if (commandFooterHighlightDefined) {
+                    packageConfigData[optionName]["footer_highlight"] = commandFooterHighlight ? TRUE_STR : FALSE_STR;
+                }
                 
                 // Save the config file once
                 saveIniFileData(packageConfigIniPath, packageConfigData);
@@ -5196,9 +5610,9 @@ bool drawCommandsMenu(
                         listItem = new tsl::elm::ListItem(cleanOptionName, "", isMini, true);
 
                         if (commandMode == OPTION_STR)
-                            listItem->setValue(footer);
+                            listItem->setValue(footer, commandFooterHighlightDefined ? !commandFooterHighlight : false);
                         else
-                            listItem->setValue(footer, true);
+                            listItem->setValue(footer, commandFooterHighlightDefined ? !commandFooterHighlight : true);
                     }
                     
                     if (footer == UNAVAILABLE_SELECTION || footer == NOT_AVAILABLE_STR || (footer.find(NULL_STR) != std::string::npos))
@@ -5384,21 +5798,22 @@ bool drawCommandsMenu(
                     if (!isDirectory(tmpSelectedItem))
                         dropExtension(itemName);
                     parentDirName = getParentDirNameFromPath(selectedItem);
-                    if (commandMode == DEFAULT_STR  || commandMode == SLOT_STR || commandMode == OPTION_STR || commandMode == HOLD_STR) { // for handiling toggles
+                    if (commandMode == DEFAULT_STR  || commandMode == SLOT_STR || commandMode == OPTION_STR) { // for handiling toggles
                         cleanOptionName = optionName;
                         //removeTag(cleanOptionName);
                         tsl::elm::ListItem* listItem = new tsl::elm::ListItem(cleanOptionName, "", isMini, true);
-                        if (commandMode == DEFAULT_STR || commandMode == HOLD_STR)
-                            listItem->setValue(footer, true);
+
+                        if (commandMode == DEFAULT_STR)
+                            listItem->setValue(footer, commandFooterHighlightDefined ? !commandFooterHighlight : true);
                         else
-                            listItem->setValue(footer);
+                            listItem->setValue(footer, commandFooterHighlightDefined ? !commandFooterHighlight : false);
                         
 
-                        if (commandMode == HOLD_STR)
+                        if (isHold)
                             listItem->disableClickAnimation();
 
                         listItem->setClickListener([i, commands, keyName = originalOptionName, cleanOptionName, packagePath, packageName,
-                            selectedItem, listItem, lastPackageHeader, commandMode, footer, showWidget](uint64_t keys) {
+                            selectedItem, listItem, lastPackageHeader, commandMode, footer, isHold, showWidget, commandFooterHighlight, commandFooterHighlightDefined](uint64_t keys) {
                             
                             if (runningInterpreter.load(acquire)) {
                                 return false;
@@ -5413,13 +5828,16 @@ bool drawCommandsMenu(
                                 runningInterpreter.store(true, release);
 
                                 auto modifiedCmds = getSourceReplacement(commands, selectedItem, i, packagePath);
-                                if (commandMode == HOLD_STR) {
+                                if (isHold) {
                                     lastSelectedListItemFooter = footer;
+                                    lastFooterHighlight = commandFooterHighlight;  // STORE THE VALUE
+                                    lastFooterHighlightDefined = commandFooterHighlightDefined;  // STORE WHETHER IT WAS DEFINED
                                     listItem->setValue(INPROGRESS_SYMBOL);
                                     lastSelectedListItem = listItem;
                                     holdStartTick = armGetSystemTick();
                                     storedCommands = std::move(modifiedCmds);
                                     lastCommandMode = commandMode;
+                                    lastCommandIsHold = true;
                                     lastKeyName = keyName;
                                     return true;
                                 }
@@ -5432,6 +5850,8 @@ bool drawCommandsMenu(
                                 
                                 //lastSelectedListItem = nullptr;
                                 lastSelectedListItem = listItem;
+                                lastFooterHighlight = commandFooterHighlight;  // STORE THE VALUE
+                                lastFooterHighlightDefined = commandFooterHighlightDefined;  // STORE WHETHER IT WAS DEFINED
                                 shiftItemFocus(listItem);
                                 lastCommandMode = commandMode;
                                 lastKeyName = keyName;
@@ -5768,13 +6188,14 @@ public:
      */
     virtual bool handleInput(uint64_t keysDown, uint64_t keysHeld, touchPosition touchInput, JoystickPosition leftJoyStick, JoystickPosition rightJoyStick) override {
         
-        bool isHolding = (lastCommandMode == HOLD_STR && runningInterpreter.load(std::memory_order_acquire));
+        bool isHolding = (lastCommandIsHold && runningInterpreter.load(std::memory_order_acquire));
         if (isHolding) {
             processHold(keysDown, keysHeld, holdStartTick, isHolding, [&]() {
                 // Execute interpreter commands if needed
                 displayPercentage.store(-1, std::memory_order_release);
-                lastCommandMode.clear();
-                lastKeyName.clear();
+                //lastCommandMode.clear();
+                lastCommandIsHold = false;
+                //lastKeyName.clear();
                 lastSelectedListItem->setValue(INPROGRESS_SYMBOL);
                 //lastSelectedListItemFooter.clear();
                 //lastSelectedListItem->enableClickAnimation();
@@ -5806,19 +6227,28 @@ public:
                     if (success) {
                         if (isFile(packageConfigIniPath)) {
                             auto packageConfigData = getParsedDataFromIniFile(packageConfigIniPath);
-        
+                
                             if (auto it = packageConfigData.find(lastKeyName); it != packageConfigData.end()) {
                                 auto& optionSection = it->second;
-        
+                
                                 // Update footer if valid
                                 if (auto footerIt = optionSection.find(FOOTER_STR);
                                     footerIt != optionSection.end() &&
                                     footerIt->second.find(NULL_STR) == std::string::npos)
                                 {
-                                    lastSelectedListItem->setValue(footerIt->second);
+                                    // Check if footer_highlight exists in the INI
+                                    auto footerHighlightIt = optionSection.find("footer_highlight");
+                                    if (footerHighlightIt != optionSection.end()) {
+                                        // Use the value from the INI
+                                        bool footerHighlightFromIni = (footerHighlightIt->second == TRUE_STR);
+                                        lastSelectedListItem->setValue(footerIt->second, !footerHighlightFromIni);
+                                    } else {
+                                        // footer_highlight not defined in INI, use default
+                                        lastSelectedListItem->setValue(footerIt->second, false);
+                                    }
                                 }
                             }
-        
+                
                             lastCommandMode.clear();
                         } else {
                             lastSelectedListItem->setValue(CHECKMARK_SYMBOL);
@@ -5853,6 +6283,7 @@ public:
         
                 lastSelectedListItem->enableClickAnimation();
                 lastSelectedListItem = nullptr;
+                lastFooterHighlight = lastFooterHighlightDefined = false;
             }
         
             closeInterpreterThread();
@@ -6760,20 +7191,14 @@ public:
     
     bool createPackagesMenu(tsl::elm::List* list) {
         if (!isFile(PACKAGE_PATH + PACKAGE_FILENAME)) {
-            #if !USING_FSTREAM_DIRECTIVE
+            deleteFileOrDirectory(PACKAGE_PATH + CONFIG_FILENAME);
+
             FILE* packageFileOut = fopen((PACKAGE_PATH + PACKAGE_FILENAME).c_str(), "w");
             if (packageFileOut) {
-                constexpr const char packageContent[] = "[*Reboot To]\n[*Boot Entry]\nini_file_source /bootloader/hekate_ipl.ini\nfilter config\nreboot boot '{ini_file_source(*)}'\n[hekate - \uE073]\nreboot HEKATE\n[hekate UMS - \uE073\uE08D]\nreboot UMS\n\n[Commands]\n[Shutdown - ]\n;mode=hold\nshutdown\n";
+                constexpr const char packageContent[] = "[*Reboot To]\n[*Boot Entry]\nini_file_source /bootloader/hekate_ipl.ini\nfilter config\nreboot boot '{ini_file_source(*)}'\n[hekate - \uE073]\nreboot HEKATE\n[hekate UMS - \uE073\uE08D]\nreboot UMS\n\n[Commands]\n[Shutdown - ]\n;hold=true\nshutdown\n";
                 fwrite(packageContent, sizeof(packageContent) - 1, 1, packageFileOut);
                 fclose(packageFileOut);
             }
-            #else
-            std::ofstream packageFileOut(PACKAGE_PATH + PACKAGE_FILENAME);
-            if (packageFileOut) {
-                packageFileOut << "[*Reboot To]\n[*Boot Entry]\nini_file_source /bootloader/hekate_ipl.ini\nfilter config\nreboot boot '{ini_file_source(*)}'\n[hekate - \uE073]\nreboot HEKATE\n[hekate UMS - \uE073\uE08D]\nreboot UMS\n\n[Commands]\n[Shutdown - ]\n;mode=hold\nshutdown\n";
-                packageFileOut.close();
-            }
-            #endif
         }
     
         inOverlaysPage.store(false, std::memory_order_release);
@@ -6784,17 +7209,10 @@ public:
         if (dropdownSection.empty()) {
             createDirectory(PACKAGE_PATH);
             
-            #if !USING_FSTREAM_DIRECTIVE
             if (!isFile(PACKAGES_INI_FILEPATH)) {
                 FILE* createFile = fopen(PACKAGES_INI_FILEPATH.c_str(), "w");
                 if (createFile) fclose(createFile);
             }
-            #else
-            if (!isFile(PACKAGES_INI_FILEPATH)) {
-                std::ofstream createFile(PACKAGES_INI_FILEPATH);
-                createFile.close();
-            }
-            #endif
     
             std::set<std::string> packageSet;
             bool drawHiddenTab = false;
@@ -7115,13 +7533,14 @@ public:
      */
     virtual bool handleInput(uint64_t keysDown, uint64_t keysHeld, touchPosition touchInput, JoystickPosition leftJoyStick, JoystickPosition rightJoyStick) override {
         
-        bool isHolding = (lastCommandMode == HOLD_STR && runningInterpreter.load(std::memory_order_acquire));
+        bool isHolding = (lastCommandIsHold && runningInterpreter.load(std::memory_order_acquire));
         if (isHolding) {
             processHold(keysDown, keysHeld, holdStartTick, isHolding, [&]() {
                 // Execute interpreter commands if needed
                 displayPercentage.store(-1, std::memory_order_release);
-                lastCommandMode.clear();
-                lastKeyName.clear();
+                //lastCommandMode.clear();
+                //lastKeyName.clear();
+                lastCommandIsHold = false;
                 lastSelectedListItem->setValue(INPROGRESS_SYMBOL);
                 //lastSelectedListItemFooter.clear();
                 //lastSelectedListItem->enableClickAnimation();
@@ -7153,19 +7572,28 @@ public:
                     if (success) {
                         if (isFile(packageConfigIniPath)) {
                             auto packageConfigData = getParsedDataFromIniFile(packageConfigIniPath);
-        
+                
                             if (auto it = packageConfigData.find(lastKeyName); it != packageConfigData.end()) {
                                 auto& optionSection = it->second;
-        
+                
                                 // Update footer if valid
                                 if (auto footerIt = optionSection.find(FOOTER_STR);
                                     footerIt != optionSection.end() &&
                                     footerIt->second.find(NULL_STR) == std::string::npos)
                                 {
-                                    lastSelectedListItem->setValue(footerIt->second);
+                                    // Check if footer_highlight exists in the INI
+                                    auto footerHighlightIt = optionSection.find("footer_highlight");
+                                    if (footerHighlightIt != optionSection.end()) {
+                                        // Use the value from the INI
+                                        bool footerHighlightFromIni = (footerHighlightIt->second == TRUE_STR);
+                                        lastSelectedListItem->setValue(footerIt->second, !footerHighlightFromIni);
+                                    } else {
+                                        // footer_highlight not defined in INI, use default
+                                        lastSelectedListItem->setValue(footerIt->second, false);
+                                    }
                                 }
                             }
-        
+                
                             lastCommandMode.clear();
                         } else {
                             lastSelectedListItem->setValue(CHECKMARK_SYMBOL);
@@ -7200,6 +7628,7 @@ public:
         
                 lastSelectedListItem->enableClickAnimation();
                 lastSelectedListItem = nullptr;
+                lastFooterHighlight = lastFooterHighlightDefined = false;
             }
         
             closeInterpreterThread();
