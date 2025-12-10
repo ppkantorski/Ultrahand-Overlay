@@ -372,22 +372,16 @@ bool processHold(uint64_t keysDown, uint64_t keysHeld, u64& holdStartTick, bool&
         isHolding = false;
         displayPercentage.store(0, std::memory_order_release);
         runningInterpreter.store(false, std::memory_order_release);
-        if (resetStoredCommands) {
-            storedCommands.clear();
-            lastCommandMode.clear();
-            lastCommandIsHold = false;
-            lastKeyName.clear();
-        }
         if (lastSelectedListItem) {
             if (resetStoredCommands) {
                 // Use lastFooterHighlightDefined to determine the highlight parameter
                 // If not defined, infer from lastCommandMode
-                bool highlightParam;
+                bool highlightParam = true;
                 if (lastFooterHighlightDefined) {
                     highlightParam = !lastFooterHighlight;
                 } else {
                     // Default behavior based on command mode
-                    highlightParam = (lastCommandMode == DEFAULT_STR);
+                    highlightParam = !(lastCommandMode == SLOT_STR || lastCommandMode == OPTION_STR) || lastCommandMode.empty();
                 }
                 lastSelectedListItem->setValue(lastSelectedListItemFooter, highlightParam);
                 lastSelectedListItemFooter.clear();
@@ -397,6 +391,13 @@ bool processHold(uint64_t keysDown, uint64_t keysHeld, u64& holdStartTick, bool&
             lastSelectedListItem = nullptr;
             lastFooterHighlight = lastFooterHighlightDefined = false;
         }
+        if (resetStoredCommands) {
+            storedCommands.clear();
+            lastCommandMode.clear();
+            lastCommandIsHold = false;
+            lastKeyName.clear();
+        }
+        
         if (onRelease) onRelease();
         return true;
     }
