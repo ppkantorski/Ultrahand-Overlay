@@ -397,7 +397,7 @@ bool processHold(uint64_t keysDown, uint64_t keysHeld, u64& holdStartTick, bool&
             lastCommandIsHold = false;
             lastKeyName.clear();
         }
-        
+
         if (onRelease) onRelease();
         return true;
     }
@@ -4525,6 +4525,10 @@ bool drawCommandsMenu(
                                             if (!foundFooter && cmdLen > FOOTER_PATTERN_LEN && _commandName[7] == '=') {
                                                 if (_commandName.compare(0, FOOTER_PATTERN_LEN, FOOTER_PATTERN) == 0) {
                                                     commandFooter = _commandName.substr(FOOTER_PATTERN_LEN);
+                                                    // If there are additional arguments, append them (handles spaces in footer)
+                                                    for (size_t j = 1; j < command.size(); ++j) {
+                                                        commandFooter += " " + command[j];
+                                                    }
                                                     removeQuotes(commandFooter);
                                                     foundFooter = true;
                                                     if (foundFooterHighlight) break; // Early exit
@@ -4877,6 +4881,10 @@ bool drawCommandsMenu(
                                 }
                                 if (commandName.compare(0, FOOTER_PATTERN_LEN, FOOTER_PATTERN) == 0) {
                                     commandFooter = commandName.substr(FOOTER_PATTERN_LEN);
+                                    // If there are additional arguments, append them (handles spaces in footer)
+                                    for (size_t j = 1; j < cmd.size(); ++j) {
+                                        commandFooter += " " + cmd[j];
+                                    }
                                     removeQuotes(commandFooter);
                                     continue;
                                 }
