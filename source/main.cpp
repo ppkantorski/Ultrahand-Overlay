@@ -5154,10 +5154,8 @@ bool drawCommandsMenu(
                 shouldSaveINI |= syncIniValue(packageConfigData, packageConfigIniPath, optionName, MODE_STR, commandMode);
                 shouldSaveINI |= syncIniValue(packageConfigData, packageConfigIniPath, optionName, GROUPING_STR, commandGrouping);
                 
-                // Only sync footer if it has a value and is not NULL_STR
-                if (!commandFooter.empty() && commandFooter != NULL_STR) {
-                    shouldSaveINI |= syncIniValue(packageConfigData, packageConfigIniPath, optionName, FOOTER_STR, commandFooter);
-                }
+                // Only sync footer if pattern was provided
+                shouldSaveINI |= syncIniValue(packageConfigData, packageConfigIniPath, optionName, FOOTER_STR, commandFooter);
                 
                 // Only sync footer_highlight if the pattern was defined in package INI
                 if (commandFooterHighlightDefined) {
