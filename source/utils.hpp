@@ -2218,6 +2218,7 @@ void applyReplaceIniPlaceholder(std::string& arg, const std::string& commandName
  * @brief Replaces a JSON source placeholder with the actual JSON source.
  *
  * Optimized version with variables moved to usage scope to avoid repeated allocations.
+ * Supports "null" key as a fallback default for failed or empty lookups.
  *
  * @param arg The input string containing the placeholder.
  * @param commandName The name of the JSON command (e.g., "json", "json_file").
@@ -2256,6 +2257,9 @@ std::string replaceJsonPlaceholder(const std::string& arg, const std::string& co
     std::string key;
     bool validValue;
     
+    // Keep reference to root for "null" fallback lookups
+    cJSON* root = reinterpret_cast<cJSON*>(jsonDict.get());
+    
     while (startPos != std::string::npos) {
         endPos = arg.find(")}", startPos);
         if (endPos == std::string::npos) {
@@ -2266,7 +2270,7 @@ std::string replaceJsonPlaceholder(const std::string& arg, const std::string& co
         result.append(arg, lastPos, startPos - lastPos);
         
         nextPos = startPos + searchStringLen;
-        cJSON* value = reinterpret_cast<cJSON*>(jsonDict.get()); // Get the JSON root object
+        cJSON* value = root; // Start from root
         validValue = true;
         
         while (nextPos < endPos && validValue) {
@@ -2290,11 +2294,26 @@ std::string replaceJsonPlaceholder(const std::string& arg, const std::string& co
         }
         
         if (validValue && value && cJSON_IsString(value) && value->valuestring) {
-            result.append(value->valuestring); // Append replacement value
+            // Check if the retrieved value is an empty string
+            if (value->valuestring[0] == '\0') {
+                // Fallback: try to look up "null" key at the root level
+                cJSON* fallbackValue = cJSON_GetObjectItemCaseSensitive(root, NULL_STR);
+                if (fallbackValue && cJSON_IsString(fallbackValue) && fallbackValue->valuestring) {
+                    result.append(fallbackValue->valuestring);
+                } else {
+                    result.append(NULL_STR);
+                }
+            } else {
+                result.append(value->valuestring); // Append replacement value
+            }
         } else {
-            // If replacement failed, keep the original placeholder
-            //result.append(arg, startPos, endPos + 2 - startPos);
-            result.append(NULL_STR);
+            // Key doesn't exist or isn't a string - try "null" fallback
+            cJSON* fallbackValue = cJSON_GetObjectItemCaseSensitive(root, NULL_STR);
+            if (fallbackValue && cJSON_IsString(fallbackValue) && fallbackValue->valuestring) {
+                result.append(fallbackValue->valuestring);
+            } else {
+                result.append(NULL_STR);
+            }
         }
         
         lastPos = endPos + 2;
