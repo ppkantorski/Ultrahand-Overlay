@@ -2218,7 +2218,7 @@ void applyReplaceIniPlaceholder(std::string& arg, const std::string& commandName
  * @brief Replaces a JSON source placeholder with the actual JSON source.
  *
  * Optimized version with variables moved to usage scope to avoid repeated allocations.
- * Supports "null" key as a fallback default for failed or empty lookups.
+ * Supports "null" key as a fallback default for failed lookups.
  *
  * @param arg The input string containing the placeholder.
  * @param commandName The name of the JSON command (e.g., "json", "json_file").
@@ -2294,21 +2294,11 @@ std::string replaceJsonPlaceholder(const std::string& arg, const std::string& co
         }
         
         if (validValue && value && cJSON_IsString(value) && value->valuestring) {
-            // Check if the retrieved value is an empty string
-            if (value->valuestring[0] == '\0') {
-                // Fallback: try to look up "null" key at the root level
-                cJSON* fallbackValue = cJSON_GetObjectItemCaseSensitive(root, NULL_STR);
-                if (fallbackValue && cJSON_IsString(fallbackValue) && fallbackValue->valuestring) {
-                    result.append(fallbackValue->valuestring);
-                } else {
-                    result.append(NULL_STR);
-                }
-            } else {
-                result.append(value->valuestring); // Append replacement value
-            }
+            // Append the value as-is, even if it's an empty string
+            result.append(value->valuestring);
         } else {
             // Key doesn't exist or isn't a string - try "null" fallback
-            cJSON* fallbackValue = cJSON_GetObjectItemCaseSensitive(root, NULL_STR);
+            cJSON* fallbackValue = cJSON_GetObjectItemCaseSensitive(root, NULL_STR.c_str());
             if (fallbackValue && cJSON_IsString(fallbackValue) && fallbackValue->valuestring) {
                 result.append(fallbackValue->valuestring);
             } else {
