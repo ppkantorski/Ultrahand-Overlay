@@ -3750,7 +3750,7 @@ void handleCopyCommand(const std::vector<std::string>& cmd, const std::string& p
         // Only create filterSet if filter file exists
         std::unique_ptr<std::unordered_set<std::string>> filterSet;
         if (!filterListPath.empty()) {
-            filterSet = std::make_unique<std::unordered_set<std::string>>(readSetFromFile(filterListPath));
+            filterSet = std::make_unique<std::unordered_set<std::string>>(readSetFromFile(filterListPath, packagePath));
         }
         
         const size_t listSize = std::min(sourceFilesList.size(), destinationFilesList.size());
@@ -3793,7 +3793,13 @@ void handleCopyCommand(const std::vector<std::string>& cmd, const std::string& p
         }
         
         if (sourcePath.find('*') != std::string::npos) {
-            copyFileOrDirectoryByPattern(sourcePath, destinationPath, logSource, logDestination);
+            std::unique_ptr<std::unordered_set<std::string>> filterSet;
+            if (!filterListPath.empty()) {
+                filterSet = std::make_unique<std::unordered_set<std::string>>(readSetFromFile(filterListPath, packagePath));
+            }
+            copyFileOrDirectoryByPattern(sourcePath, destinationPath, logSource, logDestination, filterSet.get());
+
+            //copyFileOrDirectoryByPattern(sourcePath, destinationPath, logSource, logDestination);
         } else {
             const long long totalSize = getTotalSize(sourcePath);
             long long totalBytesCopied = 0;
@@ -3814,7 +3820,7 @@ void handleDeleteCommand(const std::vector<std::string>& cmd, const std::string&
         // Only create filterSet if filter file exists
         std::unique_ptr<std::unordered_set<std::string>> filterSet;
         if (!filterListPath.empty()) {
-            filterSet = std::make_unique<std::unordered_set<std::string>>(readSetFromFile(filterListPath));
+            filterSet = std::make_unique<std::unordered_set<std::string>>(readSetFromFile(filterListPath, packagePath));
         }
         
         for (size_t i = 0; i < sourceFilesList.size(); ++i) {
@@ -3827,7 +3833,7 @@ void handleDeleteCommand(const std::vector<std::string>& cmd, const std::string&
             const bool shouldDelete = !filterSet || filterSet->find(sourcePath) == filterSet->end();
             
             if (shouldDelete) {
-                deleteFileOrDirectory(sourcePath);
+                deleteFileOrDirectory(sourcePath, logSource);
             }
             
             // Clear the vector element immediately to free memory
@@ -3854,7 +3860,12 @@ void handleDeleteCommand(const std::vector<std::string>& cmd, const std::string&
         
         // Perform the delete operation
         if (sourcePath.find('*') != std::string::npos) {
-            deleteFileOrDirectoryByPattern(sourcePath, logSource);
+            // Load filterSet for single path operations
+            std::unique_ptr<std::unordered_set<std::string>> filterSet;
+            if (!filterListPath.empty()) {
+                filterSet = std::make_unique<std::unordered_set<std::string>>(readSetFromFile(filterListPath, packagePath));
+            }
+            deleteFileOrDirectoryByPattern(sourcePath, logSource, filterSet.get());
         } else {
             deleteFileOrDirectory(sourcePath, logSource);
         }
@@ -3918,12 +3929,12 @@ void handleMoveCommand(const std::vector<std::string>& cmd, const std::string& p
         // Load filter sets (these are typically small)
         std::unique_ptr<std::unordered_set<std::string>> copyFilterSet;
         if (!copyFilterListPath.empty()) {
-            copyFilterSet = std::make_unique<std::unordered_set<std::string>>(readSetFromFile(copyFilterListPath));
+            copyFilterSet = std::make_unique<std::unordered_set<std::string>>(readSetFromFile(copyFilterListPath, packagePath));
         }
         
         std::unique_ptr<std::unordered_set<std::string>> filterSet;
         if (!filterListPath.empty()) {
-            filterSet = std::make_unique<std::unordered_set<std::string>>(readSetFromFile(filterListPath));
+            filterSet = std::make_unique<std::unordered_set<std::string>>(readSetFromFile(filterListPath, packagePath));
         }
     
         // Pre-allocate strings to avoid reallocations in loop
@@ -4102,7 +4113,14 @@ void handleMoveCommand(const std::vector<std::string>& cmd, const std::string& p
         
         // Perform the move operation
         if (sourcePath.find('*') != std::string::npos) {
-            moveFilesOrDirectoriesByPattern(sourcePath, destinationPath, logSource, logDestination);
+            std::unique_ptr<std::unordered_set<std::string>> filterSet;
+            if (!filterListPath.empty()) {
+                filterSet = std::make_unique<std::unordered_set<std::string>>(readSetFromFile(filterListPath, packagePath));
+            }
+            
+            moveFilesOrDirectoriesByPattern(sourcePath, destinationPath, logSource, logDestination, filterSet.get());
+
+            //moveFilesOrDirectoriesByPattern(sourcePath, destinationPath, logSource, logDestination);
         } else {
             moveFileOrDirectory(sourcePath, destinationPath, logSource, logDestination);
         }
