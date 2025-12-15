@@ -5154,21 +5154,23 @@ bool drawCommandsMenu(
                 // Only sync footer if pattern was provided
                 shouldSaveINI |= syncIniValue(packageConfigData, packageConfigIniPath, optionName, FOOTER_STR, commandFooter);
                 
-                // Only sync footer_highlight if the pattern was defined in package INI
-                if (commandFooterHighlightDefined) {
-                    std::string footerHighlightStr = commandFooterHighlight ? TRUE_STR : FALSE_STR;
-            
-                    const bool existed = !syncIniValue(
-                        packageConfigData, packageConfigIniPath, optionName,
-                        "footer_highlight", footerHighlightStr
-                    );
-            
-                    // only load the value if it existed
-                    if (existed) {
-                        commandFooterHighlight = (footerHighlightStr == TRUE_STR);
+                // Always try to load footer_highlight from config.ini if it exists
+                auto optionIt = packageConfigData.find(optionName);
+                if (optionIt != packageConfigData.end()) {
+                    auto footerHighlightIt = optionIt->second.find("footer_highlight");
+                    if (footerHighlightIt != optionIt->second.end()) {
+                        // Load the value from config.ini
+                        commandFooterHighlight = (footerHighlightIt->second == TRUE_STR);
+                        commandFooterHighlightDefined = true;
                     }
-            
-                    shouldSaveINI |= !existed;
+                }
+                
+                // Only write footer_highlight back if it was defined in package INI but missing from config
+                if (commandFooterHighlightDefined && optionIt != packageConfigData.end()) {
+                    if (optionIt->second.find("footer_highlight") == optionIt->second.end()) {
+                        packageConfigData[optionName]["footer_highlight"] = commandFooterHighlight ? TRUE_STR : FALSE_STR;
+                        shouldSaveINI = true;
+                    }
                 }
                 
                 // Save all changes in one batch write
@@ -5178,8 +5180,6 @@ bool drawCommandsMenu(
             } else { // write default data if settings are not loaded
                 // Load any existing data first (might be empty if file doesn't exist)
                 packageConfigData = getParsedDataFromIniFile(packageConfigIniPath);
-                
-                // DON'T add system, mode, grouping
                 
                 // Only add footer if pattern was provided
                 if (!commandFooter.empty() && commandFooter != NULL_STR) {
