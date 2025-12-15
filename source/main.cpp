@@ -5158,16 +5158,17 @@ bool drawCommandsMenu(
                 auto optionIt = packageConfigData.find(optionName);
                 if (optionIt != packageConfigData.end()) {
                     auto footerHighlightIt = optionIt->second.find("footer_highlight");
-                    if (footerHighlightIt != optionIt->second.end()) {
-                        // Load the value from config.ini
+                    if (footerHighlightIt != optionIt->second.end() && !footerHighlightIt->second.empty()) {
+                        // Load the non-empty value from config.ini
                         commandFooterHighlight = (footerHighlightIt->second == TRUE_STR);
                         commandFooterHighlightDefined = true;
                     }
                 }
                 
-                // Only write footer_highlight back if it was defined in package INI but missing from config
+                // Only write footer_highlight back if it was defined in package INI but missing/empty in config
                 if (commandFooterHighlightDefined && optionIt != packageConfigData.end()) {
-                    if (optionIt->second.find("footer_highlight") == optionIt->second.end()) {
+                    auto it = optionIt->second.find("footer_highlight");
+                    if (it == optionIt->second.end() || it->second.empty()) {
                         packageConfigData[optionName]["footer_highlight"] = commandFooterHighlight ? TRUE_STR : FALSE_STR;
                         shouldSaveINI = true;
                     }
