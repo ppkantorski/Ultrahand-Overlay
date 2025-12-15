@@ -32,6 +32,17 @@ body:
         ---
         ### 🖥️ System Information
 
+  - type: dropdown
+    id: hardware_rev
+    attributes:
+      label: Hardware Revision
+      description: Are you using an Erista (v1) or a Mariko (v2/OLED)?
+      options:
+        - Erista
+        - Mariko
+    validations:
+      required: true
+
   - type: input
     id: hos_firmware
     attributes:
@@ -67,7 +78,7 @@ body:
     id: ultrahand
     attributes:
       label: Ultrahand Version
-      placeholder: "e.g., 2.1.3"
+      placeholder: "e.g., 2.2.4"
     validations:
       required: true
 
@@ -75,18 +86,7 @@ body:
     id: ovlloader_ver
     attributes:
       label: nx-ovlloader Version
-      placeholder: "e.g., 1.1.1"
-    validations:
-      required: true
-
-  - type: dropdown
-    id: ovlloader_type
-    attributes:
-      label: nx-ovlloader Type
-      description: Which version of nx-ovlloader are you using?
-      options:
-        - nx-ovlloader
-        - nx-ovlloader+
+      placeholder: "e.g., 2.0.0"
     validations:
       required: true
 
