@@ -538,9 +538,14 @@ void fuseDumpToIni(const std::string& outputPath = FUSE_DATA_INI_PATH) {
 std::string getLocalIpAddress() {
     Result rc;
     u32 ipAddress;
-
-    ASSERT_FATAL(nifmInitialize(NifmServiceType_User)); // for local IP
-
+    
+    // Initialize nifm service
+    rc = nifmInitialize(NifmServiceType_User);
+    if (R_FAILED(rc)) {
+        // Failed to initialize, return default
+        return UNAVAILABLE_SELECTION;
+    }
+    
     // Get the current IP address
     rc = nifmGetCurrentIpAddress(&ipAddress);
     if (R_SUCCEEDED(rc)) {
@@ -554,8 +559,9 @@ std::string getLocalIpAddress() {
         nifmExit();
         return std::string(ipStr);
     } else {
-        // Return a default IP address if the IP could not be retrieved
-        return UNAVAILABLE_SELECTION;  // Or "Unknown" if you prefer
+        // Clean up before returning default
+        nifmExit();
+        return UNAVAILABLE_SELECTION;
     }
 }
 

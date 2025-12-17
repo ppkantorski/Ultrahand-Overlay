@@ -8182,8 +8182,6 @@ public:
         };
         socketInitialize(&socketInitConfig);
 
-        unpackDeviceInfo();
-
         // read commands from root package's boot_package.ini
         if (firstBoot) {
             // Delete all pending notification jsons
@@ -8206,6 +8204,8 @@ public:
             //    tsl::notification->show("  "+ULTRAHAND_HAS_STARTED);
             
         }
+
+        unpackDeviceInfo();
         
         
         //startInterpreterThread();
@@ -8225,6 +8225,8 @@ public:
             executeIniCommands(PACKAGE_PATH + EXIT_PACKAGE_FILENAME, "exit");
 
         //cleanupCurl();
+        curl_global_cleanup();
+
         //if (!ult::limitedMemory)
         socketExit();
     }
