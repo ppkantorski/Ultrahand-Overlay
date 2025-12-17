@@ -540,7 +540,7 @@ std::string getLocalIpAddress() {
     u32 ipAddress;
     
     // Initialize nifm service
-    rc = nifmInitialize(NifmServiceType_User);
+    rc = nifmInitialize(NifmServiceType_System);
     if (R_FAILED(rc)) {
         // Failed to initialize, return default
         return UNAVAILABLE_SELECTION;
