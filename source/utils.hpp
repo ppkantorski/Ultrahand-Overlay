@@ -2448,10 +2448,9 @@ std::vector<std::vector<std::string>> getSourceReplacement(const std::vector<std
                 if (modifiedArg.find("{list_source(") != std::string::npos) {
                     applyPlaceholderReplacement(modifiedArg, "*", indexStr);
                     startPos = modifiedArg.find("{list_source(");
-                    endPos   = modifiedArg.find(")}");
+                    endPos   = modifiedArg.find(")}", startPos + 13);  // Find )}  after the opening
                     if (endPos != std::string::npos && endPos > startPos) {
-                        // SAFE: Use at() which does bounds checking, or catch the access
-                        const auto& listItems = stringToList(listString);  // const reference - no copy
+                        const auto& listItems = stringToList(listString);
                         raw = (entryIndex < listItems.size()) ? listItems[entryIndex] : "";
                         replacement = returnOrNull(raw);
                         modifiedArg.replace(startPos, endPos - startPos + 2, replacement);
@@ -2462,7 +2461,8 @@ std::vector<std::vector<std::string>> getSourceReplacement(const std::vector<std
                 if (modifiedArg.find("{list_file_source(") != std::string::npos) {
                     applyPlaceholderReplacement(modifiedArg, "*", indexStr);
                     startPos = modifiedArg.find("{list_file_source(");
-                    endPos   = modifiedArg.find(")}");
+                    // Find the closing )}  AFTER the opening we just found
+                    endPos = modifiedArg.find(")}", startPos + 18);  // 18 = length of "{list_file_source("
                     if (endPos != std::string::npos && endPos > startPos) {
                         raw = getEntryFromListFile(listPath, entryIndex);
                         replacement = returnOrNull(raw);
@@ -2482,7 +2482,7 @@ std::vector<std::vector<std::string>> getSourceReplacement(const std::vector<std
                 if (modifiedArg.find("{json_source(") != std::string::npos) {
                     applyPlaceholderReplacement(modifiedArg, "*", indexStr);
                     startPos = modifiedArg.find("{json_source(");
-                    endPos   = modifiedArg.find(")}");
+                    endPos   = modifiedArg.find(")}", startPos + 13);  // Find )}  after the opening
                     if (endPos != std::string::npos && endPos > startPos) {
                         raw = replaceJsonPlaceholder(
                             modifiedArg.substr(startPos, endPos - startPos + 2),
@@ -2494,11 +2494,12 @@ std::vector<std::vector<std::string>> getSourceReplacement(const std::vector<std
                     }
                 }
 
+
                 // {json_file_source(...)} block
                 if (modifiedArg.find("{json_file_source(") != std::string::npos) {
                     applyPlaceholderReplacement(modifiedArg, "*", indexStr);
                     startPos = modifiedArg.find("{json_file_source(");
-                    endPos   = modifiedArg.find(")}");
+                    endPos   = modifiedArg.find(")}", startPos + 18);  // Find )}  after the opening
                     if (endPos != std::string::npos && endPos > startPos) {
                         raw = replaceJsonPlaceholder(
                             modifiedArg.substr(startPos, endPos - startPos + 2),
@@ -3053,16 +3054,20 @@ bool applyPlaceholderReplacements(std::vector<std::string>& cmd, const std::stri
     std::vector<std::pair<std::string, std::function<std::string(const std::string&)>>> placeholders = {
         {"{hex_file(", [&](const std::string& placeholder) { 
             std::string result = replaceHexPlaceholder(placeholder, hexPath);
-            return returnOrNull(result);  // ADDED - convert empty to "null"
+            return returnOrNull(result);
         }},
         {"{ini_file(", [&](const std::string& placeholder) { 
             std::string result = placeholder;
             applyReplaceIniPlaceholder(result, INI_FILE_STR, iniPath); 
-            return result;  // NO returnOrNull - applyReplaceIniPlaceholder already uses it internally
+            return result;
         }},
         {"{list(", [&](const std::string& placeholder) {
-            const size_t startPos = placeholder.find('(') + 1;
-            const std::string indexStr = placeholder.substr(startPos, placeholder.find(')') - startPos);
+            const size_t openParen = placeholder.find('(');
+            const size_t closeParen = placeholder.find(')', openParen + 1);
+            if (openParen == std::string::npos || closeParen == std::string::npos) {
+                return NULL_STR;
+            }
+            const std::string indexStr = placeholder.substr(openParen + 1, closeParen - openParen - 1);
             if (!isValidNumber(indexStr)) {
                 return NULL_STR;
             }
@@ -3071,33 +3076,44 @@ bool applyPlaceholderReplacements(std::vector<std::string>& cmd, const std::stri
             if (idx >= items.size()) {
                 return NULL_STR;
             }
-            return returnOrNull(items[idx]);  // ADDED - convert empty item to "null"
+            return returnOrNull(items[idx]);
         }},
         {"{list_file(", [&](const std::string& placeholder) {
-            const size_t startPos = placeholder.find('(') + 1;
-            std::string indexStr = placeholder.substr(startPos, placeholder.find(')') - startPos);
+            const size_t openParen = placeholder.find('(');
+            const size_t closeParen = placeholder.find(')', openParen + 1);
+            if (openParen == std::string::npos || closeParen == std::string::npos) {
+                return NULL_STR;
+            }
+            const std::string indexStr = placeholder.substr(openParen + 1, closeParen - openParen - 1);
             if (!isValidNumber(indexStr)) {
                 return NULL_STR;
             }
-            return returnOrNull(getEntryFromListFile(listPath, ult::stoi(indexStr)));  // ADDED
+            return returnOrNull(getEntryFromListFile(listPath, ult::stoi(indexStr)));
         }},
         {"{json(", [&](const std::string& placeholder) { 
-            return replaceJsonPlaceholder(placeholder, JSON_STR, jsonString);  // NO returnOrNull - already returns NULL_STR internally
+            return replaceJsonPlaceholder(placeholder, JSON_STR, jsonString);
         }},
         {"{json_file(", [&](const std::string& placeholder) { 
-            return replaceJsonPlaceholder(placeholder, JSON_FILE_STR, jsonPath);  // NO returnOrNull - already returns NULL_STR internally
+            return replaceJsonPlaceholder(placeholder, JSON_FILE_STR, jsonPath);
         }},
         {"{timestamp(", [&](const std::string& placeholder) {
-            const size_t startPos = placeholder.find("(") + 1;
-            const size_t endPos = placeholder.find(")");
-            std::string format = (endPos != std::string::npos) ? 
-                placeholder.substr(startPos, endPos - startPos) : "%Y-%m-%d %H:%M:%S";
+            const size_t openParen = placeholder.find("(");
+            const size_t closeParen = placeholder.find(")", openParen + 1);
+            if (openParen == std::string::npos || closeParen == std::string::npos) {
+                return NULL_STR;
+            }
+            std::string format = (closeParen > openParen + 1) ? 
+                placeholder.substr(openParen + 1, closeParen - openParen - 1) : "%Y-%m-%d %H:%M:%S";
             removeQuotes(format);
-            return returnOrNull(getCurrentTimestamp(format));  // ADDED - convert empty to "null"
+            return returnOrNull(getCurrentTimestamp(format));
         }},
         {"{decimal_to_hex(", [&](const std::string& placeholder) {
-            const size_t startPos = placeholder.find("(") + 1;
-            const std::string params = placeholder.substr(startPos, placeholder.find(")") - startPos);
+            const size_t openParen = placeholder.find("(");
+            const size_t closeParen = placeholder.find(")", openParen + 1);
+            if (openParen == std::string::npos || closeParen == std::string::npos) {
+                return NULL_STR;
+            }
+            const std::string params = placeholder.substr(openParen + 1, closeParen - openParen - 1);
             
             const size_t commaPos = params.find(",");
             std::string decimalValue;
@@ -3114,36 +3130,55 @@ bool applyPlaceholderReplacements(std::vector<std::string>& cmd, const std::stri
             }
             
             if (order.empty()) {
-                return returnOrNull(decimalToHex(decimalValue));  // ADDED
+                return returnOrNull(decimalToHex(decimalValue));
             } else {
                 if (!isValidNumber(order)) {
                     return NULL_STR;
                 }
-                return returnOrNull(decimalToHex(decimalValue, ult::stoi(order)));  // ADDED
+                return returnOrNull(decimalToHex(decimalValue, ult::stoi(order)));
             }
         }},
         {"{ascii_to_hex(", [&](const std::string& placeholder) {
-            const size_t startPos = placeholder.find("(") + 1;
-            return returnOrNull(asciiToHex(placeholder.substr(startPos, placeholder.find(")") - startPos)));  // ADDED
+            const size_t openParen = placeholder.find("(");
+            const size_t closeParen = placeholder.find(")", openParen + 1);
+            if (openParen == std::string::npos || closeParen == std::string::npos) {
+                return NULL_STR;
+            }
+            return returnOrNull(asciiToHex(placeholder.substr(openParen + 1, closeParen - openParen - 1)));
         }},
         {"{hex_to_rhex(", [&](const std::string& placeholder) {
-            const size_t startPos = placeholder.find("(") + 1;
-            return returnOrNull(hexToReversedHex(placeholder.substr(startPos, placeholder.find(")") - startPos)));  // ADDED
+            const size_t openParen = placeholder.find("(");
+            const size_t closeParen = placeholder.find(")", openParen + 1);
+            if (openParen == std::string::npos || closeParen == std::string::npos) {
+                return NULL_STR;
+            }
+            return returnOrNull(hexToReversedHex(placeholder.substr(openParen + 1, closeParen - openParen - 1)));
         }},
         {"{hex_to_decimal(", [&](const std::string& placeholder) {
-            const size_t startPos = placeholder.find("(") + 1;
-            return returnOrNull(hexToDecimal(placeholder.substr(startPos, placeholder.find(")") - startPos)));  // ADDED
+            const size_t openParen = placeholder.find("(");
+            const size_t closeParen = placeholder.find(")", openParen + 1);
+            if (openParen == std::string::npos || closeParen == std::string::npos) {
+                return NULL_STR;
+            }
+            return returnOrNull(hexToDecimal(placeholder.substr(openParen + 1, closeParen - openParen - 1)));
         }},
         {"{base64_decode(", [&](const std::string& placeholder) {
-            const size_t startPos = placeholder.find("(") + 1;
-            return returnOrNull(decodeBase64ToString(placeholder.substr(startPos, placeholder.find(")") - startPos)));  // ADDED
+            const size_t openParen = placeholder.find("(");
+            const size_t closeParen = placeholder.find(")", openParen + 1);
+            if (openParen == std::string::npos || closeParen == std::string::npos) {
+                return NULL_STR;
+            }
+            return returnOrNull(decodeBase64ToString(placeholder.substr(openParen + 1, closeParen - openParen - 1)));
         }},
         {"{random(", [&](const std::string& placeholder) {
             std::srand(std::time(0));
             
-            const size_t startPos = placeholder.find('(') + 1;
-            const size_t endPos = placeholder.find(')');
-            const std::string parameters = placeholder.substr(startPos, endPos - startPos);
+            const size_t openParen = placeholder.find('(');
+            const size_t closeParen = placeholder.find(')', openParen + 1);
+            if (openParen == std::string::npos || closeParen == std::string::npos) {
+                return NULL_STR;
+            }
+            const std::string parameters = placeholder.substr(openParen + 1, closeParen - openParen - 1);
             const size_t commaPos = parameters.find(',');
             
             if (commaPos != std::string::npos) {
@@ -3156,9 +3191,9 @@ bool applyPlaceholderReplacements(std::vector<std::string>& cmd, const std::stri
                 
                 const int lowValue = ult::stoi(lowStr);
                 const int highValue = ult::stoi(highStr);
-                return returnOrNull(ult::to_string(lowValue + rand() % (highValue - lowValue + 1)));  // ADDED
+                return returnOrNull(ult::to_string(lowValue + rand() % (highValue - lowValue + 1)));
             }
-            return returnOrNull(placeholder);  // ADDED - convert empty to "null"
+            return returnOrNull(placeholder);
         }},
         {"{slice(", [&](const std::string& placeholder) {
             const size_t startPos = placeholder.find('(');
@@ -3198,11 +3233,11 @@ bool applyPlaceholderReplacements(std::vector<std::string>& cmd, const std::stri
                 return NULL_STR;
             }
         
-            return returnOrNull(sliceString(strPart, sliceStart, sliceEnd));  // ADDED
+            return returnOrNull(sliceString(strPart, sliceStart, sliceEnd));
         }},
         {"{split(", [&](const std::string& placeholder) {
             const size_t openParen = placeholder.find('(');
-            const size_t closeParen = placeholder.find(')');
+            const size_t closeParen = placeholder.rfind(')');
         
             if (openParen == std::string::npos || closeParen == std::string::npos || 
                 closeParen <= openParen) {
@@ -3236,10 +3271,10 @@ bool applyPlaceholderReplacements(std::vector<std::string>& cmd, const std::stri
             }
         
             std::string result = splitStringAtIndex(str, delimiter, ult::stoi(indexStr));
-            return result.empty() ? NULL_STR : result;  // Already handles empty - NO CHANGE
+            return result.empty() ? NULL_STR : result;
         }},
-        {"{math(", [&](const std::string& placeholder) { return handleMath(placeholder); }},  // NO returnOrNull - already returns NULL_STR on failure
-        {"{length(", [&](const std::string& placeholder) { return handleLength(placeholder); }},  // NO returnOrNull - returns placeholder on failure
+        {"{math(", [&](const std::string& placeholder) { return handleMath(placeholder); }},
+        {"{length(", [&](const std::string& placeholder) { return handleLength(placeholder); }},
     };
 
     updateGeneralPlaceholders();
@@ -3260,9 +3295,6 @@ bool applyPlaceholderReplacements(std::vector<std::string>& cmd, const std::stri
         if (replacePlaceholdersRecursively(arg, placeholders)) {
             replacementsMade = true;
         }
-        
-        // NO FINAL CLEANUP - if replacePlaceholdersRecursively skipped something,
-        // it should remain intact for later resolution
     }
     
     return replacementsMade;
