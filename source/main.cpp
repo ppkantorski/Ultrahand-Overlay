@@ -408,7 +408,7 @@ bool processHold(uint64_t keysDown, uint64_t keysHeld, u64& holdStartTick, bool&
     else if (keysDown & KEY_RIGHT) lastSelectedListItem->shakeHighlight(tsl::FocusDirection::Right);
     // Update hold progress
     const u64 elapsedMs = armTicksToNs(armGetSystemTick() - holdStartTick) / 1000000;
-    const int percentage = std::min(100, static_cast<int>((elapsedMs * 100) / 5000));
+    const int percentage = std::min(100, static_cast<int>((elapsedMs * 100) / 4000));
     displayPercentage.store(percentage, std::memory_order_release);
     if (percentage > 20 && (percentage % 30) == 0)
         triggerRumbleDoubleClick.store(true, std::memory_order_release);
