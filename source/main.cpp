@@ -8146,7 +8146,7 @@ public:
                 selectedPackage.clear();
             }
         }
-        if (firstBoot && tsl::notification) {
+        if (firstBoot && tsl::notification && useNotifications) {
             tsl::notification->show("  "+ULTRAHAND_HAS_STARTED);
         }
         //settingsInitialized.exchange(true, acq_rel);

@@ -5101,7 +5101,7 @@ void backgroundInterpreter(void* workPtr) {
     delete workData;
     
     if (ult::isHidden.load(std::memory_order_acquire)) {
-        if (tsl::notification) {
+        if (tsl::notification && ult::useNotifications) {
             if (commandSuccess.load(std::memory_order_acquire))
                 tsl::notification->show(NOTIFY_HEADER + TASK_IS_COMPLETE);
             else
