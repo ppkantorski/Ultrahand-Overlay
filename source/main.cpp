@@ -8164,23 +8164,23 @@ public:
     virtual void initServices() override {
         tsl::overrideBackButton = true; // for properly overriding the always go back functionality of KEY_B
 
-        constexpr SocketInitConfig socketInitConfig = {
-            // TCP buffers
-            .tcp_tx_buf_size     = 16 * 1024,   // 16 KB default
-            .tcp_rx_buf_size     = 16 * 1024*2,   // 16 KB default
-            .tcp_tx_buf_max_size = 64 * 1024,   // 64 KB default max
-            .tcp_rx_buf_max_size = 64 * 1024*2,   // 64 KB default max
-            
-            // UDP buffers
-            .udp_tx_buf_size     = 512,         // 512 B default
-            .udp_rx_buf_size     = 512,         // 512 B default
-        
-            // Socket buffer efficiency
-            .sb_efficiency       = 1,           // 0 = default, balanced memory vs CPU
-                                                // 1 = prioritize memory efficiency (smaller internal allocations)
-            .bsd_service_type    = BsdServiceType_Auto // Auto-select service
-        };
-        socketInitialize(&socketInitConfig);
+        //constexpr SocketInitConfig socketInitConfig = {
+        //    // TCP buffers
+        //    .tcp_tx_buf_size     = 16 * 1024,   // 16 KB default
+        //    .tcp_rx_buf_size     = 16 * 1024*2,   // 16 KB default
+        //    .tcp_tx_buf_max_size = 64 * 1024,   // 64 KB default max
+        //    .tcp_rx_buf_max_size = 64 * 1024*2,   // 64 KB default max
+        //    
+        //    // UDP buffers
+        //    .udp_tx_buf_size     = 512,         // 512 B default
+        //    .udp_rx_buf_size     = 512,         // 512 B default
+        //
+        //    // Socket buffer efficiency
+        //    .sb_efficiency       = 1,           // 0 = default, balanced memory vs CPU
+        //                                        // 1 = prioritize memory efficiency (smaller internal allocations)
+        //    .bsd_service_type    = BsdServiceType_Auto // Auto-select service
+        //};
+        //socketInitialize(&socketInitConfig);
 
         // read commands from root package's boot_package.ini
         if (firstBoot) {
@@ -8228,7 +8228,7 @@ public:
         curl_global_cleanup();
 
         //if (!ult::limitedMemory)
-        socketExit();
+        //socketExit();
     }
     
 };
