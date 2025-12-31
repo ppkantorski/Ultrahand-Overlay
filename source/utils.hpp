@@ -4843,7 +4843,7 @@ void processCommand(const std::vector<std::string>& cmd, const std::string& pack
                 if (launchUpdaterPayload) {
                     const std::string rebootOption = PAYLOADS_PATH + "ultrahand_updater.bin";
                     if (!isFile(rebootOption)) {
-                        downloadFile(UPDATER_PAYLOAD_URL, PAYLOADS_PATH, true);
+                        downloadFile(UPDATER_PAYLOAD_URL, PAYLOADS_PATH, false, true);
                         downloadPercentage.store(-1, std::memory_order_release);
                     }
                     if (isFile(rebootOption)) {
