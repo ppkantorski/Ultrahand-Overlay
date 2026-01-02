@@ -20,7 +20,7 @@
  *   of the project's documentation and must remain intact.
  *
  *  Licensed under GPLv2
- *  Copyright (c) 2023-2025 ppkantorski
+ *  Copyright (c) 2023-2026 ppkantorski
  ********************************************************************************/
 
 #define NDEBUG
@@ -1454,8 +1454,10 @@ public:
             addHeader(list, FEATURES);
             useLaunchCombos = getBoolValue("launch_combos", true); // TRUE_STR default
             createToggleListItem(list, LAUNCH_COMBOS, useLaunchCombos, "launch_combos");
+            useStartupNotification = getBoolValue("startup_notification", true); // TRUE_STR default
+            createToggleListItem(list, STARTUP_NOTIFICATION, useStartupNotification, "startup_notification");
             useNotifications = getBoolValue("notifications", true); // TRUE_STR default
-            createToggleListItem(list, NOTIFICATIONS, useNotifications, "notifications");
+            createToggleListItem(list, EXTERNAL_NOTIFICATIONS, useNotifications, "notifications");
 
             if (!ult::limitedMemory) {
                 useSoundEffects = getBoolValue("sound_effects", false); // TRUE_STR default
@@ -7865,6 +7867,7 @@ void initializeSettingsAndDirectories() {
     //setDefaultValue("memory_expansion", FALSE_STR, useMemoryExpansion);
     setDefaultValue("launch_combos", TRUE_STR, useLaunchCombos);
     setDefaultValue("notifications", TRUE_STR, useNotifications);
+    setDefaultValue("startup_notification", TRUE_STR, useStartupNotification);
     setDefaultValue("sound_effects", TRUE_STR, useSoundEffects);
     setDefaultValue("haptic_feedback", FALSE_STR, useHapticFeedback);
     setDefaultValue("page_swap", FALSE_STR, usePageSwap);
@@ -8086,9 +8089,10 @@ public:
                 selectedPackage.clear();
             }
         }
-        if (firstBoot && tsl::notification && useNotifications) {
-            tsl::notification->show("  "+ULTRAHAND_HAS_STARTED);
+        if (firstBoot && tsl::notification && useStartupNotification) {
+            tsl::notification->show("  "+ ((!reloadingBoot) ? ULTRAHAND_HAS_STARTED : ULTRAHAND_HAS_RESTARTED));
         }
+
         //settingsInitialized.exchange(true, acq_rel);
         // Default behavior - load main menu
         return initially<MainMenu>();
@@ -8124,31 +8128,29 @@ public:
 
         // read commands from root package's boot_package.ini
         if (firstBoot) {
-            // Delete all pending notification jsons
-            {
-                std::lock_guard<std::mutex> jsonLock(tsl::notificationJsonMutex);
-                deleteFileOrDirectoryByPattern(ult::NOTIFICATIONS_PATH + "*.notify");
+            if (!isFile(RELOADING_FLAG_FILEPATH)) {
+                // Delete all pending notification jsons
+                {
+                    std::lock_guard<std::mutex> jsonLock(tsl::notificationJsonMutex);
+                    deleteFileOrDirectoryByPattern(ult::NOTIFICATIONS_PATH + "*.notify");
+                }
+                
+                // Load and execute "initial_boot" commands if they exist
+                executeIniCommands(PACKAGE_PATH + BOOT_PACKAGE_FILENAME, "boot");
+                
+                const bool disableFuseReload = (parseValueFromIniSection(FUSE_DATA_INI_PATH, FUSE_STR, "disable_reload") == TRUE_STR);
+                if (!disableFuseReload)
+                    deleteFileOrDirectory(FUSE_DATA_INI_PATH);
+                
+                //if (tsl::notification)
+                //    tsl::notification->show("  Testing first boot.");
+            } else {
+                reloadingBoot = true;
             }
-
-            // Load and execute "initial_boot" commands if they exist
-            executeIniCommands(PACKAGE_PATH + BOOT_PACKAGE_FILENAME, "boot");
-            
-            const bool disableFuseReload = (parseValueFromIniSection(FUSE_DATA_INI_PATH, FUSE_STR, "disable_reload") == TRUE_STR);
-            if (!disableFuseReload)
-                deleteFileOrDirectory(FUSE_DATA_INI_PATH);
-
-            // initialize expanded memory on boot
-            //setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "memory_expansion", (loaderTitle == "nx-ovlloader+") ? TRUE_STR : FALSE_STR);
-
-            //if (tsl::notification)
-            //    tsl::notification->show("  "+ULTRAHAND_HAS_STARTED);
-            
         }
 
+        deleteFileOrDirectory(RELOADING_FLAG_FILEPATH);
         unpackDeviceInfo();
-        
-        
-        //startInterpreterThread();
     }
     
     /**
@@ -8161,7 +8163,7 @@ public:
     virtual void exitServices() override {
         closeInterpreterThread(); // just in case ¯\_(ツ)_/¯
 
-        if (exitingUltrahand.load(acquire))
+        if (exitingUltrahand.load(acquire) && !reloadingBoot)
             executeIniCommands(PACKAGE_PATH + EXIT_PACKAGE_FILENAME, "exit");
 
         //cleanupCurl();
