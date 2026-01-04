@@ -5996,7 +5996,7 @@ public:
            (usingPages && currentPage == RIGHT_STR) ? pageLeftName : "",
            (usingPages && currentPage == LEFT_STR) ? pageRightName : ""
         );
-
+        
         list->jumpToItem(jumpItemName, jumpItemValue, jumpItemExactMatch);
         rootFrame->setContent(list);
         if (showWidget)
