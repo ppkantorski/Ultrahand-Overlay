@@ -6219,6 +6219,7 @@ public:
         if (usingPages) {
             simulatedMenu.exchange(false, std::memory_order_acq_rel);
             
+            bool wasSimulated = false;
             {
                 //std::lock_guard<std::mutex> lock(ult::simulatedNextPageMutex);
                 if (simulatedNextPage.exchange(false, std::memory_order_acq_rel)) {
@@ -6228,6 +6229,7 @@ public:
                     else if (currentPage == RIGHT_STR) {
                         keysDown |= KEY_DLEFT;
                     }
+                    wasSimulated = true;
                 }
             }
     
@@ -6256,7 +6258,10 @@ public:
                             resetSlideState();
                             //triggerRumbleClick.store(true, std::memory_order_release);
                             //triggerNavigationSound.store(true, std::memory_order_release);
-                            triggerNavigationFeedback();
+                            if (!wasSimulated)
+                                triggerNavigationFeedback();
+                            else
+                                triggerRumbleClick.store(true, release);
                         }
                         return true;
                     }
@@ -6272,7 +6277,10 @@ public:
                             resetSlideState();
                             //triggerRumbleClick.store(true, std::memory_order_release);
                             //triggerNavigationSound.store(true, std::memory_order_release);
-                            triggerNavigationFeedback();
+                            if (!wasSimulated)
+                                triggerNavigationFeedback();
+                            else
+                                triggerRumbleClick.store(true, release);
                         }
                         return true;
                     }
@@ -7576,6 +7584,8 @@ public:
                 //    keysDown |= toPackages ? (usePageSwap ? KEY_DLEFT : KEY_DRIGHT) : (usePageSwap ? KEY_DRIGHT : KEY_DLEFT);
                 //}
                 const bool onLeftPage = (!usePageSwap && menuMode != PACKAGES_STR) || (usePageSwap && menuMode != OVERLAYS_STR);
+                
+                bool wasSimulated = false;
                 {
                     //std::lock_guard<std::mutex> lock(ult::simulatedNextPageMutex);
                     if (simulatedNextPage.exchange(false, std::memory_order_acq_rel)) {
@@ -7585,6 +7595,7 @@ public:
                         else {
                             keysDown |= KEY_DLEFT;
                         }
+                        wasSimulated = true;
                     }
                 }
                 
@@ -7627,7 +7638,10 @@ public:
                             resetNavState();
                             //triggerRumbleClick.store(true, std::memory_order_release);
                             //triggerNavigationSound.store(true, std::memory_order_release);
-                            triggerNavigationFeedback();
+                            if (!wasSimulated)
+                                triggerNavigationFeedback();
+                            else
+                                triggerRumbleClick.store(true, release);
                         }
                         return true;
                     }
@@ -7652,7 +7666,10 @@ public:
                             resetNavState();
                             //triggerRumbleClick.store(true, std::memory_order_release);
                             //triggerNavigationSound.store(true, std::memory_order_release);
-                            triggerNavigationFeedback();
+                            if (!wasSimulated)
+                                triggerNavigationFeedback();
+                            else
+                                triggerRumbleClick.store(true, release);
                         }
                         return true;
                     }
