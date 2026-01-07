@@ -3694,6 +3694,8 @@ public:
     
             } else if (commandMode == TOGGLE_STR) {
                 auto* toggleListItem = new tsl::elm::ToggleListItem(itemName, false, ON, OFF, isMini, true);
+                toggleListItem->enableShortHoldKey();
+                toggleListItem->m_shortHoldKey = SCRIPT_KEY;
     
                 // Use const iterators for better performance
                 const bool toggleStateOn = std::find(selectedItemsListOn.cbegin(), selectedItemsListOn.cend(), selectedItem) != selectedItemsListOn.cend();
@@ -4533,14 +4535,19 @@ bool drawCommandsMenu(
                             footer = commandFooter;
                             cleanOptionName = optionName.substr(1);
                             //removeTag(cleanOptionName);
-                            listItem = new tsl::elm::ListItem(cleanOptionName, "", isMini, true);
+                            listItem = new tsl::elm::ListItem(cleanOptionName, "", isMini);
+                            listItem->enableShortHoldKey();
+                            listItem->m_shortHoldKey = SCRIPT_KEY;
+
                             listItem->setValue(footer, commandFooterHighlightDefined ? !commandFooterHighlight : false); 
                         } else {
                             footer = !isSlot ? DROPDOWN_SYMBOL : OPTION_SYMBOL;
                             cleanOptionName = optionName.substr(1);
                             //removeTag(cleanOptionName);
                             // Create reference to PackageMenu with dropdownSection set to optionName
-                            listItem = new tsl::elm::ListItem(cleanOptionName, footer, isMini, true);
+                            listItem = new tsl::elm::ListItem(cleanOptionName, footer, isMini);
+                            listItem->enableShortHoldKey();
+                            listItem->m_shortHoldKey = SCRIPT_KEY;
                         }
                         
                         if (packageMenuMode) {
@@ -5450,12 +5457,16 @@ bool drawCommandsMenu(
                     if ((footer == DROPDOWN_SYMBOL) || (footer.empty()) || footer == commandFooter) {
                         cleanOptionName = optionName;
                         //removeTag(cleanOptionName);
-                        listItem = new tsl::elm::ListItem(cleanOptionName, footer, isMini, true);
+                        listItem = new tsl::elm::ListItem(cleanOptionName, footer, isMini);
+                        listItem->enableShortHoldKey();
+                        listItem->m_shortHoldKey = SCRIPT_KEY;
                     }
                     else {
                         cleanOptionName = optionName;
                         //removeTag(cleanOptionName);
-                        listItem = new tsl::elm::ListItem(cleanOptionName, "", isMini, true);
+                        listItem = new tsl::elm::ListItem(cleanOptionName, "", isMini);
+                        listItem->enableShortHoldKey();
+                        listItem->m_shortHoldKey = SCRIPT_KEY;
 
                         if (commandMode == OPTION_STR)
                             listItem->setValue(footer, commandFooterHighlightDefined ? !commandFooterHighlight : false);
@@ -5649,7 +5660,9 @@ bool drawCommandsMenu(
                     if (commandMode == DEFAULT_STR  || commandMode == SLOT_STR || commandMode == OPTION_STR) { // for handiling toggles
                         cleanOptionName = optionName;
                         //removeTag(cleanOptionName);
-                        tsl::elm::ListItem* listItem = new tsl::elm::ListItem(cleanOptionName, "", isMini, true);
+                        tsl::elm::ListItem* listItem = new tsl::elm::ListItem(cleanOptionName, "", isMini);
+                        listItem->enableShortHoldKey();
+                        listItem->m_shortHoldKey = SCRIPT_KEY;
 
                         if (commandMode == DEFAULT_STR)
                             listItem->setValue(footer, commandFooterHighlightDefined ? !commandFooterHighlight : true);
@@ -5729,6 +5742,8 @@ bool drawCommandsMenu(
                         cleanOptionName = optionName;
                         //removeTag(cleanOptionName);
                         auto* toggleListItem = new tsl::elm::ToggleListItem(cleanOptionName, false, ON, OFF, isMini, true);
+                        toggleListItem->enableShortHoldKey();
+                        toggleListItem->m_shortHoldKey = SCRIPT_KEY;
 
                         // Set the initial state of the toggle item
                         if (!pathPatternOn.empty()){
@@ -5996,7 +6011,7 @@ public:
            (usingPages && currentPage == RIGHT_STR) ? pageLeftName : "",
            (usingPages && currentPage == LEFT_STR) ? pageRightName : ""
         );
-        
+
         list->jumpToItem(jumpItemName, jumpItemValue, jumpItemExactMatch);
         rootFrame->setContent(list);
         if (showWidget)
@@ -6887,7 +6902,9 @@ public:
                 
                 const bool newStarred = !overlayStarred;
                 
-                tsl::elm::ListItem* listItem = new tsl::elm::ListItem(newOverlayName, "", false, false);
+                tsl::elm::ListItem* listItem = new tsl::elm::ListItem(newOverlayName, "");
+                listItem->enableShortHoldKey();
+                listItem->enableLongHoldKey();
                 
                 if (!hideOverlayVersions) {
                     displayVersion = getFirstLongEntry(overlayVersion);
@@ -7220,7 +7237,10 @@ public:
                 displayName += "?";
                 displayName += packageName;
     
-                tsl::elm::ListItem* listItem = new tsl::elm::ListItem(displayName, "", false, false);
+                tsl::elm::ListItem* listItem = new tsl::elm::ListItem(displayName, "");
+                listItem->enableShortHoldKey();
+                listItem->enableLongHoldKey();
+
                 if (!hidePackageVersions) {
                     listItem->setValue(packageVersion, true);
                     listItem->setValueColor(usePackageVersions ? tsl::ultPackageVersionTextColor : tsl::packageVersionTextColor);
