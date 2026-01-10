@@ -4780,10 +4780,18 @@ void processCommand(const std::vector<std::string>& cmd, const std::string& pack
                 if (cmdSize >= 2) {
                     std::string sourcePath = cmd[1];
                     preprocessPath(sourcePath, packagePath);
-                    commandSuccess.store(
-                        pchtxt2cheat(sourcePath) && commandSuccess.load(std::memory_order_acquire),
-                        std::memory_order_release
-                    );
+                    if (cmdSize >= 3) {
+                        const std::string cheatName = cmd[2];
+                        commandSuccess.store(
+                            pchtxt2cheat(sourcePath, cheatName) && commandSuccess.load(std::memory_order_acquire),
+                            std::memory_order_release
+                        );
+                    } else {
+                        commandSuccess.store(
+                            pchtxt2cheat(sourcePath) && commandSuccess.load(std::memory_order_acquire),
+                            std::memory_order_release
+                        );
+                    }
                 }
                 return;
             }
