@@ -359,38 +359,45 @@ static std::string lastSelectedListItemFooter;
 static std::vector<std::vector<std::string>> storedCommands;
 
 bool processHold(uint64_t keysDown, uint64_t keysHeld, u64& holdStartTick, bool& isHolding,
-                        std::function<void()> onComplete,
-                        std::function<void()> onRelease = nullptr,
-                        bool resetStoredCommands = false) {
+                std::function<void()> onComplete,
+                std::function<void()> onRelease = nullptr,
+                bool resetStoredCommands = false) {
     if (!lastSelectedListItem) {
         isHolding = false;
         return false;
     }
-    if (!(keysHeld & KEY_A)) {
-        // Key released — reset everything
+    
+    // Check if user is touch holding or button holding
+    const bool isTouchHolding = lastSelectedListItem->isTouchHolding();
+    const bool isButtonHolding = (keysHeld & KEY_A);
+    
+    if (!isTouchHolding && !isButtonHolding) {
+        // Key/touch released — reset everything
         triggerExitFeedback();
         isHolding = false;
         displayPercentage.store(0, std::memory_order_release);
         runningInterpreter.store(false, std::memory_order_release);
+        
         if (lastSelectedListItem) {
+            // Reset touch hold state
+            lastSelectedListItem->resetTouchHold();
+            
             if (resetStoredCommands) {
-                // Use lastFooterHighlightDefined to determine the highlight parameter
-                // If not defined, infer from lastCommandMode
                 bool highlightParam = true;
                 if (lastFooterHighlightDefined) {
                     highlightParam = !lastFooterHighlight;
                 } else {
-                    // Default behavior based on command mode
                     highlightParam = !(lastCommandMode == SLOT_STR || lastCommandMode == OPTION_STR) || lastCommandMode.empty();
                 }
                 lastSelectedListItem->setValue(lastSelectedListItemFooter, highlightParam);
                 lastSelectedListItemFooter.clear();
             } else {
-                lastSelectedListItem->setValue("", true);
+                lastSelectedListItem->setValue("", true);
             }
             lastSelectedListItem = nullptr;
             lastFooterHighlight = lastFooterHighlightDefined = false;
         }
+        
         if (resetStoredCommands) {
             storedCommands.clear();
             lastCommandMode.clear();
@@ -401,32 +408,40 @@ bool processHold(uint64_t keysDown, uint64_t keysHeld, u64& holdStartTick, bool&
         if (onRelease) onRelease();
         return true;
     }
-    // Directional feedback
+    
+    // Directional feedback (only for button input)
     if (keysDown & KEY_UP) lastSelectedListItem->shakeHighlight(tsl::FocusDirection::Up);
     else if (keysDown & KEY_DOWN) lastSelectedListItem->shakeHighlight(tsl::FocusDirection::Down);
     else if (keysDown & KEY_LEFT) lastSelectedListItem->shakeHighlight(tsl::FocusDirection::Left);
     else if (keysDown & KEY_RIGHT) lastSelectedListItem->shakeHighlight(tsl::FocusDirection::Right);
+    
     // Update hold progress
     const u64 elapsedMs = armTicksToNs(armGetSystemTick() - holdStartTick) / 1000000;
     const int percentage = std::min(100, static_cast<int>((elapsedMs * 100) / 4000));
     displayPercentage.store(percentage, std::memory_order_release);
+    
     if (percentage > 20 && (percentage % 30) == 0)
         triggerRumbleDoubleClick.store(true, std::memory_order_release);
+    
     // Completed hold
     if (percentage >= 100) {
         isHolding = false;
         displayPercentage.store(-1, std::memory_order_release);
+        
         if (lastSelectedListItem) {
+            lastSelectedListItem->resetTouchHold();
             lastSelectedListItem->enableClickAnimation();
             lastSelectedListItem->triggerClickAnimation();
             lastSelectedListItem->disableClickAnimation();
         }
+        
         if (onComplete) onComplete();
-        //lastSelectedListItem = nullptr;
         return true;
     }
+    
     return true; // Continue holding
 }
+
 
 static std::string returnJumpItemName;
 static std::string returnJumpItemValue;
@@ -1244,7 +1259,9 @@ public:
 
             // Add an "Exit Overlay System" menu item
             auto* exitItem = new tsl::elm::ListItem(EXIT_OVERLAY_SYSTEM, "", true);
+            exitItem->enableTouchHolding();
             exitItem->setValue("", true);
+
             exitItem->setClickListener([this, exitItem](uint64_t keys) {
                 if ((keys & KEY_A) && !(keys & ~KEY_A & ALL_KEYS_MASK)) {
 
@@ -1253,7 +1270,12 @@ public:
                         runningInterpreter.store(true, release);
                         exitItem->setValue(INPROGRESS_SYMBOL);
                         lastSelectedListItem = exitItem;
-                        holdStartTick = armGetSystemTick();
+                        // Use touch hold start tick if available, otherwise use current tick
+                        if (exitItem->isTouchHolding()) {
+                            holdStartTick = exitItem->getTouchHoldStartTick();
+                        } else {
+                            holdStartTick = armGetSystemTick();
+                        }
                         displayPercentage.store(1, std::memory_order_release);
                     }
                     return true;
@@ -3619,8 +3641,10 @@ public:
                     listItem->setValue(footer, true);
                 }
 
-                if (isHold)
+                if (isHold) {
                     listItem->disableClickAnimation();
+                    listItem->enableTouchHolding();
+                }
                 
                 listItem->setClickListener([this, i, selectedItem, footer, listItem, currentPackageHeader, itemName](uint64_t keys) {
                     
@@ -3640,7 +3664,14 @@ public:
                             //lastFooterHighlightDefined = commandFooterHighlightDefined;  // STORE WHETHER IT WAS DEFINED
                             listItem->setValue(INPROGRESS_SYMBOL);
                             lastSelectedListItem = listItem;
-                            holdStartTick = armGetSystemTick();
+
+                            // Use touch hold start tick if available, otherwise use current tick
+                            if (listItem->isTouchHolding()) {
+                                holdStartTick = listItem->getTouchHoldStartTick();
+                            } else {
+                                holdStartTick = armGetSystemTick();
+                            }
+
                             storedCommands = std::move(modifiedCmds);
                             lastCommandMode = commandMode;
                             lastCommandIsHold = true;
@@ -5670,8 +5701,10 @@ bool drawCommandsMenu(
                             listItem->setValue(footer, commandFooterHighlightDefined ? !commandFooterHighlight : false);
                         
 
-                        if (isHold)
+                        if (isHold) {
                             listItem->disableClickAnimation();
+                            listItem->enableTouchHolding();
+                        }
 
                         listItem->setClickListener([i, commands, keyName = originalOptionName, cleanOptionName, packagePath, packageName,
                             selectedItem, listItem, lastPackageHeader, commandMode, footer, isHold, showWidget, commandFooterHighlight, commandFooterHighlightDefined](uint64_t keys) {
@@ -5695,7 +5728,12 @@ bool drawCommandsMenu(
                                     lastFooterHighlightDefined = commandFooterHighlightDefined;  // STORE WHETHER IT WAS DEFINED
                                     listItem->setValue(INPROGRESS_SYMBOL);
                                     lastSelectedListItem = listItem;
-                                    holdStartTick = armGetSystemTick();
+                                    // Use touch hold start tick if available, otherwise use current tick
+                                    if (listItem->isTouchHolding()) {
+                                        holdStartTick = listItem->getTouchHoldStartTick();
+                                    } else {
+                                        holdStartTick = armGetSystemTick();
+                                    }
                                     storedCommands = std::move(modifiedCmds);
                                     lastCommandMode = commandMode;
                                     lastCommandIsHold = true;
