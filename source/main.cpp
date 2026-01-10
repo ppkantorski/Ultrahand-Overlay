@@ -1271,11 +1271,12 @@ public:
                         exitItem->setValue(INPROGRESS_SYMBOL);
                         lastSelectedListItem = exitItem;
                         // Use touch hold start tick if available, otherwise use current tick
-                        if (exitItem->isTouchHolding()) {
-                            holdStartTick = exitItem->getTouchHoldStartTick();
-                        } else {
-                            holdStartTick = armGetSystemTick();
-                        }
+                        //if (exitItem->isTouchHolding()) {
+                        //    holdStartTick = exitItem->getTouchHoldStartTick();
+                        //} else {
+                        //    holdStartTick = armGetSystemTick();
+                        //}
+                        holdStartTick = armGetSystemTick();
                         displayPercentage.store(1, std::memory_order_release);
                     }
                     return true;
@@ -3666,11 +3667,12 @@ public:
                             lastSelectedListItem = listItem;
 
                             // Use touch hold start tick if available, otherwise use current tick
-                            if (listItem->isTouchHolding()) {
-                                holdStartTick = listItem->getTouchHoldStartTick();
-                            } else {
-                                holdStartTick = armGetSystemTick();
-                            }
+                            //if (listItem->isTouchHolding()) {
+                            //    holdStartTick = listItem->getTouchHoldStartTick();
+                            //} else {
+                            //    holdStartTick = armGetSystemTick();
+                            //}
+                            holdStartTick = armGetSystemTick();
 
                             storedCommands = std::move(modifiedCmds);
                             lastCommandMode = commandMode;
@@ -5729,11 +5731,12 @@ bool drawCommandsMenu(
                                     listItem->setValue(INPROGRESS_SYMBOL);
                                     lastSelectedListItem = listItem;
                                     // Use touch hold start tick if available, otherwise use current tick
-                                    if (listItem->isTouchHolding()) {
-                                        holdStartTick = listItem->getTouchHoldStartTick();
-                                    } else {
-                                        holdStartTick = armGetSystemTick();
-                                    }
+                                    //if (listItem->isTouchHolding()) {
+                                    //    holdStartTick = listItem->getTouchHoldStartTick();
+                                    //} else {
+                                    //    holdStartTick = armGetSystemTick();
+                                    //}
+                                    holdStartTick = armGetSystemTick();
                                     storedCommands = std::move(modifiedCmds);
                                     lastCommandMode = commandMode;
                                     lastCommandIsHold = true;
