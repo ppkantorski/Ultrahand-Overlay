@@ -223,11 +223,11 @@ inline void clearMemory() {
     //forwarderListItem = nullptr;
 }
 
-void shiftItemFocus(tsl::elm::Element* element) {
-    if (auto& currentGui = tsl::Overlay::get()->getCurrentGui()) {
-        currentGui->requestFocus(element, tsl::FocusDirection::None);
-    }
-}
+//void tsl::shiftItemFocus(tsl::elm::Element* element) {
+//    if (auto& currentGui = tsl::Overlay::get()->getCurrentGui()) {
+//        currentGui->requestFocus(element, tsl::FocusDirection::None);
+//    }
+//}
 
 
 /**
@@ -494,7 +494,7 @@ private:
                     }
                 }
 
-                shiftItemFocus(listItem);
+                tsl::shiftItemFocus(listItem);
                 tsl::changeTo<UltrahandSettingsMenu>(targetMenu);
                 //selectedListItem = nullptr;
                 selectedListItem = listItem;
@@ -642,7 +642,7 @@ private:
 
                     listItem->setValue(CHECKMARK_SYMBOL);
                     lastSelectedListItem = listItem;
-                    shiftItemFocus(listItem);
+                    tsl::shiftItemFocus(listItem);
                     if (lastSelectedListItem)
                         lastSelectedListItem->triggerClickAnimation();
                     
@@ -753,7 +753,7 @@ private:
             listItem->disableClickAnimation();
             listItem->setValue(INPROGRESS_SYMBOL);
             lastSelectedListItem = listItem;
-            shiftItemFocus(listItem);
+            tsl::shiftItemFocus(listItem);
             lastRunningInterpreter.store(true, std::memory_order_release);
             if (lastSelectedListItem)
                 lastSelectedListItem->triggerClickAnimation();
@@ -958,7 +958,7 @@ public:
                         listItem->setValue(defaultLangMode + " " + CHECKMARK_SYMBOL);
                         //lastSelectedListItem = nullptr;
                         lastSelectedListItem = listItem;
-                        shiftItemFocus(listItem);
+                        tsl::shiftItemFocus(listItem);
                         //if (lastSelectedListItem)
                         //    lastSelectedListItem->triggerClickAnimation();
                         lastSelectedListItemFooter = defaultLangMode;
@@ -1324,7 +1324,7 @@ public:
                     listItem->setValue(CHECKMARK_SYMBOL);
                     //lastSelectedListItem = nullptr;
                     lastSelectedListItem = listItem;
-                    shiftItemFocus(listItem);
+                    tsl::shiftItemFocus(listItem);
                     if (lastSelectedListItem)
                         lastSelectedListItem->triggerClickAnimation();
                     themeWasChanged = true;
@@ -1367,7 +1367,7 @@ public:
                         listItem->setValue(CHECKMARK_SYMBOL);
                         //lastSelectedListItem = nullptr;
                         lastSelectedListItem = listItem;
-                        shiftItemFocus(listItem);
+                        tsl::shiftItemFocus(listItem);
                         if (lastSelectedListItem)
                             lastSelectedListItem->triggerClickAnimation();
                         themeWasChanged = true;
@@ -1404,7 +1404,7 @@ public:
                     listItem->setValue(CHECKMARK_SYMBOL);
                     //lastSelectedListItem = nullptr;
                     lastSelectedListItem = listItem;
-                    shiftItemFocus(listItem);
+                    tsl::shiftItemFocus(listItem);
                     if (lastSelectedListItem)
                         lastSelectedListItem->triggerClickAnimation();
                     return true;
@@ -1444,7 +1444,7 @@ public:
                         listItem->setValue(CHECKMARK_SYMBOL);
                         //lastSelectedListItem = nullptr;
                         lastSelectedListItem = listItem;
-                        shiftItemFocus(listItem);
+                        tsl::shiftItemFocus(listItem);
                         if (selectedListItem)
                             lastSelectedListItem->triggerClickAnimation();
                         return true;
@@ -1858,7 +1858,7 @@ public:
                     selectedListItem->setValue(iStr);
                 listItem->setValue(CHECKMARK_SYMBOL);
                 lastSelectedListItem = listItem;
-                shiftItemFocus(listItem);
+                tsl::shiftItemFocus(listItem);
                 if (lastSelectedListItem)
                     lastSelectedListItem->triggerClickAnimation();
             }
@@ -1928,7 +1928,7 @@ public:
                 if (runningInterpreter.load(acquire)) return false;
                 if ((keys & KEY_A && !(keys & ~KEY_A & ALL_KEYS_MASK))) {
                     inMainMenu.store(false, std::memory_order_release);
-                    shiftItemFocus(item);
+                    tsl::shiftItemFocus(item);
                     tsl::changeTo<SettingsMenu>(name, mode, overlayName, overlayVersion, selection);
                     selectedListItem = item;
                     if (lastSelectedListItem) lastSelectedListItem->triggerClickAnimation();
@@ -2018,7 +2018,7 @@ public:
                         if ((keys & KEY_A && !(keys & ~KEY_A & ALL_KEYS_MASK))) {
                             inMainMenu.store(false, std::memory_order_release);
 
-                            shiftItemFocus(item);
+                            tsl::shiftItemFocus(item);
                             tsl::changeTo<SettingsMenu>(entryName, OVERLAY_STR, mode, "", "mode_combo_" + std::to_string(i));
                             selectedListItem = item;
                             if (lastSelectedListItem) lastSelectedListItem->triggerClickAnimation();
@@ -2072,7 +2072,7 @@ public:
                         if (selectedListItem) selectedListItem->setValue(OPTION_SYMBOL);
                         item->setValue(CHECKMARK_SYMBOL);
                         lastSelectedListItem = item;
-                        shiftItemFocus(item);
+                        tsl::shiftItemFocus(item);
                         if (lastSelectedListItem) lastSelectedListItem->triggerClickAnimation();
                         return true;
                     }
@@ -2107,7 +2107,7 @@ public:
                         if (selectedListItem) selectedListItem->setValue(mapped);
                         item->setValue(CHECKMARK_SYMBOL);
                         lastSelectedListItem = item;
-                        shiftItemFocus(item);
+                        tsl::shiftItemFocus(item);
                         if (lastSelectedListItem) lastSelectedListItem->triggerClickAnimation();
                         return true;
                     }
@@ -2158,7 +2158,7 @@ public:
                         if (selectedListItem) selectedListItem->setValue(OPTION_SYMBOL);
                         item->setValue(CHECKMARK_SYMBOL);
                         lastSelectedListItem = item;
-                        shiftItemFocus(item);
+                        tsl::shiftItemFocus(item);
                         if (lastSelectedListItem) lastSelectedListItem->triggerClickAnimation();
                         return true;
                     }
@@ -2197,7 +2197,7 @@ public:
                         if (selectedListItem) selectedListItem->setValue(mapped);
                         item->setValue(CHECKMARK_SYMBOL);
                         lastSelectedListItem = item;
-                        shiftItemFocus(item);
+                        tsl::shiftItemFocus(item);
                         if (lastSelectedListItem) lastSelectedListItem->triggerClickAnimation();
                         return true;
                     }
@@ -3707,7 +3707,7 @@ public:
                         lastSelectedListItem = listItem;
                         //lastFooterHighlight = commandFooterHighlight;  // STORE THE VALUE
                         //lastFooterHighlightDefined = commandFooterHighlightDefined;  // STORE WHETHER IT WAS DEFINED
-                        shiftItemFocus(listItem);
+                        tsl::shiftItemFocus(listItem);
     
                         lastRunningInterpreter.store(true, std::memory_order_release);
                         if (lastSelectedListItem)
@@ -3722,7 +3722,7 @@ public:
                         applyPlaceholderReplacementsToCommands(modifiedCmds, filePath);
                         //tsl::elm::g_cachedTop.disabled = true;
                         //tsl::elm::g_cachedBottom.disabled = true;
-                        shiftItemFocus(listItem);
+                        tsl::shiftItemFocus(listItem);
                         tsl::changeTo<ScriptOverlay>(std::move(modifiedCmds), filePath, itemName, "selection", false, currentPackageHeader, showWidget);
                         return true;
                     }
@@ -3835,7 +3835,7 @@ public:
                     applyPlaceholderReplacementsToCommands(modifiedCmds, filePath);
                     //tsl::elm::g_cachedTop.disabled = true;
                     //tsl::elm::g_cachedBottom.disabled = true;
-                    shiftItemFocus(toggleListItem);
+                    tsl::shiftItemFocus(toggleListItem);
                     tsl::changeTo<ScriptOverlay>(std::move(modifiedCmds), filePath, itemName, "selection", false, currentPackageHeader, showWidget);
                 });
     
@@ -4637,7 +4637,7 @@ bool drawCommandsMenu(
                                     
                                     //auto options = loadOptionsFromIni(packageIniPath);
                                     // Pass all gathered commands to the ScriptOverlay
-                                    shiftItemFocus(listItem);
+                                    tsl::shiftItemFocus(listItem);
                                     tsl::changeTo<ScriptOverlay>(std::move(gatherPromptCommands(optionName, std::move(loadOptionsFromIni(packageIniPath)))), packagePath, optionName, "package", true, lastPackageHeader, showWidget);
                                     return true;
                                 }
@@ -4656,7 +4656,7 @@ bool drawCommandsMenu(
                                 if ((keys & KEY_A && !(keys & ~KEY_A & ALL_KEYS_MASK))) {
                                     inPackageMenu = false;
 
-                                    shiftItemFocus(listItem);
+                                    tsl::shiftItemFocus(listItem);
                                     tsl::changeTo<MainMenu>("", optionName);
                                     return true;
                                 } else if (keys & SCRIPT_KEY && !(keys & ~SCRIPT_KEY & ALL_KEYS_MASK)) {
@@ -4669,7 +4669,7 @@ bool drawCommandsMenu(
                                     //const std::vector<std::vector<std::string>> promptCommands = gatherPromptCommands(optionName, options);
                                     //auto options = loadOptionsFromIni(packageIniPath)
 
-                                    shiftItemFocus(listItem);
+                                    tsl::shiftItemFocus(listItem);
                                     tsl::changeTo<ScriptOverlay>(std::move(gatherPromptCommands(optionName, std::move(loadOptionsFromIni(packageIniPath)))), PACKAGE_PATH, optionName, "main", true, lastPackageHeader, showWidget);
                                     return true;
                                 } else if (keys & SYSTEM_SETTINGS_KEY && !(keys & ~SYSTEM_SETTINGS_KEY & ALL_KEYS_MASK)) {
@@ -5303,7 +5303,7 @@ bool drawCommandsMenu(
                 
                         const bool isFromMainMenu = (packagePath == PACKAGE_PATH);
 
-                        shiftItemFocus(trackBar);
+                        tsl::shiftItemFocus(trackBar);
 
                         // Switch to ScriptOverlay
                         tsl::changeTo<ScriptOverlay>(std::move(modifiedCmds), packagePath, keyName, isFromMainMenu ? "main" : "package", false, lastPackageHeader, showWidget);
@@ -5363,7 +5363,7 @@ bool drawCommandsMenu(
                         // Apply placeholder replacements and switch to ScriptOverlay
                         applyPlaceholderReplacementsToCommands(modifiedCmds, packagePath);
 
-                        shiftItemFocus(stepTrackBar);
+                        tsl::shiftItemFocus(stepTrackBar);
 
                         tsl::changeTo<ScriptOverlay>(std::move(modifiedCmds), packagePath, keyName, isFromMainMenu ? "main" : "package", false, lastPackageHeader, showWidget);
                     });
@@ -5499,7 +5499,7 @@ bool drawCommandsMenu(
                         // Apply placeholder replacements and switch to ScriptOverlay
                         applyPlaceholderReplacementsToCommands(modifiedCmds, packagePath);
 
-                        shiftItemFocus(namedStepTrackBar);
+                        tsl::shiftItemFocus(namedStepTrackBar);
 
                         tsl::changeTo<ScriptOverlay>(std::move(modifiedCmds), packagePath, keyName, isFromMainMenu ? "main" : "package", false, lastPackageHeader, showWidget);
                     });
@@ -5606,7 +5606,7 @@ bool drawCommandsMenu(
                                 std::string selectionItem = keyName;
                                 removeTag(selectionItem);
 
-                                shiftItemFocus(listItem);
+                                tsl::shiftItemFocus(listItem);
 
                                 // add lines ;mode=forwarder and package_source 'forwarderPackagePath' to front of modifiedCmds
                                 tsl::changeTo<ScriptOverlay>(std::move(getSourceReplacement(commands, keyName, i, packagePath)), packagePath, selectionItem, isFromMainMenu ? "main" : "package", true, lastPackageHeader, showWidget);
@@ -5670,7 +5670,7 @@ bool drawCommandsMenu(
                                         //g_overlayFilename = "";
                                     }
 
-                                    shiftItemFocus(listItem);
+                                    tsl::shiftItemFocus(listItem);
 
                                     tsl::changeTo<SelectionOverlay>(packagePath, keyName, newKey, lastPackageHeader, commands, showWidget);
                                     //lastKeyName = keyName;
@@ -5695,7 +5695,7 @@ bool drawCommandsMenu(
                                 removeTag(selectionItem);
                                 auto modifiedCmds = commands;
                                 applyPlaceholderReplacementsToCommands(modifiedCmds, packagePath);
-                                shiftItemFocus(listItem);
+                                tsl::shiftItemFocus(listItem);
                                 tsl::changeTo<ScriptOverlay>(std::move(modifiedCmds), packagePath, selectionItem, isFromMainMenu ? "main" : "package", true, lastPackageHeader, showWidget);
                                 return true;
                             } else if ((packagePath == PACKAGE_PATH) && (keys & SYSTEM_SETTINGS_KEY) && !(keys & ~SYSTEM_SETTINGS_KEY & ALL_KEYS_MASK)) {
@@ -5785,7 +5785,7 @@ bool drawCommandsMenu(
                                 lastSelectedListItem = listItem;
                                 lastFooterHighlight = commandFooterHighlight;  // STORE THE VALUE
                                 lastFooterHighlightDefined = commandFooterHighlightDefined;  // STORE WHETHER IT WAS DEFINED
-                                shiftItemFocus(listItem);
+                                tsl::shiftItemFocus(listItem);
                                 lastCommandMode = commandMode;
                                 lastKeyName = keyName;
 
@@ -5797,7 +5797,7 @@ bool drawCommandsMenu(
                                 const bool isFromMainMenu = (packagePath == PACKAGE_PATH);
                                 auto modifiedCmds = getSourceReplacement(commands, selectedItem, i, packagePath);
                                 applyPlaceholderReplacementsToCommands(modifiedCmds, packagePath);
-                                shiftItemFocus(listItem);
+                                tsl::shiftItemFocus(listItem);
                                 tsl::changeTo<ScriptOverlay>(std::move(modifiedCmds), packagePath, keyName, isFromMainMenu ? "main" : "package", false, lastPackageHeader, showWidget);
                                 return true;
                             } else if ((packagePath == PACKAGE_PATH) && (keys & SYSTEM_SETTINGS_KEY) && !(keys & ~SYSTEM_SETTINGS_KEY & ALL_KEYS_MASK)) {
@@ -5882,7 +5882,7 @@ bool drawCommandsMenu(
 
                             applyPlaceholderReplacementsToCommands(modifiedCmds, packagePath);
 
-                            shiftItemFocus(toggleListItem);
+                            tsl::shiftItemFocus(toggleListItem);
                             tsl::changeTo<ScriptOverlay>(std::move(modifiedCmds), packagePath, keyName, isFromMainMenu ? "main" : "package", false, lastPackageHeader, showWidget);
                         });
 
@@ -7085,7 +7085,7 @@ public:
                         returnJumpItemValue = hideOverlayVersions ? "" : overlayVersion;
                         jumpItemName = jumpItemValue = "";
                         
-                        shiftItemFocus(listItem);
+                        tsl::shiftItemFocus(listItem);
                         tsl::changeTo<SettingsMenu>(overlayFileName, OVERLAY_STR, overlayName, overlayVersion, "", !supportsAMS110);
                         triggerRumbleClick.store(true, std::memory_order_release);
                         triggerSettingsSound.store(true, std::memory_order_release);
@@ -7125,7 +7125,7 @@ public:
                     jumpItemExactMatch.store(true, std::memory_order_release);
                     inMainMenu.store(false, std::memory_order_release);
                     inHiddenMode.store(true, std::memory_order_release);
-                    shiftItemFocus(listItem);
+                    tsl::shiftItemFocus(listItem);
                     tsl::changeTo<MainMenu>(OVERLAYS_STR);
                     return true;
                 } else if (keys & SYSTEM_SETTINGS_KEY && !(keys & ~SYSTEM_SETTINGS_KEY & ALL_KEYS_MASK)) {
@@ -7413,7 +7413,7 @@ public:
                         returnJumpItemValue = hidePackageVersions ? "" : packageVersion;
                         jumpItemName = jumpItemValue = "";
 
-                        shiftItemFocus(listItem);
+                        tsl::shiftItemFocus(listItem);
                         tsl::changeTo<SettingsMenu>(packageName, PACKAGE_STR, newPackageName, packageVersion);
                         triggerRumbleClick.store(true, std::memory_order_release);
                         triggerSettingsSound.store(true, std::memory_order_release);
@@ -7445,7 +7445,7 @@ public:
                     if ((keys & KEY_A && !(keys & ~KEY_A & ALL_KEYS_MASK))) {
                         inMainMenu.store(false, std::memory_order_release);
                         inHiddenMode.store(true, std::memory_order_release);
-                        shiftItemFocus(listItem);
+                        tsl::shiftItemFocus(listItem);
                         tsl::changeTo<MainMenu>(PACKAGES_STR);
                         return true;
                     } else if (keys & SYSTEM_SETTINGS_KEY && !(keys & ~SYSTEM_SETTINGS_KEY & ALL_KEYS_MASK)) {
