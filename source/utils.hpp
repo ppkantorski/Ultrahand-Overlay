@@ -565,8 +565,33 @@ std::string getLocalIpAddress() {
     }
 }
 
+std::string getMasterVolumeLevel() {
+    audctlInitialize();
+    float currentVolume = 0.0f;
+    Result rc = audctlGetSystemOutputMasterVolume(&currentVolume);
+    audctlExit();
+    
+    if (R_SUCCEEDED(rc)) {
+        int volumePercentage = static_cast<int>(currentVolume * 100.0f + 0.5f);
+        return ult::to_string(volumePercentage);
+    }
+    
+    return "100"; // Default to 100 if failed
+}
 
-
+std::string getBacklightLevel() {
+    lblInitialize();
+    float currentBrightness = 0.0f;
+    Result rc = lblGetCurrentBrightnessSetting(&currentBrightness);
+    lblExit();
+    
+    if (R_SUCCEEDED(rc)) {
+        int brightnessPercentage = static_cast<int>(currentBrightness * 100.0f + 0.5f);
+        return ult::to_string(brightnessPercentage);
+    }
+    
+    return "100"; // Default to 100 if failed
+}
 
 // Function to remove all empty command strings
 void removeEmptyCommands(std::vector<std::vector<std::string>>& commands) {
@@ -1324,7 +1349,7 @@ std::vector<std::string> wrapText(
     if (wrappingMode == "char") {
         for (char c : text) {
             const float currentMaxWidth = firstLine ? maxWidth : maxWidth - indentWidth;
-
+            
             currentLine.push_back(c);
             if (tsl::gfx::calculateStringWidth(currentLine, fontSize, false) > currentMaxWidth) {
                 // Remove last character and push line
@@ -3041,7 +3066,9 @@ void updateGeneralPlaceholders() {
         {"{soc_iddq}", ult::to_string(socIDDQ)},
         {"{title_id}", getTitleIdAsString()},
         {"{build_id}", getBuildIdAsString()},
-        {"{local_ip}", getLocalIpAddress()}
+        {"{local_ip}", getLocalIpAddress()},
+        {"{volume}", getMasterVolumeLevel()},
+        {"{backlight}", getBacklightLevel()}
     };
 }
 
@@ -5033,6 +5060,19 @@ void processCommand(const std::vector<std::string>& cmd, const std::string& pack
                 return;
             }
             break;
+
+        case '!':
+            if (commandName == "!path_exists") {
+                if (cmdSize >= 2) {
+                    std::string sourcePath = cmd[1];
+                    preprocessPath(sourcePath, packagePath);
+                    if (ult::isFileOrDirectory(sourcePath)) {
+                        commandSuccess.store(false, std::memory_order_release);
+                    } else {
+                        commandSuccess.store(true, std::memory_order_release);
+                    }
+                }
+            }
     }
 }
 

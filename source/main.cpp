@@ -808,6 +808,8 @@ private:
                 } else {
                     Audio::exit();
                 }
+            } else if (iniKey == "clean_version_labels") {
+                returnJumpItemValue = cleanVersionLabel(returnJumpItemValue);
             }
 
             state = !state;
@@ -965,6 +967,7 @@ public:
                         } else if (defaultLangMode == "ko") {
                             tsl::gfx::Renderer::get().loadLocalFont(PlSharedFontType_KO);
                         }
+
                         //lastSelectedListItem = nullptr;
                         lastSelectedListItem = listItem;
                         tsl::shiftItemFocus(listItem);
@@ -992,11 +995,11 @@ public:
                 tsl::notification->showNow(NOTIFY_HEADER + NEW_UPDATE_IS_AVAILABLE);
             
             }
-
+            
             addHeader(list, SOFTWARE_UPDATE);
             addUpdateButton(list, UPDATE_ULTRAHAND, fullVersionLabel);
             addUpdateButton(list, UPDATE_LANGUAGES, fullVersionLabel);
-
+            
             PackageHeader overlayHeader;
             overlayHeader.title = "Ultrahand Overlay";
             overlayHeader.version = APP_VERSION;
@@ -4422,7 +4425,7 @@ bool drawCommandsMenu(
         maxValue = 100;
         units = "";
         steps = 0;
-        unlockedTrackbar = true;
+        unlockedTrackbar = false;
         onEveryTick = false;
         commandFooter = "";
         commandFooterHighlight = false;
@@ -6633,9 +6636,10 @@ public:
     };
 };
 
-
+bool triggerBootCommands = true;
 bool toPackages = false;
 bool inOverlay = false;
+
 /**
  * @brief The `MainMenu` class handles the main menu overlay functionality.
  *
@@ -7159,6 +7163,12 @@ public:
                 fclose(packageFileOut);
             }
         }
+
+        if (triggerBootCommands) {
+            // Load and execute "initial_boot" commands if they exist
+            executeIniCommands(PACKAGE_PATH + BOOT_PACKAGE_FILENAME, "boot");
+            triggerBootCommands = false;
+        }
     
         inOverlaysPage.store(false, std::memory_order_release);
         inPackagesPage.store(true, std::memory_order_release);
@@ -7193,7 +7203,11 @@ public:
                     auto packageIt = packagesIniData.find(packageName);
                     if (packageIt == packagesIniData.end()) {
                         const PackageHeader packageHeader = getPackageHeaderFromIni(PACKAGE_PATH + packageName+ "/" +PACKAGE_FILENAME);
-                        
+                        //if (cleanVersionLabels) {
+                        //    packageHeader.version = cleanVersionLabel(packageHeader.version);
+                        //    removeQuotes(packageHeader.version);
+                        //}
+
                         auto& packageSection = packagesIniData[packageName];
                         packageSection[PRIORITY_STR] = "20";
                         packageSection[STAR_STR] = FALSE_STR;
@@ -7220,11 +7234,11 @@ public:
                         if (hide == TRUE_STR) drawHiddenTab = true;
                         
                         if (inHiddenMode.load(std::memory_order_acquire) == (hide == TRUE_STR)) {
-                            PackageHeader packageHeader = getPackageHeaderFromIni(PACKAGE_PATH + packageName+ "/" +PACKAGE_FILENAME);
-                            if (cleanVersionLabels) {
-                                packageHeader.version = cleanVersionLabel(packageHeader.version);
-                                removeQuotes(packageHeader.version);
-                            }
+                            const PackageHeader packageHeader = getPackageHeaderFromIni(PACKAGE_PATH + packageName+ "/" +PACKAGE_FILENAME);
+                            //if (cleanVersionLabels) {
+                            //    packageHeader.version = cleanVersionLabel(packageHeader.version);
+                            //    removeQuotes(packageHeader.version);
+                            //}
                             
                             const std::string priority = (packageIt->second.find(PRIORITY_STR) != packageIt->second.end()) ? formatPriorityString(packageIt->second[PRIORITY_STR]) : "0020";
                             const std::string starred = (packageIt->second.find(STAR_STR) != packageIt->second.end()) ? packageIt->second[STAR_STR] : FALSE_STR;
@@ -7322,19 +7336,25 @@ public:
                 }
                 displayName += "?";
                 displayName += packageName;
-    
+
+                
+                
                 tsl::elm::ListItem* listItem = new tsl::elm::ListItem(displayName, "");
                 listItem->enableShortHoldKey();
                 listItem->enableLongHoldKey();
 
+                std::string displayVersion;
+
                 if (!hidePackageVersions) {
-                    listItem->setValue(packageVersion, true);
+                    displayVersion.reserve(64);
+                    displayVersion = cleanVersionLabels ? cleanVersionLabel(packageVersion) : packageVersion;
+                    listItem->setValue(displayVersion, true);
                     listItem->setValueColor(usePackageVersions ? tsl::ultPackageVersionTextColor : tsl::packageVersionTextColor);
                 }
                 listItem->setTextColor(usePackageTitles ? tsl::ultPackageTextColor : tsl::packageTextColor);
                 listItem->disableClickAnimation();
                 
-                listItem->setClickListener([listItem, packageFilePath, newStarred, packageName, newPackageName, packageVersion, packageStarred, buildReturnName](s64 keys) {
+                listItem->setClickListener([listItem, packageFilePath, newStarred, packageName, newPackageName, packageVersion, displayVersion, packageStarred, buildReturnName](s64 keys) {
                     if (runningInterpreter.load(acquire)) return false;
                     
                     if (simulatedMenu.load(std::memory_order_acquire)) {
@@ -7380,7 +7400,7 @@ public:
                         packageRootLayerVersion = packageVersion;
                 
                         returnJumpItemName = buildReturnName(newStarred, packageName, newPackageName);
-                        returnJumpItemValue = hidePackageVersions ? "" : packageVersion;
+                        returnJumpItemValue = displayVersion;
                 
                         tsl::clearGlyphCacheNow.store(true, release);
                         tsl::swapTo<PackageMenu>(SwapDepth(2), packageFilePath, "");
@@ -7394,7 +7414,7 @@ public:
                         
                         skipJumpReset.store(true, release);
                         jumpItemName = buildReturnName(!newStarred, packageName, newPackageName);
-                        jumpItemValue = hidePackageVersions ? "" : packageVersion;
+                        jumpItemValue = displayVersion;
                         jumpItemExactMatch.store(true, release);
                         
                         wasInHiddenMode = inHiddenMode.load(std::memory_order_acquire);
@@ -7419,7 +7439,7 @@ public:
                         }
                         
                         returnJumpItemName = buildReturnName(newStarred, packageName, newPackageName);
-                        returnJumpItemValue = hidePackageVersions ? "" : packageVersion;
+                        returnJumpItemValue = displayVersion;
                         jumpItemName = jumpItemValue = "";
 
                         tsl::shiftItemFocus(listItem);
@@ -7431,7 +7451,7 @@ public:
                     
                     if (keys & SYSTEM_SETTINGS_KEY && cleanKeys == SYSTEM_SETTINGS_KEY) {
                         returnJumpItemName = buildReturnName(newStarred, packageName, newPackageName);
-                        returnJumpItemValue = hidePackageVersions ? "" : packageVersion;
+                        returnJumpItemValue = displayVersion;
                         return true;
                     }
                     
@@ -8108,7 +8128,9 @@ public:
      * This function is called when the overlay transitions from an invisible state to a visible state.
      * It can be used to perform actions or updates specific to the overlay's visibility.
      */
-    virtual void onHide() override {} 
+    virtual void onHide() override {
+        triggerBootCommands = true;
+    } 
 
     /**
      * @brief Loads the initial graphical user interface (GUI) for the overlay.
@@ -8270,7 +8292,7 @@ public:
                 }
                 
                 // Load and execute "initial_boot" commands if they exist
-                executeIniCommands(PACKAGE_PATH + BOOT_PACKAGE_FILENAME, "boot");
+                executeIniCommands(PACKAGE_PATH + BOOT_PACKAGE_FILENAME, "on-boot");
                 
                 const bool disableFuseReload = (parseValueFromIniSection(FUSE_DATA_INI_PATH, FUSE_STR, "disable_reload") == TRUE_STR);
                 if (!disableFuseReload)
