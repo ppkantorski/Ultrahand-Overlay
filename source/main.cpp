@@ -960,13 +960,13 @@ public:
                         listItem->setValue(defaultLangMode + " " + CHECKMARK_SYMBOL);
 
                         // Reload font if CJK language is selected
-                        if (defaultLangMode == "zh-cn") {
-                            tsl::gfx::Renderer::get().loadLocalFont(PlSharedFontType_ChineseSimplified);
-                        } else if (defaultLangMode == "zh-tw") {
-                            tsl::gfx::Renderer::get().loadLocalFont(PlSharedFontType_ChineseTraditional);
-                        } else if (defaultLangMode == "ko") {
-                            tsl::gfx::Renderer::get().loadLocalFont(PlSharedFontType_KO);
-                        }
+                        //if (defaultLangMode == "zh-cn") {
+                        //    tsl::gfx::Renderer::get().loadLocalFont(PlSharedFontType_ChineseSimplified);
+                        //} else if (defaultLangMode == "zh-tw") {
+                        //    tsl::gfx::Renderer::get().loadLocalFont(PlSharedFontType_ChineseTraditional);
+                        //} else if (defaultLangMode == "ko") {
+                        //    tsl::gfx::Renderer::get().loadLocalFont(PlSharedFontType_KO);
+                        //}
 
                         //lastSelectedListItem = nullptr;
                         lastSelectedListItem = listItem;
@@ -8082,13 +8082,13 @@ void initializeSettingsAndDirectories() {
     }
 
     // Load local font if needed based on overlay language setting
-    if (defaultLang == "zh-cn") {
-        tsl::gfx::Renderer::get().loadLocalFont(PlSharedFontType_ChineseSimplified);
-    } else if (defaultLang == "zh-tw") {
-        tsl::gfx::Renderer::get().loadLocalFont(PlSharedFontType_ChineseTraditional);
-    } else if (defaultLang == "ko") {
-        tsl::gfx::Renderer::get().loadLocalFont(PlSharedFontType_KO);
-    }
+    //if (defaultLang == "zh-cn") {
+    //    tsl::gfx::Renderer::get().loadLocalFont(PlSharedFontType_ChineseSimplified);
+    //} else if (defaultLang == "zh-tw") {
+    //    tsl::gfx::Renderer::get().loadLocalFont(PlSharedFontType_ChineseTraditional);
+    //} else if (defaultLang == "ko") {
+    //    tsl::gfx::Renderer::get().loadLocalFont(PlSharedFontType_KO);
+    //}
     
     // Initialize theme
     initializeTheme();
