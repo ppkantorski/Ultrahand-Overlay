@@ -1342,28 +1342,41 @@ std::vector<std::string> wrapText(
     }
 
     std::vector<std::string> wrappedLines;
-
     bool firstLine = true;
     std::string currentLine;
 
     if (wrappingMode == "char") {
-        for (char c : text) {
+        // UTF-8 aware character wrapping
+        auto itStr = text.cbegin();
+        const auto itStrEnd = text.cend();
+        
+        while (itStr != itStrEnd) {
             const float currentMaxWidth = firstLine ? maxWidth : maxWidth - indentWidth;
             
-            currentLine.push_back(c);
-            if (tsl::gfx::calculateStringWidth(currentLine, fontSize, false) > currentMaxWidth) {
-                // Remove last character and push line
-                const char lastChar = currentLine.back();
-                currentLine.pop_back();
+            // Decode one UTF-8 character
+            u32 currCharacter;
+            const ssize_t codepointWidth = decode_utf8(&currCharacter, reinterpret_cast<const u8*>(&(*itStr)));
+            if (codepointWidth <= 0) break;
+            
+            // Extract the full UTF-8 character bytes
+            std::string charStr(itStr, itStr + codepointWidth);
+            std::string testLine = currentLine + charStr;
+            
+            if (tsl::gfx::calculateStringWidth(testLine, fontSize, false) > currentMaxWidth) {
+                // Current line is full, push it
                 if (!currentLine.empty()) {
                     if (useIndent && !firstLine)
                         wrappedLines.push_back(indent + currentLine);
                     else
                         wrappedLines.push_back(currentLine);
                 }
-                currentLine = lastChar;
+                currentLine = charStr;
                 firstLine = false;
+            } else {
+                currentLine = testLine;
             }
+            
+            itStr += codepointWidth;
         }
 
         if (!currentLine.empty()) {
@@ -1377,7 +1390,6 @@ std::vector<std::string> wrapText(
         // Word wrapping
         StringStream stream(text);
         std::string currentWord;
-
         std::string testLine;
 
         while (stream >> currentWord) {
