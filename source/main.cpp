@@ -418,7 +418,7 @@ bool processHold(uint64_t keysDown, uint64_t keysHeld, u64& holdStartTick, bool&
     
     // Update hold progress
     const u64 elapsedMs = armTicksToNs(armGetSystemTick() - holdStartTick) / 1000000;
-    const int percentage = std::min(100, static_cast<int>((elapsedMs * 100) / 4000));
+    const int percentage = std::min(100, static_cast<int>((elapsedMs * 100) / 3000));
     displayPercentage.store(percentage, std::memory_order_release);
     
     if (percentage > 20 && (percentage % 30) == 0)
@@ -5995,6 +5995,11 @@ public:
         if (returningToMain || returningToHiddenMain) {
             tsl::clearGlyphCacheNow.store(true, release);
             clearMemory();
+
+            {
+                std::unique_lock<std::shared_mutex> writeLock(tsl::gfx::s_translationCacheMutex);
+                ult::clearTranslationCache();
+            }
             
             packageRootLayerTitle = packageRootLayerVersion = packageRootLayerColor = "";
             overrideTitle = false;
@@ -7394,6 +7399,15 @@ public:
                                 }
                             }
                         }
+
+                        std::string defaultLang = parseValueFromIniSection(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, DEFAULT_LANG_STR);
+                        if (defaultLang.empty()) {
+                            defaultLang = "en";
+                        }
+                        const std::string translationJsonPath = packageFilePath+"lang/"+defaultLang+".json";
+
+                        if (ult::isFileOrDirectory(translationJsonPath))
+                            ult::loadTranslationsFromJSON(translationJsonPath); // load translations (optional)
 
                         packageRootLayerTitle = newPackageName;
                         packageRootLayerName = packageName;
