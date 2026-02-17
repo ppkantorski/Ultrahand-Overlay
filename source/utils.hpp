@@ -2995,7 +2995,7 @@ bool replacePlaceholdersRecursively(
 
         // Try each placeholder type
         for (size_t t = 0; t < placeholders.size(); ++t) {
-            const auto& opener = placeholders[t].first;      // e.g., "{slice("
+            const auto& opener = placeholders[t].first;
             const auto& replacer = placeholders[t].second;
 
             searchPos = 0;
@@ -3028,10 +3028,9 @@ bool replacePlaceholdersRecursively(
                 // Recurse on inner to resolve any nested placeholders
                 replacePlaceholdersRecursively(inner, placeholders);
 
-                // Check if recursion made progress
                 // If inner didn't change AND still contains placeholder patterns,
-                // it means the inner placeholders couldn't be resolved
-                // Skip this outer placeholder and leave it for later resolution
+                // it means the inner placeholders couldn't be resolved yet —
+                // skip this outer placeholder and leave it for later resolution
                 if (inner == innerBeforeRecursion && inner.find('{') != std::string::npos) {
                     searchPos = startPos + opener.size();
                     continue;
@@ -3043,12 +3042,20 @@ bool replacePlaceholdersRecursively(
                 // Call the replacer on the fully resolved placeholder
                 replacement = replacer(resolvedPlaceholder);
 
+                // If the replacer returned the placeholder unchanged (e.g. json_file
+                // whose source file doesn't exist yet), skip without marking a replacement
+                // to avoid an infinite loop in the outer for(;;)
+                if (replacement == resolvedPlaceholder) {
+                    searchPos = startPos + opener.size();
+                    continue;
+                }
+
                 // Perform replacement
                 arg.replace(startPos, fullLen, replacement);
-                
+
                 anyReplacementsMade = true;
                 replacedThisPass = true;
-                
+
                 // Continue scanning after the replacement
                 searchPos = startPos + replacement.size();
             }

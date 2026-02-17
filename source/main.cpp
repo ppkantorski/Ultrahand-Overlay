@@ -98,6 +98,7 @@ static const std::string FOOTER_PATTERN = ";footer=";
 static const std::string FOOTER_HIGHLIGHT_PATTERN = ";footer_highlight=";
 static const std::string HOLD_PATTERN = ";hold=";
 static const std::string SYSTEM_PATTERN = ";system=";
+static const std::string STATE_PATTERN = ";state=";
 static const std::string WIDGET_PATTERN = ";widget=";
 
 static const std::string MINI_PATTERN = ";mini=";
@@ -135,6 +136,7 @@ static const std::string ON_EVERY_TICK_PATTERN = ";on_every_tick=";
 
 
 static const size_t SYSTEM_PATTERN_LEN = SYSTEM_PATTERN.length();
+static const size_t STATE_PATTERN_LEN = STATE_PATTERN.length();
 static const size_t MODE_PATTERN_LEN = MODE_PATTERN.length();
 static const size_t GROUPING_PATTERN_LEN = GROUPING_PATTERN.length();
 static const size_t FOOTER_PATTERN_LEN = FOOTER_PATTERN.length();
@@ -666,7 +668,7 @@ private:
             if (runningInterpreter.load(acquire)) {
                 return false;
             } else {
-                if (executingCommands && commandSuccess.load(acquire) && title != UPDATE_LANGUAGES) {
+                if (executingCommands && commandSuccess.load(acquire)) {// && title != UPDATE_LANGUAGES) {
                     softwareHasUpdated = true;
                     triggerMenuReload = true;
                 }
@@ -685,7 +687,8 @@ private:
             };
     
             // === UPDATE_ULTRAHAND case ===
-            if (title == UPDATE_ULTRAHAND) {
+            //if (title == UPDATE_ULTRAHAND) {
+            {
                 const bool disableLoaderUpdate = isFile(FLAGS_PATH+"NO_LOADER_UPDATES.flag");
                 const bool disableSoundEffectsUpdate = isFile(FLAGS_PATH+"NO_SOUND_EFFECTS_UPDATES.flag");
                 const std::string versionLabel = cleanVersionLabel(parseValueFromIniSection((SETTINGS_PATH+"RELEASE.ini"), "Release Info", "latest_version"));
@@ -741,12 +744,12 @@ private:
                 addVersionUpdate();
             } 
             // === UPDATE_LANGUAGES case ===
-            else if (title == UPDATE_LANGUAGES) {
-                interpreterCommands.push_back({"delete", DOWNLOADS_PATH+"lang.zip"});
-                interpreterCommands.push_back({"download", ULTRAHAND_REPO_URL + "releases/latest/download/lang.zip", DOWNLOADS_PATH});
-                interpreterCommands.push_back({"unzip", DOWNLOADS_PATH+"lang.zip", LANG_PATH});
-                interpreterCommands.push_back({"delete", DOWNLOADS_PATH+"lang.zip"});
-            }
+            //else if (title == UPDATE_LANGUAGES) {
+            //    interpreterCommands.push_back({"delete", DOWNLOADS_PATH+"lang.zip"});
+            //    interpreterCommands.push_back({"download", ULTRAHAND_REPO_URL + "releases/latest/download/lang.zip", DOWNLOADS_PATH});
+            //    interpreterCommands.push_back({"unzip", DOWNLOADS_PATH+"lang.zip", LANG_PATH});
+            //    interpreterCommands.push_back({"delete", DOWNLOADS_PATH+"lang.zip"});
+            //}
     
             runningInterpreter.store(true, release);
             executeInterpreterCommands(std::move(interpreterCommands), "", "");
@@ -998,13 +1001,13 @@ public:
             
             addHeader(list, SOFTWARE_UPDATE);
             addUpdateButton(list, UPDATE_ULTRAHAND, fullVersionLabel);
-            addUpdateButton(list, UPDATE_LANGUAGES, fullVersionLabel);
+            //addUpdateButton(list, UPDATE_LANGUAGES, fullVersionLabel);
             
             PackageHeader overlayHeader;
             overlayHeader.title = "Ultrahand Overlay";
             overlayHeader.version = APP_VERSION;
             overlayHeader.creator = "ppkantorski";
-            overlayHeader.about = "Ultrahand Overlay is a versatile tool that enables you to create and share custom command-based packages.";
+            overlayHeader.about = "Ultrahand Overlay is a customizable overlay ecosystem for commands, overlays, hotkeys, and advanced system interaction.";
             overlayHeader.credits = "Special thanks to B3711, ComplexNarrative, ssky, MasaGratoR, meha, WerWolv, HookedBehemoth and many others. ♥";
             addPackageInfo(list, overlayHeader, OVERLAY_STR);
             overlayHeader.clear();
@@ -2890,7 +2893,8 @@ private:
     std::string specifiedFooterKey;
     bool toggleState = false;
     std::string packageConfigIniPath;
-    std::string commandSystem, commandMode, commandGrouping;
+    //std::string commandSystem, commandMode, commandGrouping;
+    std::string commandMode, commandGrouping;
 
     std::string lastPackageHeader;
 
@@ -3026,12 +3030,12 @@ public:
                 (!inEristaSection && !inMarikoSection)) {
                 
                 // Optimized pattern matching with bounds checking
-                if (commandName.size() > SYSTEM_PATTERN_LEN && 
-                    commandName.compare(0, SYSTEM_PATTERN_LEN, SYSTEM_PATTERN) == 0) {
-                    commandSystem.assign(commandName, SYSTEM_PATTERN_LEN, commandName.size() - SYSTEM_PATTERN_LEN);
-                    if (std::find(commandSystems.begin(), commandSystems.end(), commandSystem) == commandSystems.end())
-                        commandSystem = commandSystems[0];
-                } else if (commandName.size() > MODE_PATTERN_LEN && 
+                //if (commandName.size() > SYSTEM_PATTERN_LEN && 
+                //    commandName.compare(0, SYSTEM_PATTERN_LEN, SYSTEM_PATTERN) == 0) {
+                //    commandSystem.assign(commandName, SYSTEM_PATTERN_LEN, commandName.size() - SYSTEM_PATTERN_LEN);
+                //    if (std::find(commandSystems.begin(), commandSystems.end(), commandSystem) == commandSystems.end())
+                //        commandSystem = commandSystems[0];
+                if (commandName.size() > MODE_PATTERN_LEN && 
                            commandName.compare(0, MODE_PATTERN_LEN, MODE_PATTERN) == 0) {
                     commandMode = commandName.substr(MODE_PATTERN_LEN);
                     if (std::find(commandModes.begin(), commandModes.end(), commandMode) == commandModes.end())
@@ -3286,7 +3290,7 @@ public:
         auto* list = new tsl::elm::List();
         packageConfigIniPath = filePath + CONFIG_FILENAME;
     
-        commandSystem = commandSystems[0];
+        //commandSystem = commandSystems[0];
         commandMode = commandModes[0];
         commandGrouping = commandGroupings[0];
     
@@ -4311,6 +4315,7 @@ bool drawCommandsMenu(
     bool commandFooterHighlightDefined;
     bool isHold;
     std::string commandSystem;
+    std::string commandState;
     std::string commandMode;
     std::string commandGrouping;
     
@@ -4368,6 +4373,7 @@ bool drawCommandsMenu(
     std::string lastPackageHeader;
 
     bool isMini;
+    const bool isDocked = ult::consoleIsDocked();
 
     // update general placeholders
     updateGeneralPlaceholders();
@@ -4432,6 +4438,7 @@ bool drawCommandsMenu(
         commandFooterHighlightDefined = false;
         isHold = false;
         commandSystem = DEFAULT_STR;
+        commandState = DEFAULT_STR;
         commandMode = DEFAULT_STR;
         commandGrouping = DEFAULT_STR;
         
@@ -4579,7 +4586,7 @@ bool drawCommandsMenu(
                             }
                     
                             // Load footer_highlight from config INI if it exists
-                            auto footerHighlightIt = optionIt->second.find("footer_highlight");
+                            auto footerHighlightIt = optionIt->second.find(FOOTER_HIGHLIGHT_STR);
                             if (footerHighlightIt != optionIt->second.end()) {
                                 commandFooterHighlight = (footerHighlightIt->second == TRUE_STR);
                                 commandFooterHighlightDefined = true;
@@ -4787,6 +4794,11 @@ bool drawCommandsMenu(
                                         commandSystem = commandSystems[0];
                                     continue;
                                 }
+                                if (commandName.compare(0, STATE_PATTERN_LEN, STATE_PATTERN) == 0) {
+                                    commandState = commandName.substr(STATE_PATTERN_LEN);
+                                    continue;
+                                }
+
                                 if (commandName.compare(0, SCROLLABLE_PATTERN_LEN, SCROLLABLE_PATTERN) == 0) {
                                     switch (commandName[SCROLLABLE_PATTERN_LEN]) {
                                         case 't':
@@ -5168,7 +5180,7 @@ bool drawCommandsMenu(
                 // Always try to load footer_highlight from config.ini if it exists
                 auto optionIt = packageConfigData.find(optionName);
                 if (optionIt != packageConfigData.end()) {
-                    auto footerHighlightIt = optionIt->second.find("footer_highlight");
+                    auto footerHighlightIt = optionIt->second.find(FOOTER_HIGHLIGHT_STR);
                     if (footerHighlightIt != optionIt->second.end() && !footerHighlightIt->second.empty()) {
                         // Load the non-empty value from config.ini
                         commandFooterHighlight = (footerHighlightIt->second == TRUE_STR);
@@ -5178,9 +5190,9 @@ bool drawCommandsMenu(
                 
                 // Only write footer_highlight back if it was defined in package INI but missing/empty in config
                 if (commandFooterHighlightDefined && optionIt != packageConfigData.end()) {
-                    auto it = optionIt->second.find("footer_highlight");
+                    auto it = optionIt->second.find(FOOTER_HIGHLIGHT_STR);
                     if (it == optionIt->second.end() || it->second.empty()) {
-                        packageConfigData[optionName]["footer_highlight"] = commandFooterHighlight ? TRUE_STR : FALSE_STR;
+                        packageConfigData[optionName][FOOTER_HIGHLIGHT_STR] = commandFooterHighlight ? TRUE_STR : FALSE_STR;
                         shouldSaveINI = true;
                     }
                 }
@@ -5199,7 +5211,7 @@ bool drawCommandsMenu(
                 }
                 // Only add footer_highlight if it was defined in package INI
                 if (commandFooterHighlightDefined) {
-                    packageConfigData[optionName]["footer_highlight"] = commandFooterHighlight ? TRUE_STR : FALSE_STR;
+                    packageConfigData[optionName][FOOTER_HIGHLIGHT_STR] = commandFooterHighlight ? TRUE_STR : FALSE_STR;
                 }
                 
                 // Save the config file once
@@ -5236,6 +5248,10 @@ bool drawCommandsMenu(
             if (commandSystem == ERISTA_STR && !usingErista) {
                 skipSystem = true;
             } else if (commandSystem == MARIKO_STR && !usingMariko) {
+                skipSystem = true;
+            } else if (commandState == DOCKED_STR && !isDocked) {
+                skipSystem = true;
+            } else if (commandState == HANDHELD_STR && isDocked) {
                 skipSystem = true;
             }
             
@@ -6192,7 +6208,7 @@ public:
                                     footerIt->second.find(NULL_STR) == std::string::npos)
                                 {
                                     // Check if footer_highlight exists in the INI
-                                    auto footerHighlightIt = optionSection.find("footer_highlight");
+                                    auto footerHighlightIt = optionSection.find(FOOTER_HIGHLIGHT_STR);
                                     if (footerHighlightIt != optionSection.end()) {
                                         // Use the value from the INI
                                         bool footerHighlightFromIni = (footerHighlightIt->second == TRUE_STR);
@@ -7580,7 +7596,7 @@ public:
                                     footerIt->second.find(NULL_STR) == std::string::npos)
                                 {
                                     // Check if footer_highlight exists in the INI
-                                    auto footerHighlightIt = optionSection.find("footer_highlight");
+                                    auto footerHighlightIt = optionSection.find(FOOTER_HIGHLIGHT_STR);
                                     if (footerHighlightIt != optionSection.end()) {
                                         // Use the value from the INI
                                         bool footerHighlightFromIni = (footerHighlightIt->second == TRUE_STR);
