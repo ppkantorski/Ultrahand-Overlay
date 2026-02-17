@@ -108,4 +108,4 @@ Contributions are welcome! If you have any ideas, suggestions, or bug reports, p
 
 This project is licensed and distributed under [GPLv2](LICENSE) with a [custom library](https://github.com/ppkantorski/libultrahand/tree/main/libultra) utilizing [CC-BY-4.0](SUB_LICENSE).
 
-Copyright (c) 2023-2025 ppkantorski
+Copyright (c) 2023-2026 ppkantorski
