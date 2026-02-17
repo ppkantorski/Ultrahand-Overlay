@@ -70,6 +70,12 @@ static uint32_t cpuIDDQ, gpuIDDQ, socIDDQ;
 static bool usingEmunand = true;
 
 
+// For persistent versions and colors across nested packages (when not specified)
+std::string packageRootLayerTitle;
+std::string packageRootLayerName;
+std::string packageRootLayerVersion;
+std::string packageRootLayerColor;
+
 
 /**
  * @brief Ultrahand-Overlay Configuration Paths
@@ -327,6 +333,33 @@ bool isVersionGreaterOrEqual(const char* currentVersion, const char* requiredVer
     if (currMinor > reqMinor) return true;
     if (currMinor < reqMinor) return false;
     return currPatch >= reqPatch;
+}
+
+inline bool checkVersionCondition(const std::string& condition, const std::string& currentVersion) {
+    if (condition.empty()) return true;
+
+    const char* cur = currentVersion.c_str();
+    std::string op, ver;
+
+    if (condition.size() > 1 && condition[0] == '>' && condition[1] == '=') {
+        op = ">="; ver = condition.substr(2);
+    } else if (condition.size() > 1 && condition[0] == '<' && condition[1] == '=') {
+        op = "<="; ver = condition.substr(2);
+    } else if (condition[0] == '>') {
+        op = ">"; ver = condition.substr(1);
+    } else if (condition[0] == '<') {
+        op = "<"; ver = condition.substr(1);
+    } else {
+        op = "=="; ver = condition;
+    }
+
+    const char* req = ver.c_str();
+    if (op == "==") return isVersionGreaterOrEqual(cur, req) && isVersionGreaterOrEqual(req, cur);
+    if (op == ">=") return isVersionGreaterOrEqual(cur, req);
+    if (op == "<=") return isVersionGreaterOrEqual(req, cur);
+    if (op == ">")  return isVersionGreaterOrEqual(cur, req) && !isVersionGreaterOrEqual(req, cur);
+    if (op == "<")  return isVersionGreaterOrEqual(req, cur) && !isVersionGreaterOrEqual(cur, req);
+    return true;
 }
 
 
@@ -3077,6 +3110,7 @@ void updateGeneralPlaceholders() {
         {"{ram_model}", memoryModel},
         {"{ams_version}", amsVersion},
         {"{hos_version}", hosVersion},
+        {"{package_version}", packageRootLayerVersion},
         {"{cpu_speedo}", ult::to_string(cpuSpeedo0)},
         {"{cpu_iddq}", ult::to_string(cpuIDDQ)},
         {"{gpu_speedo}", ult::to_string(cpuSpeedo2)},

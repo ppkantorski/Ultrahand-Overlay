@@ -92,13 +92,15 @@ static size_t nestedMenuCount = 0;
 static const std::vector<std::string> commandSystems = {DEFAULT_STR, ERISTA_STR, MARIKO_STR};
 static const std::vector<std::string> commandModes = {DEFAULT_STR, HOLD_STR, SLOT_STR, TOGGLE_STR, OPTION_STR, FORWARDER_STR, TEXT_STR, TABLE_STR, TRACKBAR_STR, STEP_TRACKBAR_STR, NAMED_STEP_TRACKBAR_STR};
 static const std::vector<std::string> commandGroupings = {DEFAULT_STR, "split", "split2", "split3", "split4", "split5"};
+static const std::string SYSTEM_PATTERN = ";system=";
+static const std::string STATE_PATTERN = ";state=";
+static const std::string HOS_VERSION_PATTERN = ";hos_version=";
+static const std::string AMS_VERSION_PATTERN = ";ams_version=";
 static const std::string MODE_PATTERN = ";mode=";
 static const std::string GROUPING_PATTERN = ";grouping=";
 static const std::string FOOTER_PATTERN = ";footer=";
 static const std::string FOOTER_HIGHLIGHT_PATTERN = ";footer_highlight=";
 static const std::string HOLD_PATTERN = ";hold=";
-static const std::string SYSTEM_PATTERN = ";system=";
-static const std::string STATE_PATTERN = ";state=";
 static const std::string WIDGET_PATTERN = ";widget=";
 
 static const std::string MINI_PATTERN = ";mini=";
@@ -137,6 +139,8 @@ static const std::string ON_EVERY_TICK_PATTERN = ";on_every_tick=";
 
 static const size_t SYSTEM_PATTERN_LEN = SYSTEM_PATTERN.length();
 static const size_t STATE_PATTERN_LEN = STATE_PATTERN.length();
+static const size_t HOS_VERSION_PATTERN_LEN = HOS_VERSION_PATTERN.length();
+static const size_t AMS_VERSION_PATTERN_LEN = AMS_VERSION_PATTERN.length();
 static const size_t MODE_PATTERN_LEN = MODE_PATTERN.length();
 static const size_t GROUPING_PATTERN_LEN = GROUPING_PATTERN.length();
 static const size_t FOOTER_PATTERN_LEN = FOOTER_PATTERN.length();
@@ -2515,10 +2519,10 @@ public:
 
 
 // For persistent versions and colors across nested packages (when not specified)
-std::string packageRootLayerTitle;
-std::string packageRootLayerName;
-std::string packageRootLayerVersion;
-std::string packageRootLayerColor;
+//std::string packageRootLayerTitle;
+//std::string packageRootLayerName;
+//std::string packageRootLayerVersion;
+//std::string packageRootLayerColor;
 //bool packageRootLayerIsStarred = false;
 
 //std::string lastPackageHeader;
@@ -4314,8 +4318,11 @@ bool drawCommandsMenu(
     bool commandFooterHighlight;
     bool commandFooterHighlightDefined;
     bool isHold;
+
     std::string commandSystem;
     std::string commandState;
+    std::string commandHOSFirmware;
+    std::string commandAMSFirmware;
     std::string commandMode;
     std::string commandGrouping;
     
@@ -4439,6 +4446,8 @@ bool drawCommandsMenu(
         isHold = false;
         commandSystem = DEFAULT_STR;
         commandState = DEFAULT_STR;
+        commandHOSFirmware = "";
+        commandAMSFirmware = "";
         commandMode = DEFAULT_STR;
         commandGrouping = DEFAULT_STR;
         
@@ -4914,6 +4923,10 @@ bool drawCommandsMenu(
                                 break;
                                 
                             case 'h':
+                                if (commandName.compare(0, HOS_VERSION_PATTERN_LEN, HOS_VERSION_PATTERN) == 0) {
+                                    commandHOSFirmware = commandName.substr(HOS_VERSION_PATTERN_LEN);
+                                    continue;
+                                }
                                 if (commandName.compare(0, HOLD_PATTERN_LEN, HOLD_PATTERN) == 0) {
                                     switch (commandName[HOLD_PATTERN_LEN]) {
                                         case 't':
@@ -5067,6 +5080,10 @@ bool drawCommandsMenu(
                                 break;
                                 
                             case 'a':
+                                if (commandName.compare(0, AMS_VERSION_PATTERN_LEN, AMS_VERSION_PATTERN) == 0) {
+                                    commandAMSFirmware = commandName.substr(AMS_VERSION_PATTERN_LEN);
+                                    continue;
+                                }
                                 if (commandName.compare(0, ALIGNMENT_PATTERN_LEN, ALIGNMENT_PATTERN) == 0) {
                                     tableAlignment = commandName.substr(ALIGNMENT_PATTERN_LEN);
                                     continue;
@@ -5252,6 +5269,10 @@ bool drawCommandsMenu(
             } else if (commandState == DOCKED_STR && !isDocked) {
                 skipSystem = true;
             } else if (commandState == HANDHELD_STR && isDocked) {
+                skipSystem = true;
+            } else if (!commandHOSFirmware.empty() && !checkVersionCondition(commandHOSFirmware, hosVersion)) {
+                skipSystem = true;
+            } else if (!commandAMSFirmware.empty() && !checkVersionCondition(commandAMSFirmware, amsVersion)) {
                 skipSystem = true;
             }
             
