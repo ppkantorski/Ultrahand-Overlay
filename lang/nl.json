@@ -86,6 +86,8 @@
     "SOUND_SUPPORT_ENABLED": "Geluid aan",
     "EXIT_OVERLAY_SYSTEM": "Overlay-systeem afsluiten",
     "ULTRAHAND_ABOUT": "Ultrahand Overlay is een aanpasbaar ecosysteem van overlays voor commando's, overlays, sneltoetsen en geavanceerde systeeminteractie.",
+    "ULTRAHAND_CREDITS_START": "Speciale dank aan ",
+    "ULTRAHAND_CREDITS_END": " en vele anderen. ♥",
     "LOCAL_IP": "Lokale IP",
     "WALLPAPER": "Achtergrond",
     "THEME": "Thema",
