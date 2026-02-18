@@ -86,6 +86,8 @@
     "SOUND_SUPPORT_ENABLED": "Sound support enabled.",
     "EXIT_OVERLAY_SYSTEM": "Exit Overlay System",
     "ULTRAHAND_ABOUT": "Ultrahand Overlay is a customizable overlay ecosystem for commands, overlays, hotkeys, and advanced system interaction.",
+    "ULTRAHAND_CREDITS_START": "Special thanks to ",
+    "ULTRAHAND_CREDITS_END": " and many others. ♥",
     "LOCAL_IP": "Local IP",
     "WALLPAPER": "Wallpaper",
     "THEME": "Theme",
