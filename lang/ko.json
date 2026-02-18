@@ -86,6 +86,8 @@
     "SOUND_SUPPORT_ENABLED": "사운드 켜짐",
     "EXIT_OVERLAY_SYSTEM": "오버레이 시스템 종료",
     "ULTRAHAND_ABOUT": "Ultrahand Overlay는 명령, 오버레이, 핫키, 고급 시스템 인터랙션을 위한 맞춤형 오버레이 에코시스템입니다.",
+    "ULTRAHAND_CREDITS_START": "",
+    "ULTRAHAND_CREDITS_END": " 및 많은 분들께 특별한 감사 인사를 드립니다. ♥",
     "LOCAL_IP": "로컬 IP",
     "WALLPAPER": "배경화면",
     "THEME": "테마",
