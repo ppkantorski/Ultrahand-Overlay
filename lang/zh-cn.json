@@ -86,6 +86,8 @@
     "SOUND_SUPPORT_ENABLED": "音效已开启",
     "EXIT_OVERLAY_SYSTEM": "退出插件系统",
     "ULTRAHAND_ABOUT": "Ultrahand Overlay 是一个可自定义的插件生态系统，用于命令、插件、快捷键以及高级系统交互。",
+    "ULTRAHAND_CREDITS_START": "特别感谢 ",
+    "ULTRAHAND_CREDITS_END": " 以及许多其他人。♥",
     "LOCAL_IP": "本地 IP",
     "WALLPAPER": "壁纸",
     "THEME": "主题",
