@@ -23,12 +23,7 @@
 #include <payload.hpp> // Studious Pancake
 #include <util.hpp> // Studious Pancake
 
-#if !USING_FSTREAM_DIRECTIVE
 #include <stdio.h>
-#else
-#include <fstream>
-#endif
-
 #include <fnmatch.h>
 #include <numeric>
 #include <queue>
@@ -449,7 +444,6 @@ inline bool checkVersionCondition(const std::string& condition, const std::strin
 //}
 
 void writeFuseIni(const std::string& outputPath, const char* data = nullptr) {
-#if !USING_FSTREAM_DIRECTIVE
     // Use stdio.h functions for file operations
     FILE* outFile = fopen(outputPath.c_str(), "w");
     if (outFile) {
@@ -479,38 +473,6 @@ void writeFuseIni(const std::string& outputPath, const char* data = nullptr) {
         }
         fclose(outFile);
     }
-#else
-    // Use fstream for file operations
-    std::ofstream outFile(outputPath);
-    if (outFile) {
-        // Uncomment this line if needed to include the commented warning line
-        // outFile.write("; do not adjust these values manually unless they were not dumped correctly\n", 81);
-
-        outFile.write("[", 1);
-        outFile.write(FUSE_STR.c_str(), FUSE_STR.size());
-        outFile.write("]\n", 2);
-
-        if (data) {
-            outFile << "cpu_speedo_0=" << *reinterpret_cast<const uint32_t*>(data + FUSE_CPU_SPEEDO_0_CALIB) << '\n'
-                    << "cpu_speedo_2=" << *reinterpret_cast<const uint32_t*>(data + FUSE_CPU_SPEEDO_2_CALIB) << '\n'
-                    << "soc_speedo_0=" << *reinterpret_cast<const uint32_t*>(data + FUSE_SOC_SPEEDO_0_CALIB) << '\n'
-                    << "cpu_iddq=" << *reinterpret_cast<const uint32_t*>(data + FUSE_CPU_IDDQ_CALIB) << '\n'
-                    << "soc_iddq=" << *reinterpret_cast<const uint32_t*>(data + FUSE_SOC_IDDQ_CALIB) << '\n'
-                    << "gpu_iddq=" << *reinterpret_cast<const uint32_t*>(data + FUSE_GPU_IDDQ_CALIB) << '\n'
-                    << "disable_reload=false\n";
-        } else {
-            outFile << "cpu_speedo_0=\n"
-                    << "cpu_speedo_2=\n"
-                    << "soc_speedo_0=\n"
-                    << "cpu_iddq=\n"
-                    << "soc_iddq=\n"
-                    << "gpu_iddq=\n"
-                    << "disable_reload=false\n";
-        }
-
-        outFile.close();
-    }
-#endif
 }
 
 
@@ -3004,103 +2966,102 @@ static size_t findMatchingClose(const std::string& s,
  * @note Source placeholders like {list_source(*)}, {file_source} are resolved in
  *       getSourceReplacement() and will be skipped by this function.
  */
-bool replacePlaceholdersRecursively(
+static bool replacePlaceholdersRecursivelyImpl(
     std::string& arg,
-    const std::vector<std::pair<std::string, std::function<std::string(const std::string&)>>>& placeholders) {
+    const std::vector<std::pair<std::string, std::function<std::string(const std::string&)>>>& placeholders,
+    const std::vector<std::string>& starts) {
+    
     bool anyReplacementsMade = false;
-
-    // Precompute all opener tokens ("{slice(", "{math(", ...).
-    std::vector<std::string> starts;
-    starts.reserve(placeholders.size());
-    for (const auto& pr : placeholders) {
-        starts.push_back(pr.first);
-    }
-
     bool replacedThisPass;
     size_t searchPos;
     std::string replacement;
     std::string inner;
-    std::string innerBeforeRecursion;
+    std::string resolvedPlaceholder;
 
-    // Keep sweeping until no replacements occur
     for (;;) {
         replacedThisPass = false;
 
-        // Try each placeholder type
         for (size_t t = 0; t < placeholders.size(); ++t) {
             const auto& opener = placeholders[t].first;
             const auto& replacer = placeholders[t].second;
+            const size_t openerLen = opener.size();
 
             searchPos = 0;
-
             while (true) {
-                // Find the next occurrence of THIS opener
                 const size_t startPos = arg.find(opener, searchPos);
                 if (startPos == std::string::npos) break;
 
-                // Find its matching ")}" by counting nested ANY opener
-                const size_t closePos = findMatchingClose(arg, startPos, starts, opener.size());
+                const size_t closePos = findMatchingClose(arg, startPos, starts, openerLen);
                 if (closePos == std::string::npos) {
-                    // Unbalanced; skip this and move on to avoid infinite loop
-                    searchPos = startPos + opener.size();
+                    searchPos = startPos + openerLen;
                     continue;
                 }
 
-                // Full placeholder text including wrapper: "{name(...)}"
-                const size_t fullLen = (closePos - startPos) + 2; // include the ")}"
-                const std::string placeholderText = arg.substr(startPos, fullLen);
+                const size_t innerStart = startPos + openerLen;
+                const size_t innerLen   = closePos - innerStart;
+                const size_t fullLen    = closePos - startPos + 2;
 
-                // Resolve INNER content first (exclude the outer wrapper)
-                const size_t innerStart = opener.size();
-                const size_t innerLen = placeholderText.size() - innerStart - 2; // minus ")}"
-                inner = placeholderText.substr(innerStart, innerLen);
-
-                // Save the original inner content before recursion
-                innerBeforeRecursion = inner;
-
-                // Recurse on inner to resolve any nested placeholders
-                replacePlaceholdersRecursively(inner, placeholders);
-
-                // If inner didn't change AND still contains placeholder patterns,
-                // it means the inner placeholders couldn't be resolved yet —
-                // skip this outer placeholder and leave it for later resolution
-                if (inner == innerBeforeRecursion && inner.find('{') != std::string::npos) {
-                    searchPos = startPos + opener.size();
-                    continue;
+                bool innerChanged = false;
+                
+                // Skip recursion entirely if inner is empty or has no placeholders
+                if (innerLen > 0) {
+                    inner.assign(arg, innerStart, innerLen);
+                    if (inner.find('{') != std::string::npos) {
+                        innerChanged = replacePlaceholdersRecursivelyImpl(inner, placeholders, starts);
+                        
+                        // If recursion made no changes and inner still has unresolved placeholders,
+                        // skip this outer placeholder
+                        if (!innerChanged) {
+                            searchPos = startPos + openerLen;
+                            continue;
+                        }
+                    }
                 }
 
-                // Rebuild the outer placeholder with resolved inner args
-                const std::string resolvedPlaceholder = opener + inner + ")}";
+                // Build the resolved placeholder
+                if (!innerChanged) {
+                    resolvedPlaceholder.assign(arg, startPos, fullLen);
+                } else {
+                    resolvedPlaceholder.clear();
+                    resolvedPlaceholder.reserve(openerLen + inner.size() + 2);
+                    resolvedPlaceholder += opener;
+                    resolvedPlaceholder += inner;
+                    resolvedPlaceholder += ")}";
+                }
 
-                // Call the replacer on the fully resolved placeholder
                 replacement = replacer(resolvedPlaceholder);
 
-                // If the replacer returned the placeholder unchanged (e.g. json_file
-                // whose source file doesn't exist yet), skip without marking a replacement
-                // to avoid an infinite loop in the outer for(;;)
-                if (replacement == resolvedPlaceholder) {
-                    searchPos = startPos + opener.size();
+                if (replacement.size() == resolvedPlaceholder.size() && replacement == resolvedPlaceholder) {
+                    searchPos = startPos + openerLen;
                     continue;
                 }
 
-                // Perform replacement
                 arg.replace(startPos, fullLen, replacement);
-
                 anyReplacementsMade = true;
                 replacedThisPass = true;
-
-                // Continue scanning after the replacement
                 searchPos = startPos + replacement.size();
             }
         }
 
-        // If no replacements were made this pass, we're done
         if (!replacedThisPass) break;
     }
 
     return anyReplacementsMade;
 }
 
+bool replacePlaceholdersRecursively(
+    std::string& arg,
+    const std::vector<std::pair<std::string, std::function<std::string(const std::string&)>>>& placeholders) {
+    
+    if (arg.find('{') == std::string::npos) return false;
+
+    std::vector<std::string> starts;
+    starts.reserve(placeholders.size());
+    for (const auto& pr : placeholders) {
+        starts.push_back(pr.first);
+    }
+    return replacePlaceholdersRecursivelyImpl(arg, placeholders, starts);
+}
 
 
 std::unordered_map<std::string, std::string> generalPlaceholders;
@@ -4069,7 +4030,6 @@ void handleMoveCommand(const std::vector<std::string>& cmd, const std::string& p
         //destinationPath.reserve(1024);
     
         // Stream process both files line by line
-    #if !USING_FSTREAM_DIRECTIVE
         FILE* sourceFile = fopen(sourceListPath.c_str(), "r");
         FILE* destFile = fopen(destinationListPath.c_str(), "r");
         
@@ -4164,61 +4124,6 @@ void handleMoveCommand(const std::vector<std::string>& cmd, const std::string& p
         
         fclose(sourceFile);
         fclose(destFile);
-        
-    #else
-        std::ifstream sourceFile(sourceListPath);
-        std::ifstream destFile(destinationListPath);
-        
-        if (!sourceFile.is_open() || !destFile.is_open()) {
-            #if USING_LOGGING_DIRECTIVE
-            if (!disableLogging)
-                logMessage("Failed to open source or destination list files");
-            #endif
-            return;
-        }
-        
-        // Set larger buffers for better I/O performance
-        char sourceFileBuffer[8192], destFileBuffer[8192];
-        sourceFile.rdbuf()->pubsetbuf(sourceFileBuffer, sizeof(sourceFileBuffer));
-        destFile.rdbuf()->pubsetbuf(destFileBuffer, sizeof(destFileBuffer));
-        
-        // Process files line by line simultaneously
-        while (std::getline(sourceFile, sourcePath) && std::getline(destFile, destinationPath)) {
-            preprocessPath(sourcePath, packagePath);
-            preprocessPath(destinationPath, packagePath);
-            
-            // Cache filter lookup result  
-            const bool shouldProcess = !filterSet || filterSet->find(sourcePath) == filterSet->end();
-            
-            if (shouldProcess) {
-                // Check if it's a directory (ends with /)
-                const bool isDirectory = !sourcePath.empty() && sourcePath.back() == '/';
-                
-                if (!isDirectory) {
-                    // Check copy filter once and cache result
-                    const bool shouldCopy = copyFilterSet && copyFilterSet->find(sourcePath) != copyFilterSet->end();
-                    
-                    if (shouldCopy) {
-                        const long long totalSize = getTotalSize(sourcePath);
-                        long long totalBytesCopied = 0;
-                        copyFileOrDirectory(sourcePath, destinationPath, &totalBytesCopied, totalSize);
-                    } else {
-                        moveFileOrDirectory(sourcePath, destinationPath, logSource, logDestination);
-                    }
-                } else {
-                    if (isDirectoryEmpty(sourcePath)) {
-                        moveFileOrDirectory(sourcePath, destinationPath, logSource, logDestination);
-                    }
-                    #if USING_LOGGING_DIRECTIVE
-                    else if (!disableLogging) {
-                        logMessage("Skipping non-empty directory: " + sourcePath);
-                    }
-                    #endif
-                }
-            }
-        }
-    #endif
-    
         
     } else {
         // Single file/directory moving - early returns for error conditions

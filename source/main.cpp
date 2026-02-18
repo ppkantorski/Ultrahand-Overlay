@@ -667,96 +667,70 @@ private:
         if (isVersionGreaterOrEqual(versionLabel.c_str(), APP_VERSION) && versionLabel != APP_VERSION)
             listItem->setValueColor(tsl::onTextColor);
     
-        listItem->setClickListener([this, listItem, title](uint64_t keys) {
+        listItem->setClickListener([this, listItem](uint64_t keys) {
             static bool executingCommands = false;
             if (runningInterpreter.load(acquire)) {
                 return false;
             } else {
-                if (executingCommands && commandSuccess.load(acquire)) {// && title != UPDATE_LANGUAGES) {
+                if (executingCommands && commandSuccess.load(acquire)) {
                     softwareHasUpdated = true;
                     triggerMenuReload = true;
                 }
                 executingCommands = false;
             }
-    
-            if (!(keys & KEY_A && !(keys & ~KEY_A & ALL_KEYS_MASK))) {
+        
+            if (!(keys & KEY_A && !(keys & ~KEY_A & ALL_KEYS_MASK)))
                 return false;
-            }
-    
+            
             executingCommands = true;
             isDownloadCommand.store(true, release);
-            
-            std::vector<std::vector<std::string>> interpreterCommands = {
-                {"try:"}
+        
+            const bool disableLoaderUpdate = isFile(FLAGS_PATH + "NO_LOADER_UPDATES.flag");
+            const std::string latestVersion = cleanVersionLabel(parseValueFromIniSection(SETTINGS_PATH + "RELEASE.ini", "Release Info", "latest_version"));
+            const std::string dlSounds = DOWNLOADS_PATH + "sounds/";
+            const std::string dlLoader = DOWNLOADS_PATH + "420000000007E51A/";
+            static constexpr const char* atmLoader = "/atmosphere/contents/420000000007E51A/";
+        
+            std::vector<std::vector<std::string>> cmds = {{"try:"}};
+        
+            auto addBackup = [&]() {
+                cmds.push_back({"delete", dlSounds});
+                cmds.push_back({"cp", SOUNDS_PATH, dlSounds});
+                if (disableLoaderUpdate) {
+                    cmds.push_back({"delete", dlLoader});
+                    cmds.push_back({"cp", atmLoader, dlLoader});
+                }
             };
-    
-            // === UPDATE_ULTRAHAND case ===
-            //if (title == UPDATE_ULTRAHAND) {
-            {
-                const bool disableLoaderUpdate = isFile(FLAGS_PATH+"NO_LOADER_UPDATES.flag");
-                const bool disableSoundEffectsUpdate = isFile(FLAGS_PATH+"NO_SOUND_EFFECTS_UPDATES.flag");
-                const std::string versionLabel = cleanVersionLabel(parseValueFromIniSection((SETTINGS_PATH+"RELEASE.ini"), "Release Info", "latest_version"));
-                
-                // Lambda to add backup/restore commands
-                auto addBackupCommands = [&]() {
-                    if (disableSoundEffectsUpdate) {
-                        interpreterCommands.push_back({"delete", DOWNLOADS_PATH+"sounds/"});
-                        interpreterCommands.push_back({"cp", SOUNDS_PATH, DOWNLOADS_PATH+"sounds/"});
-                    }
-                    if (disableLoaderUpdate) {
-                        interpreterCommands.push_back({"delete", DOWNLOADS_PATH+"420000000007E51A/"});
-                        interpreterCommands.push_back({"cp", "/atmosphere/contents/420000000007E51A/", DOWNLOADS_PATH+"420000000007E51A/"});
-                    }
-                };
-                
-                auto addRestoreAndLoaderCommands = [&]() {
-                    if (disableSoundEffectsUpdate) {
-                        interpreterCommands.push_back({"mv", DOWNLOADS_PATH+"sounds/", SOUNDS_PATH});
-                    }
-                    if (disableLoaderUpdate) {
-                        interpreterCommands.push_back({"mv", DOWNLOADS_PATH+"420000000007E51A/", "/atmosphere/contents/420000000007E51A/"});
-                    } else if (!isVersionGreaterOrEqual(amsVersion,"1.8.0")) {
-                        interpreterCommands.push_back({"download", OLD_NX_OVLLOADER_ZIP_URL, DOWNLOADS_PATH});
-                        interpreterCommands.push_back({"unzip", DOWNLOADS_PATH + "nx-ovlloader.zip", ROOT_PATH});
-                        interpreterCommands.push_back({"delete", DOWNLOADS_PATH + "nx-ovlloader.zip"});
-                    }
-                };
-                
-                auto addVersionUpdate = [&]() {
-                    if (!versionLabel.empty()) {
-                        interpreterCommands.push_back({"set-json-val", HB_APPSTORE_JSON, "version", versionLabel});
-                    }
-                };
-                
-                // Try #1: Update via update.ini
-                interpreterCommands.push_back({"delete", DOWNLOADS_PATH+"update.ini"});
-                interpreterCommands.push_back({"download-no-retry", LATEST_UPDATER_INI_URL, DOWNLOADS_PATH}); // if fails, move to next try
-                addBackupCommands();
-                interpreterCommands.push_back({"exec", "update", DOWNLOADS_PATH+"update.ini"});
-                interpreterCommands.push_back({"delete", DOWNLOADS_PATH+"update.ini"});
-                addRestoreAndLoaderCommands();
-                addVersionUpdate();
-                
-                // Try #2: Update via sdout.zip
-                interpreterCommands.push_back({"try:"});
-                interpreterCommands.push_back({"delete", DOWNLOADS_PATH+"sdout.zip"});
-                interpreterCommands.push_back({"download", ULTRAHAND_REPO_URL + "releases/latest/download/sdout.zip", DOWNLOADS_PATH});
-                addBackupCommands();
-                interpreterCommands.push_back({"unzip", DOWNLOADS_PATH+"sdout.zip", ROOT_PATH});
-                interpreterCommands.push_back({"delete", DOWNLOADS_PATH+"sdout.zip"});
-                addRestoreAndLoaderCommands();
-                addVersionUpdate();
-            } 
-            // === UPDATE_LANGUAGES case ===
-            //else if (title == UPDATE_LANGUAGES) {
-            //    interpreterCommands.push_back({"delete", DOWNLOADS_PATH+"lang.zip"});
-            //    interpreterCommands.push_back({"download", ULTRAHAND_REPO_URL + "releases/latest/download/lang.zip", DOWNLOADS_PATH});
-            //    interpreterCommands.push_back({"unzip", DOWNLOADS_PATH+"lang.zip", LANG_PATH});
-            //    interpreterCommands.push_back({"delete", DOWNLOADS_PATH+"lang.zip"});
-            //}
-    
+        
+            auto addRestore = [&]() {
+                cmds.push_back({"mv", dlSounds, SOUNDS_PATH});
+                if (disableLoaderUpdate)
+                    cmds.push_back({"mv", dlLoader, atmLoader});
+                if (!latestVersion.empty())
+                    cmds.push_back({"set-json-val", HB_APPSTORE_JSON, "version", latestVersion});
+            };
+        
+            // Try #1: update.ini
+            const std::string updateIni = DOWNLOADS_PATH + "update.ini";
+            cmds.push_back({"delete", updateIni});
+            cmds.push_back({"download-no-retry", LATEST_UPDATER_INI_URL, DOWNLOADS_PATH});
+            addBackup();
+            cmds.push_back({"exec", "update", updateIni});
+            cmds.push_back({"delete", updateIni});
+            addRestore();
+        
+            // Try #2: sdout.zip
+            const std::string sdoutZip = DOWNLOADS_PATH + "sdout.zip";
+            cmds.push_back({"try:"});
+            cmds.push_back({"delete", sdoutZip});
+            cmds.push_back({"download", ULTRAHAND_REPO_URL + "releases/latest/download/sdout.zip", DOWNLOADS_PATH});
+            addBackup();
+            cmds.push_back({"unzip", sdoutZip, ROOT_PATH});
+            cmds.push_back({"delete", sdoutZip});
+            addRestore();
+        
             runningInterpreter.store(true, release);
-            executeInterpreterCommands(std::move(interpreterCommands), "", "");
+            executeInterpreterCommands(std::move(cmds), "", "");
             listItem->disableClickAnimation();
             listItem->setValue(INPROGRESS_SYMBOL);
             lastSelectedListItem = listItem;
@@ -861,10 +835,11 @@ public:
             auto sectionIt = ultrahandIniData.find(ULTRAHAND_PROJECT_NAME);
             
             // Extract all values with defaults
-            std::string defaultLang = "";
-            std::string keyCombo = "";
-            std::string currentTheme = "";
-            std::string currentWallpaper = "";
+            std::string defaultLang;
+            std::string keyCombo;
+            std::string currentTheme;
+            std::string currentSounds;
+            std::string currentWallpaper;
             
             if (sectionIt != ultrahandIniData.end()) {
                 auto langIt = sectionIt->second.find(DEFAULT_LANG_STR);
@@ -882,6 +857,13 @@ public:
                     currentTheme = themeIt->second;
                 }
                 
+                if (!limitedMemory) {
+                    auto soundsIt = sectionIt->second.find("current_sounds");
+                    if (soundsIt != sectionIt->second.end()) {
+                        currentSounds = soundsIt->second;
+                    }
+                }
+
                 if (expandedMemory) {
                     auto wallpaperIt = sectionIt->second.find("current_wallpaper");
                     if (wallpaperIt != sectionIt->second.end()) {
@@ -896,6 +878,14 @@ public:
             keyCombo = keyCombo.empty() ? defaultCombos[0] : keyCombo;
             convertComboToUnicode(keyCombo);
             currentTheme = (currentTheme.empty() || currentTheme == DEFAULT_STR) ? DEFAULT : currentTheme;
+
+            if (!limitedMemory) {
+                if (isFileOrDirectory(LOADED_SOUNDS_PATH))
+                    currentSounds = currentSounds.empty() ? DEFAULT_STR : currentSounds;
+                else
+                    currentSounds = currentSounds.empty() ? OPTION_SYMBOL : currentSounds;
+            }
+
             if (expandedMemory) {
                 currentWallpaper = (currentWallpaper.empty() || currentWallpaper == OPTION_SYMBOL) ? OPTION_SYMBOL : currentWallpaper;
             }
@@ -906,6 +896,9 @@ public:
             addListItem(list, SOFTWARE_UPDATE, DROPDOWN_SYMBOL, "softwareUpdateMenu");
             addHeader(list, UI_SETTINGS);
             addListItem(list, THEME, currentTheme, "themeMenu");
+            if (!limitedMemory) {
+                addListItem(list, SOUNDS, currentSounds, "soundsMenu");
+            }
             if (expandedMemory) {
                 addListItem(list, WALLPAPER, currentWallpaper, "wallpaperMenu");
             }
@@ -1011,7 +1004,7 @@ public:
             overlayHeader.title = "Ultrahand Overlay";
             overlayHeader.version = APP_VERSION;
             overlayHeader.creator = "ppkantorski";
-            overlayHeader.about = "Ultrahand Overlay is a customizable overlay ecosystem for commands, overlays, hotkeys, and advanced system interaction.";
+            overlayHeader.about = ULTRAHAND_ABOUT;
             overlayHeader.credits = "Special thanks to B3711, ComplexNarrative, ssky, MasaGratoR, meha, WerWolv, HookedBehemoth and many others. ♥";
             addPackageInfo(list, overlayHeader, OVERLAY_STR);
             overlayHeader.clear();
@@ -1311,8 +1304,6 @@ public:
             //tableData.clear();
             //tableData = {{"", "", REBOOT_REQUIRED}};
             //addTable(list, tableData, "", 164, 28, 0, 0, DEFAULT_STR, DEFAULT_STR, DEFAULT_STR, RIGHT_STR, true);
-        
-                
         } else if (dropdownSelection == "themeMenu") {
             addHeader(list, THEME);
             std::string currentTheme = parseValueFromIniSection(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "current_theme");
@@ -1362,7 +1353,7 @@ public:
                 dropExtension(themeName);
                 if (themeName == DEFAULT_STR) continue;
 
-                tsl::elm::ListItem* listItem = new tsl::elm::ListItem(themeName);
+                listItem = new tsl::elm::ListItem(themeName);
                 if (themeName == currentTheme) {
                     listItem->setValue(CHECKMARK_SYMBOL);
                     //lastSelectedListItem = nullptr;
@@ -1396,6 +1387,92 @@ public:
                 });
                 list->addItem(listItem);
             }
+            filesList.clear();
+            filesList.shrink_to_fit();
+        } else if (dropdownSelection == "soundsMenu") {
+            addHeader(list, SOUNDS);
+            std::string currentSounds = parseValueFromIniSection(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "current_sounds");
+            if (currentSounds.empty()) {
+                if (isFile(SOUNDS_PATH + "default.zip") && ult::Audio::allSoundsExist())
+                    currentSounds = DEFAULT_STR;
+                else
+                    currentSounds = OPTION_SYMBOL;
+            }
+            auto* listItem = new tsl::elm::ListItem(OPTION_SYMBOL);
+            if (currentSounds == OPTION_SYMBOL) {
+                listItem->setValue(CHECKMARK_SYMBOL);
+                lastSelectedListItem = listItem;
+            }
+            listItem->setClickListener([listItem](uint64_t keys) {
+                if (runningInterpreter.load(acquire)) return false;
+        
+                if ((keys & KEY_A && !(keys & ~KEY_A & ALL_KEYS_MASK))) {
+                    setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "current_sounds", OPTION_SYMBOL);
+                    deleteFileOrDirectoryByPattern(LOADED_SOUNDS_PATH+"*.wav");
+                    ult::Audio::unloadAllSounds({});
+
+                    setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "sound_effects", FALSE_STR);
+                    useSoundEffects = false;
+                    
+                    if (lastSelectedListItem) lastSelectedListItem->setValue("");
+                    if (selectedListItem) selectedListItem->setValue(OPTION_SYMBOL);
+                    listItem->setValue(CHECKMARK_SYMBOL);
+                    lastSelectedListItem = listItem;
+                    tsl::shiftItemFocus(listItem);
+                    if (lastSelectedListItem) lastSelectedListItem->triggerClickAnimation();
+                    return true;
+                }
+                return false;
+            });
+            list->addItem(listItem);
+        
+            filesList = getFilesListByWildcards(SOUNDS_PATH + "*.zip");
+            std::sort(filesList.begin(), filesList.end());
+        
+            for (auto it = filesList.begin(); it != filesList.end(); ++it) {
+                if (getNameFromPath(*it) == "default.zip") {
+                    std::swap(*it, filesList.front());
+                    break;
+                }
+            }
+        
+            std::string soundsName;
+            for (const auto& soundsFile : filesList) {
+                soundsName = getNameFromPath(soundsFile);
+                dropExtension(soundsName);
+        
+                tsl::elm::ListItem* listItem = new tsl::elm::ListItem(soundsName);
+                if (soundsName == currentSounds) {
+                    listItem->setValue(CHECKMARK_SYMBOL);
+                    lastSelectedListItem = listItem;
+                }
+                listItem->setClickListener([soundsName, soundsFile, listItem](uint64_t keys) {
+                    if (runningInterpreter.load(acquire)) return false;
+        
+                    if ((keys & KEY_A && !(keys & ~KEY_A & ALL_KEYS_MASK))) {
+                        setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "current_sounds", soundsName);
+                        deleteFileOrDirectoryByPattern(LOADED_SOUNDS_PATH+"*.wav");
+                        unzipFile(soundsFile, LOADED_SOUNDS_PATH);
+                        
+                        setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "sound_effects", TRUE_STR);
+                        useSoundEffects = true;
+                        reloadSoundCacheNow.store(true, std::memory_order_release);
+
+                        if (lastSelectedListItem) lastSelectedListItem->setValue("");
+                        if (selectedListItem) selectedListItem->setValue(soundsName);
+                        listItem->setValue(CHECKMARK_SYMBOL);
+                        lastSelectedListItem = listItem;
+                        tsl::shiftItemFocus(listItem);
+                        if (lastSelectedListItem) lastSelectedListItem->triggerClickAnimation();
+                        return true;
+                    }
+                    return false;
+                });
+                list->addItem(listItem);
+            }
+        
+            filesList.clear();
+            filesList.shrink_to_fit();
         } else if (dropdownSelection == "wallpaperMenu") {
             addHeader(list, WALLPAPER);
             std::string currentWallpaper = parseValueFromIniSection(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "current_wallpaper");
@@ -1441,7 +1518,7 @@ public:
                 dropExtension(wallpaperName);
                 if (wallpaperName == DEFAULT_STR) continue;
 
-                tsl::elm::ListItem* listItem = new tsl::elm::ListItem(wallpaperName);
+                listItem = new tsl::elm::ListItem(wallpaperName);
                 if (wallpaperName == currentWallpaper) {
                     listItem->setValue(CHECKMARK_SYMBOL);
                     //lastSelectedListItem = nullptr;
@@ -1472,6 +1549,8 @@ public:
                 });
                 list->addItem(listItem);
             }
+            filesList.clear();
+            filesList.shrink_to_fit();
         } else if (dropdownSelection == "widgetMenu") {
             addHeader(list, WIDGET_ITEMS);
             createToggleListItem(list, CLOCK, hideClock, "hide_clock", true);
@@ -1498,17 +1577,19 @@ public:
             addHeader(list, FEATURES);
             useLaunchCombos = getBoolValue("launch_combos", true); // TRUE_STR default
             createToggleListItem(list, LAUNCH_COMBOS, useLaunchCombos, "launch_combos");
+
+            useHapticFeedback = getBoolValue("haptic_feedback", false); // FALSE_STR default
+            createToggleListItem(list, HAPTIC_FEEDBACK, useHapticFeedback, "haptic_feedback");
+
             useStartupNotification = getBoolValue("startup_notification", true); // TRUE_STR default
             createToggleListItem(list, STARTUP_NOTIFICATION, useStartupNotification, "startup_notification");
             useNotifications = getBoolValue("notifications", true); // TRUE_STR default
             createToggleListItem(list, EXTERNAL_NOTIFICATIONS, useNotifications, "notifications");
 
-            if (!ult::limitedMemory) {
-                useSoundEffects = getBoolValue("sound_effects", false); // TRUE_STR default
-                createToggleListItem(list, SOUND_EFFECTS, useSoundEffects, "sound_effects");
-            }
-            useHapticFeedback = getBoolValue("haptic_feedback", false); // FALSE_STR default
-            createToggleListItem(list, HAPTIC_FEEDBACK, useHapticFeedback, "haptic_feedback");
+            //if (!ult::limitedMemory) {
+            //    useSoundEffects = getBoolValue("sound_effects", false); // TRUE_STR default
+            //    createToggleListItem(list, SOUND_EFFECTS, useSoundEffects, "sound_effects");
+            //}
             useOpaqueScreenshots = getBoolValue("opaque_screenshots", true); // TRUE_STR default
             createToggleListItem(list, OPAQUE_SCREENSHOTS, useOpaqueScreenshots, "opaque_screenshots");
             useSwipeToOpen = getBoolValue("swipe_to_open", true); // TRUE_STR default
@@ -1566,7 +1647,8 @@ public:
         }
 
         auto* rootFrame = new tsl::elm::OverlayFrame(CAPITAL_ULTRAHAND_PROJECT_NAME, versionLabel);
-        if (inSubSettingsMenu && ((dropdownSelection == "languageMenu") || (dropdownSelection == KEY_COMBO_STR) || (dropdownSelection == "themeMenu") || (dropdownSelection == "wallpaperMenu"))) {
+        if (inSubSettingsMenu && ((dropdownSelection == "languageMenu") || (dropdownSelection == KEY_COMBO_STR) ||
+            (dropdownSelection == "themeMenu") || (dropdownSelection == "soundsMenu") || (dropdownSelection == "wallpaperMenu"))) {
             {
                 //std::lock_guard<std::mutex> lock(jumpItemMutex);
                 jumpItemName = "";
@@ -5280,7 +5362,7 @@ bool drawCommandsMenu(
                 if (commandMode == TABLE_STR) {
                     if (useHeaderIndent) {
                         tableColumnOffset = 164;
-                        tableStartGap = tableEndGap = 19-2; // for perfect alignment for header tables
+                        tableStartGap = tableEndGap = 17; // for perfect alignment for header tables
                         isScrollableTable = false;
                         lastPackageHeader = getFirstSectionText(tableData, packagePath);
                     }
@@ -6826,17 +6908,10 @@ public:
         
         std::vector<std::string> overlayFiles = getFilesListByWildcards(OVERLAY_PATH+"*.ovl");
         
-        #if !USING_FSTREAM_DIRECTIVE
         if (!isFile(OVERLAYS_INI_FILEPATH)) {
             FILE* createFile = fopen(OVERLAYS_INI_FILEPATH.c_str(), "w");
             if (createFile) fclose(createFile);
         }
-        #else
-        if (!isFile(OVERLAYS_INI_FILEPATH)) {
-            std::ofstream createFile(OVERLAYS_INI_FILEPATH);
-            createFile.close();
-        }
-        #endif
     
         if (overlayFiles.empty()) return;
     
@@ -7996,6 +8071,7 @@ void initializeSettingsAndDirectories() {
     createDirectory(THEMES_PATH);
     createDirectory(WALLPAPERS_PATH);
     createDirectory(SOUNDS_PATH);
+    createDirectory(LOADED_SOUNDS_PATH);
     
     bool settingsLoaded = false;
     bool needsUpdate = false;
