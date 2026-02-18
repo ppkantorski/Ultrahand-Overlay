@@ -86,6 +86,8 @@
     "SOUND_SUPPORT_ENABLED": "音效已開啟",
     "EXIT_OVERLAY_SYSTEM": "退出外掛系統",
     "ULTRAHAND_ABOUT": "Ultrahand Overlay 是一個可自訂的插件生態系統，支持命令、插件、快捷鍵和進階系統互動。",
+    "ULTRAHAND_CREDITS_START": "特別感謝 ",
+    "ULTRAHAND_CREDITS_END": " 以及許多其他人。♥",
     "LOCAL_IP": "本地 IP",
     "WALLPAPER": "桌布",
     "THEME": "主題",
