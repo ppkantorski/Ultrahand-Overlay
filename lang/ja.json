@@ -86,6 +86,8 @@
     "SOUND_SUPPORT_ENABLED": "音効オン",
     "EXIT_OVERLAY_SYSTEM": "オーバーレイ終了",
     "ULTRAHAND_ABOUT": "Ultrahand Overlayは、コマンド、オーバーレイ、ホットキー、高度なシステム操作のためのカスタマイズ可能なオーバーレイエコシステムです。",
+    "ULTRAHAND_CREDITS_START": "",
+    "ULTRAHAND_CREDITS_END": " そして多くの方々に特別な感謝を。♥",
     "LOCAL_IP": "ローカルIP",
     "WALLPAPER": "壁紙",
     "THEME": "テーマ",
