@@ -86,6 +86,8 @@
     "SOUND_SUPPORT_ENABLED": "Звук включён",
     "EXIT_OVERLAY_SYSTEM": "Выйти из оверлеев",
     "ULTRAHAND_ABOUT": "Ultrahand Overlay — это настраиваемая экосистема оверлеев для команд, оверлеев, горячих клавиш и расширенного взаимодействия с системой.",
+    "ULTRAHAND_CREDITS_START": "Особая благодарность ",
+    "ULTRAHAND_CREDITS_END": " и многим другим. ♥",
     "LOCAL_IP": "Локальный IP",
     "WALLPAPER": "Обои",
     "THEME": "Тема",
