@@ -1964,10 +1964,21 @@ void addPackageInfo(tsl::elm::List* list, auto& packageHeader, std::string type 
         }
     };
 
+    std::string creatorHeader = _CREATOR;
+    
+    const bool hasComma =
+        packageHeader.creator.find(',')  != std::string::npos ||  // ASCII
+        packageHeader.creator.find("，") != std::string::npos ||  // Chinese
+        packageHeader.creator.find("、") != std::string::npos;    // Japanese
+    
+    if (type == OVERLAY_STR || !hasComma) {
+        if (auto pos = creatorHeader.find('('); pos != std::string::npos)
+            creatorHeader.resize(pos);
+    }
 
     addField(_TITLE,   packageHeader.title,   "none");
     addField(_VERSION, packageHeader.version, "none");
-    addField(_CREATOR, packageHeader.creator, "none");
+    addField(creatorHeader, packageHeader.creator, "none");
     addField(_ABOUT,   packageHeader.about,   defaultLang == "en" ? "word" : "char");
     addField(_CREDITS, packageHeader.credits, "word");
 
@@ -2000,7 +2011,7 @@ void drawDevImage(tsl::gfx::Renderer* renderer) {
         creatorStartTick = armGetSystemTick();
     s32 drawY;
     constexpr float targetY = 557.0f, startY = targetY + devImageHeight;
-    constexpr float duration = 0.5f, delay = 0.1f;
+    constexpr float duration = 0.5f, delay = 0.2f;
     if (!creatorAnimDone) {
         const float elapsed = armTicksToNs(armGetSystemTick() - creatorStartTick) / 1e9f;
         if (elapsed < delay) {
@@ -2026,7 +2037,7 @@ void drawDevImage(tsl::gfx::Renderer* renderer) {
             useFrame2 = true;
         } else if (blinkEndTick > 0 && now >= blinkEndTick) {
             blinkEndTick = 0;
-            nextBlinkTick = now + armNsToTicks(static_cast<u64>((3.0f + (rand() % 300) / 100.0f) * 1e9f));
+            nextBlinkTick = now + armNsToTicks(static_cast<u64>((1.0f + (rand() % 600) / 100.0f) * 1e9f));
         } else if (nextBlinkTick > 0 && now >= nextBlinkTick) {
             blinkEndTick  = now + armNsToTicks(150000000ULL);
             nextBlinkTick = 0;
