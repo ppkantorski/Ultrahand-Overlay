@@ -910,7 +910,7 @@ public:
             addListItem(list, WIDGET, DROPDOWN_SYMBOL, "widgetMenu");
             addListItem(list, MISCELLANEOUS, DROPDOWN_SYMBOL, "miscMenu");
 
-            addGap(list, 12);
+            //addGap(list, 12);
 
         } else if (dropdownSelection == KEY_COMBO_STR) {
             addHeader(list, KEY_COMBO);
@@ -1660,8 +1660,8 @@ public:
 
             //addHeader(list, "Version Labels");
 
-        } else {
-            addBasicListItem(list, FAILED_TO_OPEN + ": " + settingsIniPath);
+        //} else {
+        //    addBasicListItem(list, FAILED_TO_OPEN + ": " + settingsIniPath);
         }
 
         auto* rootFrame = new tsl::elm::OverlayFrame(CAPITAL_ULTRAHAND_PROJECT_NAME, versionLabel);
