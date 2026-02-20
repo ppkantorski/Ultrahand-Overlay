@@ -390,12 +390,13 @@ bool processHold(uint64_t keysDown, uint64_t keysHeld, u64& holdStartTick, bool&
             lastSelectedListItem->resetTouchHold();
             
             if (resetStoredCommands) {
-                bool highlightParam = true;
-                if (lastFooterHighlightDefined) {
-                    highlightParam = !lastFooterHighlight;
-                } else {
-                    highlightParam = !(lastCommandMode == SLOT_STR || lastCommandMode == OPTION_STR) || lastCommandMode.empty();
-                }
+                const bool highlightParam = lastFooterHighlightDefined ? !lastFooterHighlight :
+                    !(lastCommandMode == SLOT_STR || lastCommandMode == OPTION_STR) || lastCommandMode.empty();
+                //if (lastFooterHighlightDefined) {
+                //    highlightParam = !lastFooterHighlight;
+                //} else {
+                //    highlightParam = !(lastCommandMode == SLOT_STR || lastCommandMode == OPTION_STR) || lastCommandMode.empty();
+                //}
                 lastSelectedListItem->setValue(lastSelectedListItemFooter, highlightParam);
                 lastSelectedListItemFooter.clear();
             } else {
@@ -1297,8 +1298,10 @@ public:
                     if (!isHolding) {
                         isHolding = true;
                         runningInterpreter.store(true, release);
+                        lastSelectedListItemFooter = exitItem->getValue();
                         exitItem->setValue(INPROGRESS_SYMBOL);
                         lastSelectedListItem = exitItem;
+
                         // Use touch hold start tick if available, otherwise use current tick
                         //if (exitItem->isTouchHolding()) {
                         //    holdStartTick = exitItem->getTouchHoldStartTick();
@@ -1721,7 +1724,7 @@ public:
                     ult::launchingOverlay.store(true, std::memory_order_release);
                     tsl::Overlay::get()->close();
                 }
-            });
+            }, nullptr, true);  // <-- resetStoredCommands = true
         }
 
         const bool isRunningInterp = runningInterpreter.load(acquire);
