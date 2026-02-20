@@ -28,7 +28,7 @@
 #   - `ovlmenu.ovl` file in the script directory
 #
 # Licensed under GPLv2
-# Copyright (c) 2025 ppkantorski
+# Copyright (c) 2025-2026 ppkantorski
 ##################################################################################
 
 import os
@@ -105,7 +105,10 @@ def main():
             "config/ultrahand/themes",
             "config/ultrahand/wallpapers",
             "switch/.overlays",
-            "switch/.packages"
+            "switch/.packages",
+            "config/ultrahand/.sounds",
+            "config/ultrahand/assets",
+            "atmosphere/exefs_patches/audio_mastervolume"
         ]
         
         for folder in folders:
@@ -186,7 +189,46 @@ def main():
         else:
             print("Warning: sounds folder not found in Ultrahand repository")
         
-        # Step 8: Copy ovlmenu.ovl
+        # Step 8: Copy .sounds folder from repo root to config/ultrahand/.sounds
+        print("Copying .sounds folder...")
+        dot_sounds_source = ultrahand_root / ".sounds"
+        dot_sounds_dest = sdout_dir / "config/ultrahand/.sounds"
+
+        if dot_sounds_source.exists():
+            for f in dot_sounds_source.iterdir():
+                if f.is_file():
+                    shutil.copy2(f, dot_sounds_dest)
+                    print(f"Copied {f.name}")
+        else:
+            print("Warning: .sounds folder not found in Ultrahand repository")
+
+        # Step 8b: Copy assets folder from repo root to config/ultrahand/assets
+        print("Copying assets folder...")
+        assets_source = ultrahand_root / "assets"
+        assets_dest = sdout_dir / "config/ultrahand/assets"
+
+        if assets_source.exists():
+            for f in assets_source.iterdir():
+                if f.is_file():
+                    shutil.copy2(f, assets_dest)
+                    print(f"Copied {f.name}")
+        else:
+            print("Warning: assets folder not found in Ultrahand repository")
+
+        # Step 8c: Copy common/audio_mastervolume to atmosphere/exefs_patches/audio_mastervolume
+        print("Copying audio_mastervolume patches...")
+        audio_mv_source = ultrahand_root / "common/audio_mastervolume"
+        audio_mv_dest = sdout_dir / "atmosphere/exefs_patches/audio_mastervolume"
+
+        if audio_mv_source.exists():
+            for f in audio_mv_source.iterdir():
+                if f.is_file():
+                    shutil.copy2(f, audio_mv_dest)
+                    print(f"Copied {f.name}")
+        else:
+            print("Warning: common/audio_mastervolume folder not found in Ultrahand repository")
+
+        # Step 9: Copy ovlmenu.ovl
         print("Copying ovlmenu.ovl...")
         ovlmenu_source = script_dir / "ovlmenu.ovl"
         ovlmenu_dest = sdout_dir / "switch/.overlays"
@@ -197,12 +239,12 @@ def main():
         else:
             print("Warning: ovlmenu.ovl not found in script directory")
         
-        # Step 9: Clean up temporary files
+        # Step 10: Clean up temporary files
         print("Cleaning up temporary files...")
         shutil.rmtree(temp_dir)
         print("Temporary files deleted")
         
-        # Step 10: Create final zip
+        # Step 11: Create final zip
         output_zip = script_dir / "sdout.zip"
         create_zip_without_metadata(sdout_dir, output_zip)
         
