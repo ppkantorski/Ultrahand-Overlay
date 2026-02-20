@@ -696,7 +696,7 @@ private:
         
             auto addBackup = [&]() {
                 cmds.push_back({"delete", dlSounds});
-                cmds.push_back({"cp", SOUNDS_PATH, dlSounds});
+                cmds.push_back({"cp", LOADED_SOUNDS_PATH, dlSounds});
                 if (disableLoaderUpdate) {
                     cmds.push_back({"delete", dlLoader});
                     cmds.push_back({"cp", atmLoader, dlLoader});
@@ -704,7 +704,7 @@ private:
             };
         
             auto addRestore = [&]() {
-                cmds.push_back({"mv", dlSounds, SOUNDS_PATH});
+                cmds.push_back({"mv", dlSounds, LOADED_SOUNDS_PATH});
                 if (disableLoaderUpdate)
                     cmds.push_back({"mv", dlLoader, atmLoader});
                 if (!latestVersion.empty())
