@@ -2034,7 +2034,7 @@ void drawDevImage(tsl::gfx::Renderer* renderer) {
         }
     }
     const u8* imageData = devImageData.data() + (useFrame2 ? devImageFrameSize : 0);
-    renderer->drawBitmapRGBA4444(258, drawY, devImageWidth, devImageHeight, imageData);
+    renderer->drawBitmapRGBA4444(258, drawY, devImageWidth, devImageHeight, imageData, tsl::gfx::Renderer::s_opacity);
 }
 
 
