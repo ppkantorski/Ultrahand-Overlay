@@ -812,6 +812,10 @@ public:
     ~UltrahandSettingsMenu() {
         lastSelectedListItemFooter = "";
         //tsl::elm::clearFrameCache();
+        if (dropdownSelection == "softwareUpdateMenu") {
+            devImageData.clear();
+            devImageData.shrink_to_fit();
+        }
     }
 
     virtual tsl::elm::Element* createUI() override {
@@ -1005,10 +1009,21 @@ public:
             overlayHeader.version = APP_VERSION;
             overlayHeader.creator = "ppkantorski";
             overlayHeader.about = ULTRAHAND_ABOUT;
-            overlayHeader.credits = "Special thanks to B3711, ComplexNarrative, ssky, MasaGratoR, meha, WerWolv, HookedBehemoth and many others. ♥";
-            addPackageInfo(list, overlayHeader, OVERLAY_STR);
+            overlayHeader.credits = ULTRAHAND_CREDITS_START+"WerWolv, HookedBehemoth, B3711, ComplexNarrative, ssky, MasaGratoR, meha,"+ULTRAHAND_CREDITS_END;
+
+            std::string defaultLang = parseValueFromIniSection(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, DEFAULT_LANG_STR);
+            if (defaultLang.empty()) {
+                defaultLang = "en";
+            }
+
+            addPackageInfo(list, overlayHeader, OVERLAY_STR, defaultLang);
             overlayHeader.clear();
-        
+
+            if (loadDevImages()) {
+                creatorStartTick = nextBlinkTick = blinkEndTick = 0;
+                creatorAnimDone = false;
+                list->addItem(new tsl::elm::CustomDrawer([](tsl::gfx::Renderer* renderer, u16, u16, u16, u16){drawDevImage(renderer);}));
+            }
         } else if (dropdownSelection == "systemMenu") {
             
             // Version info formatting - stack allocated, optimal size
@@ -8072,6 +8087,7 @@ void initializeSettingsAndDirectories() {
     createDirectory(WALLPAPERS_PATH);
     createDirectory(SOUNDS_PATH);
     createDirectory(LOADED_SOUNDS_PATH);
+    createDirectory(ASSETS_PATH);
     
     bool settingsLoaded = false;
     bool needsUpdate = false;
@@ -8204,8 +8220,8 @@ void initializeSettingsAndDirectories() {
     if (isFile(langFile))
         parseLanguage(langFile);
     else {
-        if (defaultLang == "en")
-            reinitializeLangVars();
+        //if (defaultLang == "en")
+        reinitializeLangVars();
     }
 
     // Load local font if needed based on overlay language setting
