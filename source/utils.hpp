@@ -939,43 +939,32 @@ void powerOffAllControllers() {
 
 
 void initializeTheme(const std::string& themeIniPath = THEME_CONFIG_INI_PATH) {
-    // Load INI data once
     tsl::hlp::ini::IniData themeData = getParsedDataFromIniFile(themeIniPath);
     bool needsUpdate = false;
-    
-    // Check if file exists and has theme section
-    //const bool fileExists = isFileOrDirectory(themeIniPath);
+
     const bool hasThemeSection = isFileOrDirectory(themeIniPath) && (themeData.count(THEME_STR) > 0);
-    
+
     if (hasThemeSection) {
-        // File exists with theme section - check for missing keys
         auto& themeSection = themeData[THEME_STR];
-        for (const auto& [key, value] : defaultThemeSettingsMap) {
-            if (themeSection.count(key) == 0) {
-                themeSection[key] = value;
+        for (size_t i = 0; i < ult::defaultThemeSettingsCount; ++i) {
+            if (themeSection.count(ult::defaultThemeSettings[i].key) == 0) {
+                themeSection[ult::defaultThemeSettings[i].key] = ult::defaultThemeSettings[i].value;
                 needsUpdate = true;
             }
         }
     } else {
-        // File doesn't exist or theme section is missing - initialize all defaults
         auto& themeSection = themeData[THEME_STR];
-        for (const auto& [key, value] : defaultThemeSettingsMap) {
-            themeSection[key] = value;
-        }
+        for (size_t i = 0; i < ult::defaultThemeSettingsCount; ++i)
+            themeSection[ult::defaultThemeSettings[i].key] = ult::defaultThemeSettings[i].value;
         needsUpdate = true;
     }
-    
-    // Write back only if changes were made
-    if (needsUpdate) {
-        saveIniFileData(themeIniPath, themeData);
-    }
-    
-    // Ensure themes directory exists
-    if (!isFileOrDirectory(THEMES_PATH)) {
-        createDirectory(THEMES_PATH);
-    }
-}
 
+    if (needsUpdate)
+        saveIniFileData(themeIniPath, themeData);
+
+    if (!isFileOrDirectory(THEMES_PATH))
+        createDirectory(THEMES_PATH);
+}
 
 /**
  * @brief Synchronize Tesla and Ultrahand key combos.

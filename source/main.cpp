@@ -687,10 +687,14 @@ private:
             isDownloadCommand.store(true, release);
         
             const bool disableLoaderUpdate = isFile(FLAGS_PATH + "NO_LOADER_UPDATES.flag");
+            //const bool disableMasterVolumePatchUpdate = isFile(FLAGS_PATH + "NO_MASTER_VOLUME_PATCH.flag");
+            //const bool masterVolumePatchAlreadyExists = isDirectory("/atmosphere/exefs_patches/audio_mastervolume/");
             const std::string latestVersion = cleanVersionLabel(parseValueFromIniSection(SETTINGS_PATH + "RELEASE.ini", "Release Info", "latest_version"));
             const std::string dlSounds = DOWNLOADS_PATH + "sounds/";
             const std::string dlLoader = DOWNLOADS_PATH + "420000000007E51A/";
-            static constexpr const char* atmLoader = "/atmosphere/contents/420000000007E51A/";
+            constexpr const char* atmLoader = "/atmosphere/contents/420000000007E51A/";
+            //const std::string dlMasterVol = DOWNLOADS_PATH + "audio_mastervolume/";
+            //constexpr const char* atmMasterVol = "/atmosphere/exefs_patches/audio_mastervolume/";
         
             std::vector<std::vector<std::string>> cmds = {{"try:"}};
         
@@ -701,6 +705,10 @@ private:
                     cmds.push_back({"delete", dlLoader});
                     cmds.push_back({"cp", atmLoader, dlLoader});
                 }
+                //if (disableMasterVolumePatchUpdate && masterVolumePatchAlreadyExists) {
+                //    cmds.push_back({"delete", dlMasterVol});
+                //    cmds.push_back({"cp", atmMasterVol, dlMasterVol});
+                //}
             };
         
             auto addRestore = [&]() {
@@ -709,6 +717,17 @@ private:
                     cmds.push_back({"mv", dlLoader, atmLoader});
                 if (!latestVersion.empty())
                     cmds.push_back({"set-json-val", HB_APPSTORE_JSON, "version", latestVersion});
+
+                //if (disableMasterVolumePatchUpdate) {
+                //    if (masterVolumePatchAlreadyExists) {
+                //        // Restore original patch exactly
+                //        cmds.push_back({"delete", atmMasterVol});
+                //        cmds.push_back({"mv", dlMasterVol, atmMasterVol});
+                //    } else {
+                //        // Patch did NOT exist originally → ensure update didn't add it
+                //        cmds.push_back({"delete", atmMasterVol});
+                //    }
+                //}
             };
         
             // Try #1: update.ini
@@ -1235,8 +1254,8 @@ public:
                     const float totalAvailableMB = freeRamMB + static_cast<float>(oldMB);
                     
                     // Safety margin
-                    constexpr float SAFETY_MARGIN_MB = 5.3f;
-                
+                    constexpr float SAFETY_MARGIN_MB = 4.0f;
+                    
                     // Check if new heap size fits in total available memory
                     if (static_cast<float>(newMB) > (totalAvailableMB - SAFETY_MARGIN_MB)) {
                         // Not enough memory - REJECT the change
