@@ -44,10 +44,10 @@ static std::mutex transitionMutex;
 
 
 // Placeholder replacement
-const std::string valuePlaceholder = "{value}";
-const std::string indexPlaceholder = "{index}";
-const size_t valuePlaceholderLength = valuePlaceholder.length();
-const size_t indexPlaceholderLength = indexPlaceholder.length();
+constexpr std::string_view valuePlaceholder = "{value}";
+constexpr std::string_view indexPlaceholder = "{index}";
+constexpr size_t valuePlaceholderLength = valuePlaceholder.size();
+constexpr size_t indexPlaceholderLength = indexPlaceholder.size();
 
 static std::string selectedPackage; // for package forwarders
 
@@ -92,85 +92,85 @@ static size_t nestedMenuCount = 0;
 static const std::vector<std::string> commandSystems = {DEFAULT_STR, ERISTA_STR, MARIKO_STR};
 static const std::vector<std::string> commandModes = {DEFAULT_STR, HOLD_STR, SLOT_STR, TOGGLE_STR, OPTION_STR, FORWARDER_STR, TEXT_STR, TABLE_STR, TRACKBAR_STR, STEP_TRACKBAR_STR, NAMED_STEP_TRACKBAR_STR};
 static const std::vector<std::string> commandGroupings = {DEFAULT_STR, "split", "split2", "split3", "split4", "split5"};
-static const std::string SYSTEM_PATTERN = ";system=";
-static const std::string STATE_PATTERN = ";state=";
-static const std::string HOS_VERSION_PATTERN = ";hos_version=";
-static const std::string AMS_VERSION_PATTERN = ";ams_version=";
-static const std::string MODE_PATTERN = ";mode=";
-static const std::string GROUPING_PATTERN = ";grouping=";
-static const std::string FOOTER_PATTERN = ";footer=";
-static const std::string FOOTER_HIGHLIGHT_PATTERN = ";footer_highlight=";
-static const std::string HOLD_PATTERN = ";hold=";
-static const std::string WIDGET_PATTERN = ";widget=";
+constexpr std::string_view SYSTEM_PATTERN = ";system=";
+constexpr std::string_view STATE_PATTERN = ";state=";
+constexpr std::string_view HOS_VERSION_PATTERN = ";hos_version=";
+constexpr std::string_view AMS_VERSION_PATTERN = ";ams_version=";
+constexpr std::string_view MODE_PATTERN = ";mode=";
+constexpr std::string_view GROUPING_PATTERN = ";grouping=";
+constexpr std::string_view FOOTER_PATTERN = ";footer=";
+constexpr std::string_view FOOTER_HIGHLIGHT_PATTERN = ";footer_highlight=";
+constexpr std::string_view HOLD_PATTERN = ";hold=";
+constexpr std::string_view WIDGET_PATTERN = ";widget=";
 
-static const std::string MINI_PATTERN = ";mini=";
-static const std::string SELECTION_MINI_PATTERN = ";selection_mini=";
+constexpr std::string_view MINI_PATTERN = ";mini=";
+constexpr std::string_view SELECTION_MINI_PATTERN = ";selection_mini=";
 
 // Toggle option patterns
-static const std::string PROGRESS_PATTERN = ";progress=";
+constexpr std::string_view PROGRESS_PATTERN = ";progress=";
 
 // Table option patterns
-static const std::string POLLING_PATTERN = ";polling=";
-static const std::string SCROLLABLE_PATTERN = ";scrollable=";
-static const std::string TOP_PIVOT_PATTERN = ";top_pivot=";
-static const std::string BOTTOM_PIVOT_PATTERN = ";bottom_pivot=";
-static const std::string BACKGROUND_PATTERN = ";background="; // true or false
-static const std::string HEADER_INDENT_PATTERN = ";header_indent="; // true or false
+constexpr std::string_view POLLING_PATTERN = ";polling=";
+constexpr std::string_view SCROLLABLE_PATTERN = ";scrollable=";
+constexpr std::string_view TOP_PIVOT_PATTERN = ";top_pivot=";
+constexpr std::string_view BOTTOM_PIVOT_PATTERN = ";bottom_pivot=";
+constexpr std::string_view BACKGROUND_PATTERN = ";background="; // true or false
+constexpr std::string_view HEADER_INDENT_PATTERN = ";header_indent="; // true or false
 //static const std::string HEADER_PATTERN = ";header=";
-static const std::string ALIGNMENT_PATTERN = ";alignment=";
-static const std::string WRAPPING_MODE_PATTERN = ";wrapping_mode="; // "none", "char", "word"
-static const std::string WRAPPING_INDENT_PATTERN = ";wrapping_indent="; // true or false
-static const std::string START_GAP_PATTERN =";start_gap=";
-static const std::string END_GAP_PATTERN =";end_gap=";
-static const std::string END_GAP_PATTERN_ALIAS =";gap=";
-static const std::string OFFSET_PATTERN = ";offset=";
-static const std::string SPACING_PATTERN = ";spacing=";
-static const std::string INFO_TEXT_COLOR_PATTERN = ";info_text_color=";
-static const std::string SECTION_TEXT_COLOR_PATTERN = ";section_text_color=";
+constexpr std::string_view ALIGNMENT_PATTERN = ";alignment=";
+constexpr std::string_view WRAPPING_MODE_PATTERN = ";wrapping_mode="; // "none", "char", "word"
+constexpr std::string_view WRAPPING_INDENT_PATTERN = ";wrapping_indent="; // true or false
+constexpr std::string_view START_GAP_PATTERN =";start_gap=";
+constexpr std::string_view END_GAP_PATTERN =";end_gap=";
+constexpr std::string_view END_GAP_PATTERN_ALIAS =";gap=";
+constexpr std::string_view OFFSET_PATTERN = ";offset=";
+constexpr std::string_view SPACING_PATTERN = ";spacing=";
+constexpr std::string_view INFO_TEXT_COLOR_PATTERN = ";info_text_color=";
+constexpr std::string_view SECTION_TEXT_COLOR_PATTERN = ";section_text_color=";
 
 // Trackbar option patterns
-static const std::string MIN_VALUE_PATTERN = ";min_value=";
-static const std::string MAX_VALUE_PATTERN = ";max_value=";
-static const std::string STEPS_PATTERN = ";steps=";
-static const std::string UNITS_PATTERN = ";units=";
-static const std::string UNLOCKED_PATTERN = ";unlocked=";
-static const std::string ON_EVERY_TICK_PATTERN = ";on_every_tick=";
+constexpr std::string_view MIN_VALUE_PATTERN = ";min_value=";
+constexpr std::string_view MAX_VALUE_PATTERN = ";max_value=";
+constexpr std::string_view STEPS_PATTERN = ";steps=";
+constexpr std::string_view UNITS_PATTERN = ";units=";
+constexpr std::string_view UNLOCKED_PATTERN = ";unlocked=";
+constexpr std::string_view ON_EVERY_TICK_PATTERN = ";on_every_tick=";
 
 
-static const size_t SYSTEM_PATTERN_LEN = SYSTEM_PATTERN.length();
-static const size_t STATE_PATTERN_LEN = STATE_PATTERN.length();
-static const size_t HOS_VERSION_PATTERN_LEN = HOS_VERSION_PATTERN.length();
-static const size_t AMS_VERSION_PATTERN_LEN = AMS_VERSION_PATTERN.length();
-static const size_t MODE_PATTERN_LEN = MODE_PATTERN.length();
-static const size_t GROUPING_PATTERN_LEN = GROUPING_PATTERN.length();
-static const size_t FOOTER_PATTERN_LEN = FOOTER_PATTERN.length();
-static const size_t FOOTER_HIGHLIGHT_PATTERN_LEN = FOOTER_HIGHLIGHT_PATTERN.length();
-static const size_t HOLD_PATTERN_LEN = HOLD_PATTERN.length();
-static const size_t MINI_PATTERN_LEN = MINI_PATTERN.length();
-static const size_t SELECTION_MINI_PATTERN_LEN = SELECTION_MINI_PATTERN.length();
-static const size_t PROGRESS_PATTERN_LEN = PROGRESS_PATTERN.length();
-static const size_t POLLING_PATTERN_LEN = POLLING_PATTERN.length();
-static const size_t SCROLLABLE_PATTERN_LEN = SCROLLABLE_PATTERN.length();
-static const size_t TOP_PIVOT_PATTERN_LEN = TOP_PIVOT_PATTERN.length();
-static const size_t BOTTOM_PIVOT_PATTERN_LEN = BOTTOM_PIVOT_PATTERN.length();
-static const size_t BACKGROUND_PATTERN_LEN = BACKGROUND_PATTERN.length();
-static const size_t HEADER_INDENT_PATTERN_LEN = HEADER_INDENT_PATTERN.length();
-static const size_t START_GAP_PATTERN_LEN = START_GAP_PATTERN.length();
-static const size_t END_GAP_PATTERN_LEN = END_GAP_PATTERN.length();
-static const size_t END_GAP_PATTERN_ALIAS_LEN = END_GAP_PATTERN_ALIAS.length();
-static const size_t OFFSET_PATTERN_LEN = OFFSET_PATTERN.length();
-static const size_t SPACING_PATTERN_LEN = SPACING_PATTERN.length();
-static const size_t SECTION_TEXT_COLOR_PATTERN_LEN = SECTION_TEXT_COLOR_PATTERN.length();
-static const size_t INFO_TEXT_COLOR_PATTERN_LEN = INFO_TEXT_COLOR_PATTERN.length();
-static const size_t ALIGNMENT_PATTERN_LEN = ALIGNMENT_PATTERN.length();
-static const size_t WRAPPING_MODE_PATTERN_LEN = WRAPPING_MODE_PATTERN.length();
-static const size_t WRAPPING_INDENT_PATTERN_LEN = WRAPPING_INDENT_PATTERN.length();
-static const size_t MIN_VALUE_PATTERN_LEN = MIN_VALUE_PATTERN.length();
-static const size_t MAX_VALUE_PATTERN_LEN = MAX_VALUE_PATTERN.length();
-static const size_t UNITS_PATTERN_LEN = UNITS_PATTERN.length();
-static const size_t STEPS_PATTERN_LEN = STEPS_PATTERN.length();
-static const size_t UNLOCKED_PATTERN_LEN = UNLOCKED_PATTERN.length();
-static const size_t ON_EVERY_TICK_PATTERN_LEN = ON_EVERY_TICK_PATTERN.length();
+constexpr size_t SYSTEM_PATTERN_LEN = SYSTEM_PATTERN.size();
+constexpr size_t STATE_PATTERN_LEN = STATE_PATTERN.size();
+constexpr size_t HOS_VERSION_PATTERN_LEN = HOS_VERSION_PATTERN.size();
+constexpr size_t AMS_VERSION_PATTERN_LEN = AMS_VERSION_PATTERN.size();
+constexpr size_t MODE_PATTERN_LEN = MODE_PATTERN.size();
+constexpr size_t GROUPING_PATTERN_LEN = GROUPING_PATTERN.size();
+constexpr size_t FOOTER_PATTERN_LEN = FOOTER_PATTERN.size();
+constexpr size_t FOOTER_HIGHLIGHT_PATTERN_LEN = FOOTER_HIGHLIGHT_PATTERN.size();
+constexpr size_t HOLD_PATTERN_LEN = HOLD_PATTERN.size();
+constexpr size_t MINI_PATTERN_LEN = MINI_PATTERN.size();
+constexpr size_t SELECTION_MINI_PATTERN_LEN = SELECTION_MINI_PATTERN.size();
+constexpr size_t PROGRESS_PATTERN_LEN = PROGRESS_PATTERN.size();
+constexpr size_t POLLING_PATTERN_LEN = POLLING_PATTERN.size();
+constexpr size_t SCROLLABLE_PATTERN_LEN = SCROLLABLE_PATTERN.size();
+constexpr size_t TOP_PIVOT_PATTERN_LEN = TOP_PIVOT_PATTERN.size();
+constexpr size_t BOTTOM_PIVOT_PATTERN_LEN = BOTTOM_PIVOT_PATTERN.size();
+constexpr size_t BACKGROUND_PATTERN_LEN = BACKGROUND_PATTERN.size();
+constexpr size_t HEADER_INDENT_PATTERN_LEN = HEADER_INDENT_PATTERN.size();
+constexpr size_t START_GAP_PATTERN_LEN = START_GAP_PATTERN.size();
+constexpr size_t END_GAP_PATTERN_LEN = END_GAP_PATTERN.size();
+constexpr size_t END_GAP_PATTERN_ALIAS_LEN = END_GAP_PATTERN_ALIAS.size();
+constexpr size_t OFFSET_PATTERN_LEN = OFFSET_PATTERN.size();
+constexpr size_t SPACING_PATTERN_LEN = SPACING_PATTERN.size();
+constexpr size_t SECTION_TEXT_COLOR_PATTERN_LEN = SECTION_TEXT_COLOR_PATTERN.size();
+constexpr size_t INFO_TEXT_COLOR_PATTERN_LEN = INFO_TEXT_COLOR_PATTERN.size();
+constexpr size_t ALIGNMENT_PATTERN_LEN = ALIGNMENT_PATTERN.size();
+constexpr size_t WRAPPING_MODE_PATTERN_LEN = WRAPPING_MODE_PATTERN.size();
+constexpr size_t WRAPPING_INDENT_PATTERN_LEN = WRAPPING_INDENT_PATTERN.size();
+constexpr size_t MIN_VALUE_PATTERN_LEN = MIN_VALUE_PATTERN.size();
+constexpr size_t MAX_VALUE_PATTERN_LEN = MAX_VALUE_PATTERN.size();
+constexpr size_t UNITS_PATTERN_LEN = UNITS_PATTERN.size();
+constexpr size_t STEPS_PATTERN_LEN = STEPS_PATTERN.size();
+constexpr size_t UNLOCKED_PATTERN_LEN = UNLOCKED_PATTERN.size();
+constexpr size_t ON_EVERY_TICK_PATTERN_LEN = ON_EVERY_TICK_PATTERN.size();
 static const size_t TRUE_STR_LEN = TRUE_STR.length();
 static const size_t FALSE_STR_LEN = FALSE_STR.length();
 
@@ -528,11 +528,7 @@ private:
             
             //const auto overlayNames = getOverlayNames(); // Get all overlay names
             
-            for (const auto& overlayName : getOverlayNames()) {
-                auto overlayIt = overlaysIniData.find(overlayName);
-                if (overlayIt == overlaysIniData.end()) continue; // Skip if overlay not in INI
-                
-                auto& overlaySection = overlayIt->second;
+            for (auto& [overlayName, overlaySection] : overlaysIniData) {
                 
                 // 1. Remove from main key_combo field if it matches
                 auto keyComboIt = overlaySection.find(KEY_COMBO_STR);
@@ -582,11 +578,7 @@ private:
             
             //const auto packageNames = getPackageNames(); // Get all package names
             
-            for (const auto& packageName : getPackageNames()) {
-                auto packageIt = packagesIniData.find(packageName);
-                if (packageIt == packagesIniData.end()) continue; // Skip if package not in INI
-                
-                auto& packageSection = packageIt->second;
+            for (auto& [packageName, packageSection] : packagesIniData) {
                 auto keyComboIt = packageSection.find(KEY_COMBO_STR);
                 if (keyComboIt != packageSection.end()) {
                     existingCombo = keyComboIt->second; // Reusing the same variable
@@ -904,7 +896,7 @@ public:
             currentTheme = (currentTheme.empty() || currentTheme == DEFAULT_STR) ? DEFAULT : currentTheme;
 
             if (!limitedMemory) {
-                if (isFileOrDirectory(LOADED_SOUNDS_PATH))
+                if (isDirectory(LOADED_SOUNDS_PATH))
                     currentSounds = currentSounds.empty() ? DEFAULT_STR : currentSounds;
                 else
                     currentSounds = currentSounds.empty() ? OPTION_SYMBOL : currentSounds;
@@ -2026,6 +2018,7 @@ public:
                 if (!isHolding) {
                     isHolding = true;
                     runningInterpreter.store(true, release);
+                    lastSelectedListItemFooter = deleteListItem->getValue();
                     deleteListItem->setValue(INPROGRESS_SYMBOL);
                     lastSelectedListItem = deleteListItem;
                     holdStartTick = armGetSystemTick();
@@ -2473,7 +2466,7 @@ public:
                     lastSelectedListItem->setValue(CROSSMARK_SYMBOL);
                     lastSelectedListItem = nullptr;
                 }
-            }, nullptr, false); // false = do NOT reset storedCommands
+            }, nullptr, true); // false = do NOT reset storedCommands
         }
 
 
@@ -7475,7 +7468,7 @@ public:
                 }
                 
                 const std::string packageFilePath = PACKAGE_PATH + packageName + "/";
-                if (!isFileOrDirectory(packageFilePath)) continue;
+                if (!isDirectory(packageFilePath)) continue;
     
                 const bool newStarred = !packageStarred;
     
@@ -7555,7 +7548,7 @@ public:
                         }
                         const std::string translationJsonPath = packageFilePath+"lang/"+defaultLang+".json";
 
-                        if (ult::isFileOrDirectory(translationJsonPath))
+                        if (ult::isFile(translationJsonPath))
                             ult::loadTranslationsFromJSON(translationJsonPath); // load translations (optional)
 
                         packageRootLayerTitle = newPackageName;
@@ -8318,7 +8311,7 @@ public:
             const std::string packageFilePath = PACKAGE_PATH + selectedPackage + "/";
             
             // Check if the package directory exists
-            if (isFileOrDirectory(packageFilePath)) {
+            if (isDirectory(packageFilePath)) {
                 // GET PROPER PACKAGE TITLE AND VERSION (like main menu does)
                 PackageHeader packageHeader = getPackageHeaderFromIni(packageFilePath + PACKAGE_FILENAME);
                 

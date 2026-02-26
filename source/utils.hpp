@@ -477,7 +477,7 @@ void writeFuseIni(const std::string& outputPath, const char* data = nullptr) {
 
 
 void fuseDumpToIni(const std::string& outputPath = FUSE_DATA_INI_PATH) {
-    if (isFileOrDirectory(outputPath)) return;
+    if (isFile(outputPath)) return;
 
     u64 pid = 0;
     if (R_FAILED(pmdmntGetProcessId(&pid, 0x0100000000000006))) {
@@ -738,7 +738,7 @@ void unpackDeviceInfo() {
     usingEmunand = (packed_version != 0);
     fuseDumpToIni();
     
-    if (isFileOrDirectory(FUSE_DATA_INI_PATH)) {
+    if (isFile(FUSE_DATA_INI_PATH)) {
         // Load INI data once instead of 6 separate file reads
         const auto fuseSection = getKeyValuePairsFromSection(FUSE_DATA_INI_PATH, FUSE_STR);
         const auto end = fuseSection.end();
@@ -922,7 +922,7 @@ void powerOffAllControllers() {
             if (R_FAILED(rc)) {
                 commandSuccess.store(false, std::memory_order_release);
                 //LogLine("Error btmHidDisconnect: %u - %X\n", rc, rc);
-            } else {
+            //} else {
                 //LogLine("Disconnected Address: %u - %X\n", g_addresses[i], g_addresses[i]);
             }
         }
@@ -940,29 +940,21 @@ void powerOffAllControllers() {
 
 void initializeTheme(const std::string& themeIniPath = THEME_CONFIG_INI_PATH) {
     tsl::hlp::ini::IniData themeData = getParsedDataFromIniFile(themeIniPath);
+    auto& themeSection = themeData[THEME_STR];
     bool needsUpdate = false;
 
-    const bool hasThemeSection = isFileOrDirectory(themeIniPath) && (themeData.count(THEME_STR) > 0);
-
-    if (hasThemeSection) {
-        auto& themeSection = themeData[THEME_STR];
-        for (size_t i = 0; i < ult::defaultThemeSettingsCount; ++i) {
-            if (themeSection.count(ult::defaultThemeSettings[i].key) == 0) {
-                themeSection[ult::defaultThemeSettings[i].key] = ult::defaultThemeSettings[i].value;
-                needsUpdate = true;
-            }
+    const bool hasThemeSection = isFile(themeIniPath) && (themeData.count(THEME_STR) > 0);
+    for (size_t i = 0; i < ult::defaultThemeSettingsCount; ++i) {
+        const auto& setting = ult::defaultThemeSettings[i];
+        if (!hasThemeSection || themeSection.count(setting.key) == 0) {
+            themeSection[setting.key] = setting.value;
+            needsUpdate = true;
         }
-    } else {
-        auto& themeSection = themeData[THEME_STR];
-        for (size_t i = 0; i < ult::defaultThemeSettingsCount; ++i)
-            themeSection[ult::defaultThemeSettings[i].key] = ult::defaultThemeSettings[i].value;
-        needsUpdate = true;
     }
 
     if (needsUpdate)
         saveIniFileData(themeIniPath, themeData);
-
-    if (!isFileOrDirectory(THEMES_PATH))
+    if (!isDirectory(THEMES_PATH))
         createDirectory(THEMES_PATH);
 }
 
@@ -1397,7 +1389,7 @@ std::vector<std::string> wrapText(
     };
 
     if (wrappingMode == "char") {
-        static const std::string hyphen = "-";
+        static constexpr char hyphen = '-';
         u32 prevCharacter = 0;
         u32 prevPrevCharacter = 0;
         auto itStr = text.cbegin();
@@ -1559,18 +1551,21 @@ static bool buildTableDrawerLines(
     const float indentWidth = tsl::gfx::calculateStringWidth(indent, fontSize, false);
 
     outSection.clear();
-    //outSection.shrink_to_fit();
     outInfo.clear();
-    //outInfo.shrink_to_fit();
     outY.clear();
-    //outY.shrink_to_fit();
     outX.clear();
-    //outX.shrink_to_fit();
 
     size_t curY = startGap;
     bool anyReplacementsMade = false;
 
-    // A small lambda to wrap and push lines with proper x,y and info alignment
+    // Translation helper — called once up front, no lock held during wrapping
+    auto getTranslated = [](const std::string& s) -> std::string {
+        if (s.empty()) return s;
+        std::shared_lock<std::shared_mutex> readLock(tsl::gfx::s_translationCacheMutex);
+        auto it = ult::translationCache.find(s);
+        return (it != ult::translationCache.end()) ? it->second : s;
+    };
+
     auto processLines = [&](const std::vector<std::string>& lines, const std::vector<std::string>& infos) {
         std::string infoText;
         int xPos;
@@ -1581,7 +1576,6 @@ static bool buildTableDrawerLines(
             const std::string& infoTextRaw = (i < infos.size()) ? infos[i] : "";
             infoText = (infoTextRaw.find(NULL_STR) != std::string::npos) ? UNAVAILABLE_SELECTION : infoTextRaw;
 
-            // Wrap the base text according to wrappingMode and indent params
             wrappedLines = wrapText(
                 baseText,
                 xMax - 8,
@@ -1591,7 +1585,6 @@ static bool buildTableDrawerLines(
                 fontSize
             );
 
-            // Cache width of info text only once per base line, not per wrapped line
             infoWidth = tsl::gfx::calculateStringWidth(infoText, fontSize, false);
 
             for (auto& line : wrappedLines) {
@@ -1604,7 +1597,7 @@ static bool buildTableDrawerLines(
                     xPos = static_cast<int>(columnOffset);
                 } else if (alignment == RIGHT_STR) {
                     xPos = static_cast<int>(xMax - infoWidth + (columnOffset - 160 + 1));
-                } else { // CENTER_STR
+                } else {
                     xPos = static_cast<int>(columnOffset + (xMax - infoWidth) / 2);
                 }
 
@@ -1640,9 +1633,8 @@ static bool buildTableDrawerLines(
             }
 
             if ((inErista && usingErista) || (inMariko && usingMariko) || (!inErista && !inMariko)) {
-                auto cmd = cmds;  // Copy for placeholder replacements
+                auto cmd = cmds;
 
-                // Track if any placeholder replacements were made
                 if (applyPlaceholderReplacements(
                     cmd, hexPath, iniPath,
                     listString, listPath,
@@ -1656,7 +1648,7 @@ static bool buildTableDrawerLines(
                     preprocessPath(listFileSourcePath, packagePath);
                     lines = readListFromFile(listFileSourcePath, 0, true);
                     for (const auto& line : lines) {
-                        baseSection.push_back(line);
+                        baseSection.push_back(getTranslated(line));
                         baseInfo.push_back("");
                     }
                 }
@@ -1685,17 +1677,27 @@ static bool buildTableDrawerLines(
                     preprocessPath(hexPath, packagePath);
                 }
                 else {
-                    baseSection.push_back(cmd[0]);
-                    baseInfo.push_back(cmd.size() > 2 ? cmd[2] : "");
+                    baseSection.push_back(getTranslated(cmd[0]));
+                    baseInfo.push_back(getTranslated(cmd.size() > 2 ? cmd[2] : ""));
                 }
             }
         }
         processLines(baseSection, baseInfo);
     } else {
+        {
+            std::shared_lock<std::shared_mutex> readLock(tsl::gfx::s_translationCacheMutex);
+            for (auto& s : sectionLines) {
+                auto it = ult::translationCache.find(s);
+                if (it != ult::translationCache.end()) s = it->second;
+            }
+            for (auto& s : infoLines) {
+                auto it = ult::translationCache.find(s);
+                if (it != ult::translationCache.end()) s = it->second;
+            }
+        }
         processLines(sectionLines, infoLines);
     }
-    
-    // Return true if any placeholder replacements were made
+
     return anyReplacementsMade;
 }
 
@@ -1933,14 +1935,11 @@ static u32 lastCodepoint(const std::string& s) {
 
 void addPackageInfo(tsl::elm::List* list, auto& packageHeader, std::string type = PACKAGE_STR, std::string defaultLang = "en") {
     addHeader(list, (type == PACKAGE_STR ? PACKAGE_INFO : OVERLAY_INFO));
-
     static constexpr size_t xOffset = 120;
     static constexpr size_t fontSize = 16;
     const float infoMaxWidth = static_cast<float>(tsl::cfg::FramebufferWidth - 95 - xOffset);
-
     std::vector<std::string> sectionLines;
     std::vector<std::string> infoLines;
-
     auto addField = [&](const std::string& header, const std::string& text, const std::string& mode) {
         if (text.empty()) return;
         sectionLines.push_back(header);
@@ -1952,25 +1951,28 @@ void addPackageInfo(tsl::elm::List* list, auto& packageHeader, std::string type 
                 sectionLines.push_back(std::string(headerLen, ' '));
         }
     };
-
+    auto getTranslated = [](const std::string& s) -> std::string {
+        std::shared_lock<std::shared_mutex> readLock(tsl::gfx::s_translationCacheMutex);
+        auto it = ult::translationCache.find(s);
+        return (it != ult::translationCache.end()) ? it->second : s;
+    };
     std::string creatorHeader = _CREATOR;
     
     const bool hasComma =
-        packageHeader.creator.find(',')  != std::string::npos ||  // ASCII
-        packageHeader.creator.find("，") != std::string::npos ||  // Chinese
-        packageHeader.creator.find("、") != std::string::npos;    // Japanese
+        packageHeader.creator.find(',')  != std::string::npos ||
+        packageHeader.creator.find("，") != std::string::npos ||
+        packageHeader.creator.find("、") != std::string::npos;
     
     if (type == OVERLAY_STR || !hasComma) {
         if (auto pos = creatorHeader.find('('); pos != std::string::npos)
             creatorHeader.resize(pos);
     }
-
-    addField(_TITLE,   packageHeader.title,   "none");
-    addField(_VERSION, packageHeader.version, "none");
-    addField(creatorHeader, packageHeader.creator, "none");
-    addField(_ABOUT,   packageHeader.about,   defaultLang == "en" ? "word" : "char");
-    addField(_CREDITS, packageHeader.credits, "word");
-
+    
+    addField(_TITLE,        packageHeader.title,                  "none");
+    addField(_VERSION,      packageHeader.version,                "none");
+    addField(creatorHeader, packageHeader.creator,                "none");
+    addField(_ABOUT,        getTranslated(packageHeader.about),   defaultLang == "en" ? "word" : "char");
+    addField(_CREDITS,      getTranslated(packageHeader.credits), "word");
     std::vector<std::vector<std::string>> dummyTableData;
     drawTable(list, dummyTableData, sectionLines, infoLines, xOffset, 20, 9, 3, DEFAULT_STR, DEFAULT_STR, DEFAULT_STR, LEFT_STR, false, false, true);
 }
@@ -2141,7 +2143,7 @@ bool isDangerousCombination(const std::string& originalPath) {
     //}
     
     // 4) Check other always dangerous patterns (cheap string searches)
-    static const std::vector<const char*> alwaysDangerousPatterns = {
+    static constexpr std::array<const char*, 3> alwaysDangerousPatterns = {
         "~",
         "null*",
         "*null"
@@ -2863,7 +2865,8 @@ double parseExpression(const std::string& expression, size_t& pos, bool& valid) 
                 result /= operand;
                 break;
             case '%':
-                if (STBTT_fmod(result, 1.0f) != 0.0f || STBTT_fmod(operand, 1.0f) != 0.0f) {
+                if (result != static_cast<double>(static_cast<int>(result)) ||
+                    operand != static_cast<double>(static_cast<int>(operand))) {
                     valid = false;  // Modulus only valid for integers
                     return 0;
                 }
@@ -2932,7 +2935,7 @@ std::string handleMath(const std::string& placeholder) {
 
     // Format the result with StringStream
     StringStream oss;
-    if (forceInteger || STBTT_fmod(result, 1.0) == 0.0) {
+    if (forceInteger || result == static_cast<double>(static_cast<int>(result))) {
         oss << static_cast<int>(result);  // Integer output if required
     } else {
         // Manually format to two decimal places for double output
@@ -4557,7 +4560,7 @@ void executeCommands(std::vector<std::vector<std::string>> commands) {
 }
 
 void executeIniCommands(const std::string &iniPath, const std::string &section, const std::string &packagePath = PACKAGE_PATH) {
-    if (isFileOrDirectory(iniPath)) {
+    if (isFile(iniPath)) {
         auto commands = loadSpecificSectionFromIni(iniPath, section);
         if (!commands.empty()) {
             interpretAndExecuteCommands(std::move(commands), packagePath, section);
@@ -4850,7 +4853,7 @@ void processCommand(const std::vector<std::string>& cmd, const std::string& pack
                     std::string overlayPath = getUnquoted(cmd, 1);
                     preprocessPath(overlayPath, packagePath);
                     
-                    if (!isFileOrDirectory(overlayPath)) {
+                    if (!isFile(overlayPath)) {
                         #if USING_LOGGING_DIRECTIVE
                         if (!disableLogging)
                             logMessage("Overlay file not found: " + overlayPath);
