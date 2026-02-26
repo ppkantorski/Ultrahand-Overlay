@@ -1,5 +1,6 @@
 import json
 import time
+import uuid
 import os
 import platform
 
@@ -13,7 +14,7 @@ from prompt_toolkit.completion import Completer, Completion, WordCompleter
 # --- Global FTP credentials ---
 FTP_HOST = "192.168.3.3"
 FTP_PORT = 5000
-FTP_USERNAME = "root"
+FTP_USERNAME = ""
 FTP_PASSWORD = ""
 REMOTE_PATH = "/config/ultrahand/notifications/"
 
@@ -24,11 +25,12 @@ def generate_and_upload_notify(text, font_size=28):
     font_size = max(1, min(34, font_size))  # Clamp font size
 
     program_folder = os.path.dirname(os.path.abspath(__file__))
-    timestamp = int(time.time())
-    filename = f"ultrahand_notify-{timestamp}.notify"
+    unique_id = uuid.uuid4().hex
+    filename = f"ultrahand_notify-{unique_id}.notify"
     local_file = os.path.join(program_folder, filename)
 
     notify_data = {
+        "title": "Ultrahand Notify",
         "text": text,
         "font_size": font_size,
         "priority": 10
