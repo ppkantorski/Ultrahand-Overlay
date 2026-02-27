@@ -756,6 +756,8 @@ private:
                 }
             } else if (iniKey == "clean_version_labels") {
                 returnJumpItemValue = cleanVersionLabel(returnJumpItemValue);
+            } else if (iniKey == "hide_overlay_versions" || iniKey == "hide_package_versions") {
+                returnJumpItemValue = "";
             }
 
             state = !state;
