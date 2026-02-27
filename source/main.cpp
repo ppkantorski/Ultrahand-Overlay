@@ -532,8 +532,6 @@ private:
             auto packagesIniData = getParsedDataFromIniFile(PACKAGES_INI_FILEPATH);
             bool packagesModified = false;
             
-            //const auto packageNames = getPackageNames(); // Get all package names
-            
             for (auto& [packageName, packageSection] : packagesIniData) {
                 auto keyComboIt = packageSection.find(KEY_COMBO_STR);
                 if (keyComboIt != packageSection.end()) {
@@ -730,7 +728,6 @@ private:
                 triggerMenuReload = firstState->value() != state;
             } else if (iniKey == "right_alignment") {
                 if (!state) {
-                    //const auto [horizontalUnderscanPixels, verticalUnderscanPixels] = tsl::gfx::getUnderscanPixels();
                     tsl::gfx::Renderer::get().setLayerPos(1280-32 - tsl::gfx::getUnderscanPixels().first, 0);
                     ult::layerEdge = (1280-448);
                 } else {
