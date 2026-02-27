@@ -6487,7 +6487,7 @@ public:
                     jumpItemExactMatch.store(true, std::memory_order_release);
                 }
                                 
-                listItem->setClickListener([listItem, overlayFile, newStarred, overlayFileName, overlayName, overlayVersion, requiresAMS110Handling, supportsAMS110, buildOverlayReturnName](s64 keys) {
+                listItem->setClickListener([listItem, overlayFile, newStarred, overlayFileName, overlayName, overlayVersion, displayVersion, requiresAMS110Handling, supportsAMS110, buildOverlayReturnName](s64 keys) {
                     if (runningInterpreter.load(std::memory_order_acquire)) return false;
                     
                     if (simulatedMenu.load(std::memory_order_acquire)) {
@@ -6546,7 +6546,7 @@ public:
                         
                         skipJumpReset.store(true, std::memory_order_release);
                         jumpItemName = buildOverlayReturnName(!newStarred, overlayFileName, overlayName);
-                        jumpItemValue = hideOverlayVersions ? "" : overlayVersion;
+                        jumpItemValue = hideOverlayVersions ? "" : displayVersion;
                         jumpItemExactMatch.store(true, std::memory_order_release);
 
 
@@ -6573,7 +6573,7 @@ public:
                         }
                         
                         returnJumpItemName = buildOverlayReturnName(newStarred, overlayFileName, overlayName);
-                        returnJumpItemValue = hideOverlayVersions ? "" : overlayVersion;
+                        returnJumpItemValue = hideOverlayVersions ? "" : displayVersion;
                         jumpItemName = jumpItemValue = "";
                         
                         tsl::shiftItemFocus(listItem);
@@ -6585,7 +6585,7 @@ public:
                     
                     if (keys & SYSTEM_SETTINGS_KEY && cleanKeys == SYSTEM_SETTINGS_KEY) {
                         returnJumpItemName = buildOverlayReturnName(newStarred, overlayFileName, overlayName);
-                        returnJumpItemValue = hideOverlayVersions ? "" : overlayVersion;
+                        returnJumpItemValue = hideOverlayVersions ? "" : displayVersion;
                         return true;
                     }
                     
