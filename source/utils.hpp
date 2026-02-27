@@ -29,8 +29,6 @@
 #include <queue>
 #include <mutex>
 #include <condition_variable>
-//#include <regex>
-//#include <sys/statvfs.h>
 
 
 using namespace ult;
@@ -205,7 +203,6 @@ void removeKeyComboFromOthers(const std::string& keyCombo, const std::string& cu
 }
 
 // Define default key combos (same as UltrahandSettingsMenu)
-
 const std::vector<std::string> defaultCombos = {
     // Primary (Default) Combos – top priority, always first
     "ZL+ZR+DDOWN",
@@ -358,61 +355,6 @@ inline bool checkVersionCondition(const std::string& condition, const std::strin
 }
 
 
-//void testAudioOutput() {
-//    Result res;
-//    audoutInitialize();
-//    
-//    // Sample rate and buffer size
-//    const size_t sampleRate = 48000; // 48 kHz
-//    const size_t seconds = 1; // Duration of audio
-//    const size_t bufferSize = sampleRate * sizeof(int16_t) * seconds;
-//
-//    // Allocate buffer dynamically to avoid large stack allocations
-//    int16_t* buffer = (int16_t*)malloc(bufferSize);
-//    if (buffer == nullptr) {
-//        logMessage("Failed to allocate buffer memory!\n");
-//        audoutExit();
-//        return;
-//    }
-//    
-//    // Generate a simple tone (sine wave)
-//    float frequency = 400.0f; // 440 Hz tone
-//    float amplitude = 0.5f;   // Volume
-//
-//    for (size_t i = 0; i < bufferSize / sizeof(int16_t); i++) {
-//        float sample = amplitude * sinf(2.0f * M_PI * frequency * i / sampleRate);
-//        buffer[i] = (int16_t)(sample * 32767.0f); // Convert to 16-bit PCM
-//    }
-//
-//    // Prepare buffers
-//    AudioOutBuffer audioBuffer;
-//    audioBuffer.buffer = buffer;
-//    audioBuffer.buffer_size = bufferSize;
-//    audioBuffer.data_size = bufferSize;
-//
-//    // Start audio output
-//    res = audoutStartAudioOut();
-//    if (R_FAILED(res)) {
-//        logMessage("Failed to start audio output!");
-//        free(buffer);
-//        audoutExit();
-//        return;
-//    }
-//
-//    // Play the sound
-//    res = audoutAppendAudioOutBuffer(&audioBuffer);
-//    if (R_FAILED(res)) {
-//        logMessage("Failed to append audio buffer!");
-//    }
-//    
-//    audoutWaitPlayFinish(NULL, NULL, 1000);
-//
-//    // Clean up
-//    free(buffer);
-//    audoutStopAudioOut();
-//    audoutExit();
-//}
-
 #define FUSE_CPU_SPEEDO_0_CALIB 0x114
 //#define FUSE_CPU_SPEEDO_1_CALIB 0x12C
 #define FUSE_CPU_SPEEDO_2_CALIB 0x130
@@ -425,23 +367,6 @@ inline bool checkVersionCondition(const std::string& condition, const std::strin
 #define FUSE_SOC_IDDQ_CALIB 0x140
 #define FUSE_GPU_IDDQ_CALIB 0x228
 
-
-//bool areAllNonZero(const std::initializer_list<u32>& values) {
-//    return std::all_of(values.begin(), values.end(), [](u32 value) { return value != 0; });
-//}
-
-//uint32_t readFuseValue(std::ifstream &file, std::streamoff offset) {
-//    uint32_t value = 0;
-//    // Seek to the specified offset
-//    file.seekg(offset, std::ios::beg);
-//    if (file.good()) {
-//        // Read the value (assuming it's a 4-byte integer)
-//        file.read(reinterpret_cast<char*>(&value), sizeof(value));
-//    } else {
-//        //std::cerr << "Error: Unable to seek to the specified offset." << std::endl;
-//    }
-//    return value;
-//}
 
 void writeFuseIni(const std::string& outputPath, const char* data = nullptr) {
     // Use stdio.h functions for file operations
@@ -481,11 +406,9 @@ void fuseDumpToIni(const std::string& outputPath = FUSE_DATA_INI_PATH) {
 
     u64 pid = 0;
     if (R_FAILED(pmdmntGetProcessId(&pid, 0x0100000000000006))) {
-        //pmdmntExit();
         writeFuseIni(outputPath);
         return;
     }
-    //pmdmntExit();
 
     Handle debug;
     if (R_FAILED(svcDebugActiveProcess(&debug, pid))) {
@@ -714,9 +637,6 @@ void unpackDeviceInfo() {
     u64 packed_version;
     splGetConfig((SplConfigItem)2, &packed_version);
     const std::string memoryType = getMemoryType(packed_version);
-    //memoryVendor = UNAVAILABLE_SELECTION;
-    //memoryModel = UNAVAILABLE_SELECTION;
-    //memorySize = UNAVAILABLE_SELECTION;
     
     if (!memoryType.empty()) {
         const std::vector<std::string> memoryData = splitString(memoryType, "_");
@@ -731,8 +651,6 @@ void unpackDeviceInfo() {
     
     // Format HOS version
     formatVersion(packed_version, 24, 16, 8, hosVersion);
-
-    //usingHOS21orHigher = (strcmp(hosVersion, "20.0.0") >= 0); // set global variable
 
     splGetConfig((SplConfigItem)65007, &packed_version);
     usingEmunand = (packed_version != 0);
@@ -858,7 +776,6 @@ static std::string resolveWildcardFromKnownPath(
 
     for (size_t startPos = 0; startPos <= resolvedPath.size(); ++startPos) {
         captures.clear();
-        //captures.shrink_to_fit();
         subPath = resolvedPath.substr(startPos);
         
         if (matchAndExtract(oldPattern, subPath, captures)) {
@@ -900,7 +817,6 @@ void powerOffAllControllers() {
     rc = btmInitialize();
     if (R_FAILED(rc)) {
         commandSuccess.store(false, std::memory_order_release);
-        //LogLine("Error btmInitialize: %u - %X\n", rc, rc);
         return;
     }
     
@@ -912,21 +828,15 @@ void powerOffAllControllers() {
         }
     } else {
         commandSuccess.store(false, std::memory_order_release);
-        //LogLine("Error btmGetDeviceCondition: %u - %X\n", rc, rc);
     }
     
     if (R_SUCCEEDED(rc)) {
-        //LogLine("Disconnecting controllers. Count: %u\n", g_connected_count);
         for (int i = 0; i != g_connected_count; ++i) {
             rc = btmHidDisconnect(g_addresses[i]);
             if (R_FAILED(rc)) {
                 commandSuccess.store(false, std::memory_order_release);
-                //LogLine("Error btmHidDisconnect: %u - %X\n", rc, rc);
-            //} else {
-                //LogLine("Disconnected Address: %u - %X\n", g_addresses[i], g_addresses[i]);
             }
         }
-        //LogLine("All controllers disconnected.\n");
     } else {
         commandSuccess.store(false, std::memory_order_release);
     }
@@ -1173,28 +1083,6 @@ void addSelectionIsEmptyDrawer(auto& list) {
     });
     list->addItem(warning);
 }
-
-// Helper function to wrap text into multiple lines based on a maximum width (character count)
-// Subsequent lines are indented by 4 spaces
-//std::vector<std::string> wrapText(const std::string& text, size_t maxWidth) {
-//    std::vector<std::string> wrappedLines;
-//    //std::string indent = "    ";  // 4 spaces for indentation
-//    std::string indent = "└ ";
-//    size_t currentPos = 0;
-//
-//    // First line (no indentation)
-//    wrappedLines.push_back(text.substr(currentPos, maxWidth));
-//    currentPos += maxWidth;
-//
-//    // Subsequent lines (indented by 4 spaces)
-//    while (currentPos < text.size()) {
-//        wrappedLines.push_back(indent + text.substr(currentPos, maxWidth));
-//        currentPos += maxWidth;
-//    }
-//
-//    return wrappedLines;
-//}
-
 
 bool applyPlaceholderReplacements(std::vector<std::string>& cmd, const std::string& hexPath, const std::string& iniPath, const std::string& listString, const std::string& listPath, const std::string& jsonString, const std::string& jsonPath);
 
@@ -1912,7 +1800,6 @@ void addHelpInfo(tsl::elm::List* list) {
 
     // Draw the table with the defined lines
     drawTable(list, dummyTableData, sectionLines, infoLines, xOffset, 20, 9, 4);
-    //drawTable(list, sectionLines, infoLines, xOffset, 19, 12, 4, DEFAULT_STR, DEFAULT_STR, LEFT_STR, false, false, true, "none", false);
 }
 
 
@@ -2057,23 +1944,6 @@ void drawDevImage(tsl::gfx::Renderer* renderer) {
  * directories.
  */
 
-/**
- * @brief Ultrahand-Overlay Protected Folders
- *
- * This block of code defines two vectors containing paths to protected folders used in the
- * Ultrahand-Overlay project. These folders are designated as protected to prevent certain
- * operations that may pose security risks.
- *
- * The two vectors include:
- *
- * - `protectedFolders`: Paths to standard protected folders.
- * - `ultraProtectedFolders`: Paths to ultra protected folders with stricter security.
- *
- * These protected folder paths are used within the Ultrahand-Overlay project to enforce
- * safety conditions and ensure that certain operations are not performed on sensitive
- * directories.
- */
-
 bool isDangerousCombination(const std::string& originalPath) {
     // Early exit: Check for double wildcards first (cheapest check)
     if (originalPath.find("**") != std::string::npos) {
@@ -2135,14 +2005,7 @@ bool isDangerousCombination(const std::string& originalPath) {
         {"sdmc:/emuMMC/RAW1/", 18}
     };
     
-    // 3) Check for directory traversal patterns (before other dangerous patterns)
-    //if (patternPath.find("/../") != std::string::npos || 
-    //    patternPath.find("../") == 0 ||
-    //    patternPath.find("/..") == patternPath.length() - 3) {
-    //    return true;
-    //}
-    
-    // 4) Check other always dangerous patterns (cheap string searches)
+    // 3) Check other always dangerous patterns (cheap string searches)
     static constexpr std::array<const char*, 3> alwaysDangerousPatterns = {
         "~",
         "null*",
@@ -2155,7 +2018,7 @@ bool isDangerousCombination(const std::string& originalPath) {
         }
     }
     
-    // 5) Root folder wildcard check (only if wildcards exist)
+    // 4) Root folder wildcard check (only if wildcards exist)
     if (hasWildcards) {
         static constexpr const char rootPrefix[] = "sdmc:/";
         static constexpr size_t rootLen = 6; // Length of "sdmc:/"
@@ -2174,7 +2037,7 @@ bool isDangerousCombination(const std::string& originalPath) {
         }
     }
     
-    // 6) Check ultra-protected folders (highest priority)
+    // 5) Check ultra-protected folders (highest priority)
     for (const auto& folder : ultraProtectedFolders) {
         if (patternPath.length() >= folder.length &&
             patternPath.compare(0, folder.length, folder.path) == 0) {
@@ -2182,7 +2045,7 @@ bool isDangerousCombination(const std::string& originalPath) {
         }
     }
     
-    // 7) Check restricted wildcard folders (only if wildcards exist)
+    // 6) Check restricted wildcard folders (only if wildcards exist)
     std::string relative;
     if (hasWildcards) {
         for (const auto& folder : restrictedWildcardFolders) {
@@ -2203,7 +2066,7 @@ bool isDangerousCombination(const std::string& originalPath) {
         }
     }
     
-    // 8) Check protected folders
+    // 7) Check protected folders
     bool isAlbum;
     
     for (const auto& folder : protectedFolders) {
@@ -2236,7 +2099,7 @@ bool isDangerousCombination(const std::string& originalPath) {
         }
     }
     
-    // 9) Otherwise, no dangerous combination detected
+    // 8) Otherwise, no dangerous combination detected
     return false;
 }
 
@@ -2576,8 +2439,6 @@ std::vector<std::vector<std::string>> getSourceReplacement(const std::vector<std
         }
 
         modifiedCmd.clear();
-        //modifiedCmd.shrink_to_fit();
-        //modifiedCmd.reserve(cmd.size());
         commandName = cmd[0];
 
         if (commandName == "download") {
@@ -2721,10 +2582,6 @@ std::string getCurrentTimestamp(const std::string& format) {
     // Try using standard POSIX time() function
     time_t seconds = time(nullptr);
     const u32 milliseconds = (armTicksToNs(armGetSystemTick()) / 1000000ULL) % 1000; // We lose millisecond precision with this method
-    
-    // If you need milliseconds, try to get them from system tick
-    //u64 tick_ns = armTicksToNs(armGetSystemTick());
-    //milliseconds = (armTicksToNs(armGetSystemTick()) / 1000000ULL) % 1000;
     
     std::string modifiedFormat = format;
     bool hasMilliseconds = false;
@@ -2972,55 +2829,14 @@ std::string handleLength(const std::string& placeholder) {
 }
 
 
-
-// Define the replacePlaceholders function outside of applyPlaceholderReplacements
-//auto replacePlaceholders = [](std::string& arg, const std::string& placeholder, const std::function<std::string(const std::string&)>& replacer) {
-//    size_t startPos, endPos;
-//    std::string lastArg, replacement;
-//
-//    size_t nestedStartPos, nextStartPos, nextEndPos;
-//
-//    while ((startPos = arg.find(placeholder)) != std::string::npos) {
-//        nestedStartPos = startPos;
-//        while (true) {
-//            nextStartPos = arg.find(placeholder, nestedStartPos + 1);
-//            nextEndPos = arg.find(")}", nestedStartPos);
-//            if (nextStartPos != std::string::npos && nextStartPos < nextEndPos) {
-//                nestedStartPos = nextStartPos;
-//            } else {
-//                endPos = nextEndPos;
-//                break;
-//            }
-//        }
-//
-//        if (endPos == std::string::npos || endPos <= startPos) break;
-//
-//        replacement = replacer(arg.substr(startPos, endPos - startPos + 2));
-//        if (replacement.empty()) {
-//            replacement = NULL_STR;
-//        }
-//        arg.replace(startPos, endPos - startPos + 2, replacement);
-//        if (arg == lastArg) {
-//            if (interpreterLogging) {
-//                disableLogging = false;
-//                logMessage("failed replacement arg: " + arg);
-//            }
-//            replacement = NULL_STR;
-//            arg.replace(startPos, endPos - startPos + 2, replacement);
-//            break;
-//        }
-//        lastArg = arg;
-//    }
-//};
-
 // Finds the next occurrence of ANY function-style placeholder opener from `starts`,
 // beginning at `from`. On tie (same index), it prefers the LONGEST token.
 // Returns npos if none found, and sets matchedLen accordingly.
 static size_t findNextOpenToken(const std::string& s,
                                 size_t from,
                                 const std::vector<std::string>& starts,
-                                size_t& matchedLen)
-{
+                                size_t& matchedLen) {
+
     size_t bestPos = std::string::npos;
     matchedLen = 0;
 
@@ -3047,8 +2863,8 @@ static size_t findNextOpenToken(const std::string& s,
 static size_t findMatchingClose(const std::string& s,
                                 size_t startPos,
                                 const std::vector<std::string>& starts,
-                                size_t outerOpenLen)
-{
+                                size_t outerOpenLen) {
+
     // We have already seen one opener at startPos
     int depth = 1;
     size_t scan = startPos + outerOpenLen;
@@ -3545,30 +3361,22 @@ bool applyPlaceholderReplacementsToCommands(std::vector<std::vector<std::string>
             inEristaSection = true;
             inMarikoSection = false;
             cmd = {};
-            //cmd.clear();
-            //cmd.shrink_to_fit();
             continue; // Don't keep this command
         } else if (commandName == "mariko:") {
             inEristaSection = false;
             inMarikoSection = true;
             cmd = {};
-            //cmd.clear();
-            //cmd.shrink_to_fit();
             continue; // Don't keep this command
         } else if ((!commandName.empty() && commandName.front() == ';') ||
                    (commandName.size() >= 7 && commandName.substr(commandName.size() - 7) == "_source") ||
                    commandName == "logging") {
             cmd = {};
-            //cmd.clear();
-            //cmd.shrink_to_fit();
             continue; // Don't keep this command
         }
 
         // Skip commands not relevant to current hardware
         if ((inEristaSection && !usingErista) || (inMarikoSection && !usingMariko)) {
             cmd = {};
-            //cmd.clear();
-            //cmd.shrink_to_fit();
             continue; // Don't keep this command
         }
 
@@ -3609,8 +3417,6 @@ bool applyPlaceholderReplacementsToCommands(std::vector<std::vector<std::string>
         }
 
         if (!shouldKeep) {
-            //cmd.clear();
-            //cmd.shrink_to_fit();
             cmd = {};
             continue; // Don't keep this command
         }
@@ -3659,11 +3465,6 @@ bool applyPlaceholderReplacementsToCommands(std::vector<std::vector<std::string>
     commands.resize(writeIndex);
     commands.shrink_to_fit();  // Always - maximize memory efficiency
 
-    // Shrink capacity if we removed a lot of commands
-    //if (commands.capacity() > commands.size() * 2) {
-    //    commands.shrink_to_fit();
-    //}
-
     return true;
 }
 
@@ -3687,16 +3488,6 @@ bool interpretAndExecuteCommands(std::vector<std::vector<std::string>>&& command
         logFilePath = packagePath + "log.txt";
     }
     #endif
-
-    // Initialize buffer sizes based on expanded memory setting
-    //if (expandedMemory) {
-    //    COPY_BUFFER_SIZE = 262144;
-    //    HEX_BUFFER_SIZE = 8192;
-    //    UNZIP_READ_BUFFER = 262144;
-    //    UNZIP_WRITE_BUFFER = 131072;
-    //    DOWNLOAD_READ_BUFFER = 262144;
-    //    DOWNLOAD_WRITE_BUFFER = 131072;
-    //}
 
     // Load and apply buffer configuration from INI file
     const auto bufferSection = getKeyValuePairsFromSection(ULTRAHAND_CONFIG_INI_PATH, MEMORY_STR);
@@ -3746,16 +3537,8 @@ bool interpretAndExecuteCommands(std::vector<std::vector<std::string>>&& command
     for (size_t i = 0; i < commands.size(); ++i) {
         // Check for abort signal
         if (abortCommand.exchange(false, std::memory_order_acq_rel)) {
-            //abortCommand.store(false, std::memory_order_release);
             commandSuccess.store(false, std::memory_order_release);
-            // Clear all remaining commands
-            //for (size_t j = i; j < commands.size(); ++j) {
-            //    commands[j].clear();
-            //    commands[j].shrink_to_fit();
-            //}
             commands = {};
-            //commands.clear();
-            //commands.shrink_to_fit();
             #if USING_LOGGING_DIRECTIVE
             disableLogging = true;
             logFilePath = defaultLogFilePath;
@@ -3776,13 +3559,6 @@ bool interpretAndExecuteCommands(std::vector<std::vector<std::string>>&& command
         // Handle control flow commands
         if (commandName == "try:") {
             if (inTrySection && commandSuccess.load(std::memory_order_acquire)) {
-                // Clear remaining commands and exit
-                //for (size_t j = i; j < commands.size(); ++j) {
-                //    commands[j].clear();
-                //    commands[j].shrink_to_fit();
-                //}
-                //commands.clear();
-                //commands.shrink_to_fit();
                 commands = {};
                 #if USING_LOGGING_DIRECTIVE
                 disableLogging = true;
@@ -3794,8 +3570,6 @@ bool interpretAndExecuteCommands(std::vector<std::vector<std::string>>&& command
             inTrySection = true;
             // Clear and continue
             cmd = {};
-            //cmd.clear();
-            //cmd.shrink_to_fit();
             continue;
         }
         
@@ -3804,8 +3578,6 @@ bool interpretAndExecuteCommands(std::vector<std::vector<std::string>>&& command
             inMarikoSection = false;
             // Clear and continue
             cmd = {};
-            //cmd.clear();
-            //cmd.shrink_to_fit();
             continue;
         }
         
@@ -3814,16 +3586,12 @@ bool interpretAndExecuteCommands(std::vector<std::vector<std::string>>&& command
             inMarikoSection = true;
             // Clear and continue
             cmd = {};
-            //cmd.clear();
-            //cmd.shrink_to_fit();
             continue;
         }
 
         // Skip commands in try section if previous command failed
         if (!commandSuccess.load(std::memory_order_acquire) && inTrySection) {
             cmd = {};
-            //cmd.clear();
-            //cmd.shrink_to_fit();
             continue;
         }
 
@@ -3835,16 +3603,12 @@ bool interpretAndExecuteCommands(std::vector<std::vector<std::string>>&& command
 
         if (!shouldExecute) {
             cmd = {};
-            //cmd.clear();
-            //cmd.shrink_to_fit();
             continue;
         }
 
         // Only execute if not in try section or if we're succeeding in try section
         if (inTrySection && !commandSuccess.load(std::memory_order_acquire)) {
             cmd = {};
-            //cmd.clear();
-            //cmd.shrink_to_fit();
             continue;
         }
 
@@ -3925,14 +3689,10 @@ bool interpretAndExecuteCommands(std::vector<std::vector<std::string>>&& command
         
         // Clear the processed command immediately to free its memory
         cmd = {};
-        //cmd.clear();
-        //cmd.shrink_to_fit();
     }
 
     // Final cleanup
     commands = {};
-    //commands.clear();
-    //commands.shrink_to_fit();
 
     #if USING_LOGGING_DIRECTIVE
     disableLogging = true;
@@ -4081,9 +3841,6 @@ void handleDeleteCommand(const std::vector<std::string>& cmd, const std::string&
             if (shouldDelete) {
                 deleteFileOrDirectory(sourcePath, logSource);
             }
-            
-            // Clear the vector element immediately to free memory
-            //sourceFilesList[i].clear();
         }
         
     } else {
@@ -4159,9 +3916,6 @@ void handleMirrorCommand(const std::vector<std::string>& cmd, const std::string&
             const auto sourceDirectory = std::move(fileList[i]);
             fileList[i].shrink_to_fit();     // Free the capacity
             mirrorFiles(sourceDirectory, destinationPath, operation);
-            
-            // Clear the vector element immediately to free memory
-            //fileList[i].clear();
         }
     }
 }
@@ -4182,11 +3936,7 @@ void handleMoveCommand(const std::vector<std::string>& cmd, const std::string& p
         if (!filterListPath.empty()) {
             filterSet = std::make_unique<std::unordered_set<std::string>>(readSetFromFile(filterListPath, packagePath));
         }
-    
-        // Pre-allocate strings to avoid reallocations in loop
-        //sourcePath.reserve(1024);
-        //destinationPath.reserve(1024);
-    
+
         // Stream process both files line by line
         FILE* sourceFile = fopen(sourceListPath.c_str(), "r");
         FILE* destFile = fopen(destinationListPath.c_str(), "r");
@@ -4269,15 +4019,6 @@ void handleMoveCommand(const std::vector<std::string>& cmd, const std::string& p
                     #endif
                 }
             }
-            
-            // Periodically shrink strings if they've grown too large
-            // This prevents unbounded memory growth for very long paths
-            //if (sourcePath.capacity() > 8192) {
-            //    sourcePath.shrink_to_fit();
-            //}
-            //if (destinationPath.capacity() > 8192) {
-            //    destinationPath.shrink_to_fit();
-            //}
         }
         
         fclose(sourceFile);
@@ -4309,8 +4050,6 @@ void handleMoveCommand(const std::vector<std::string>& cmd, const std::string& p
             }
             
             moveFilesOrDirectoriesByPattern(sourcePath, destinationPath, logSource, logDestination, filterSet.get());
-
-            //moveFilesOrDirectoriesByPattern(sourcePath, destinationPath, logSource, logDestination);
         } else {
             moveFileOrDirectory(sourcePath, destinationPath, logSource, logDestination);
         }
@@ -5194,7 +4933,6 @@ void processCommand(const std::vector<std::string>& cmd, const std::string& pack
 
 
 
-
 // Thread information structure
 Thread interpreterThread;
 std::atomic<bool> interpreterThreadExit{false};
@@ -5224,10 +4962,6 @@ inline void clearInterpreterFlags(bool state = false) {
 }
 
 void backgroundInterpreter(void* workPtr) {
-    //if (ult::expandedMemory && ult::useSoundEffects) {
-    //    clearSoundCacheNow.wait(true, std::memory_order_acquire);
-    //}
-
     // Get work data directly - no queue needed
     auto workData = static_cast<InterpreterWorkData*>(workPtr);
     
