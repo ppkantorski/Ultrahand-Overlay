@@ -171,6 +171,7 @@ static std::string lastMenu = "";
 static std::string lastMenuMode = "";
 static std::string lastKeyName = "";
 static bool hideUserGuide = false;
+static bool hidePackages = false;
 static bool hideDelete = false;
 static bool hideUnsupported = false;
 
@@ -1536,6 +1537,8 @@ public:
             addHeader(list, MENU_SETTINGS);
             hideUserGuide = getBoolValue("hide_user_guide", false); // FALSE_STR default
             createToggleListItem(list, USER_GUIDE, hideUserGuide, "hide_user_guide", true, true, true);
+            hidePackages = getBoolValue("hide_packages", false); // FALSE_STR default
+            createToggleListItem(list, SHOW_PACKAGES, hidePackages, "hide_packages", true, true, true);
             hideHidden = getBoolValue("hide_hidden", false); // FALSE_STR default
             createToggleListItem(list, SHOW_HIDDEN, hideHidden, "hide_hidden", true, true);
             hideDelete = getBoolValue("hide_delete", false); // FALSE_STR default
@@ -6244,6 +6247,11 @@ public:
             }
             hasInitialized = true;
         }
+
+        // for handling package menu hiding
+        if (hidePackages) {
+            currentMenu = menuMode = OVERLAYS_STR;
+        }
         
         if (toPackages) {
             setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "to_packages", FALSE_STR);
@@ -6257,12 +6265,12 @@ public:
         bool noClickableItems = false;
         
         if (menuMode == OVERLAYS_STR) {
-            createOverlaysMenu(list);
+            noClickableItems = createOverlaysMenu(list);
         } else if (menuMode == PACKAGES_STR) {
             noClickableItems = createPackagesMenu(list);
         }
     
-        auto* rootFrame = new tsl::elm::OverlayFrame(CAPITAL_ULTRAHAND_PROJECT_NAME, versionLabel, noClickableItems, menuMode+hiddenMenuMode+dropdownSection, "", "", "");
+        auto* rootFrame = new tsl::elm::OverlayFrame(CAPITAL_ULTRAHAND_PROJECT_NAME, versionLabel, noClickableItems, hidePackages ? "" : menuMode+hiddenMenuMode+dropdownSection, "", "", "");
         
         list->jumpToItem(jumpItemName, jumpItemValue, jumpItemExactMatch.load(acquire));
         
@@ -6271,10 +6279,12 @@ public:
     }
     
         
-    void createOverlaysMenu(tsl::elm::List* list) {
+    bool createOverlaysMenu(tsl::elm::List* list) {
         inOverlaysPage.store(true, std::memory_order_release);
         inPackagesPage.store(false, std::memory_order_release);
     
+        bool noClickableItems = false;
+
         addHeader(list, (!inHiddenMode.load(std::memory_order_acquire) ? OVERLAYS : HIDDEN_OVERLAYS)+" "+DIVIDER_SYMBOL+" \uE0E3 "+SETTINGS+" "+DIVIDER_SYMBOL+" \uE0E2 "+FAVORITE);
         
         std::vector<std::string> overlayFiles = getFilesListByWildcards(OVERLAY_PATH+"*.ovl");
@@ -6284,7 +6294,7 @@ public:
             if (createFile) fclose(createFile);
         }
     
-        if (overlayFiles.empty()) return;
+        if (overlayFiles.empty()) return true;
     
         std::set<std::string> overlaySet;
         bool drawHiddenTab = false;
@@ -6385,6 +6395,7 @@ public:
         
         if (overlaySet.empty()) {
             addSelectionIsEmptyDrawer(list);
+            noClickableItems = true;
         } else {
             // Pre-allocate string buffers for parsing loop
             std::string overlayFileName, overlayName, overlayVersion, newOverlayName, displayVersion;
@@ -6499,6 +6510,7 @@ public:
                     if ((keys & KEY_A && cleanKeys == KEY_A)) {
                         if (!requiresAMS110Handling) {
                             disableSound.store(true, std::memory_order_release);
+                            disableHaptics.store(true, std::memory_order_release);
                             
                             std::string useOverlayLaunchArgs, overlayLaunchArgs;
                             {
@@ -6547,8 +6559,7 @@ public:
                         jumpItemName = buildOverlayReturnName(!newStarred, overlayFileName, overlayName);
                         jumpItemValue = hideOverlayVersions ? "" : displayVersion;
                         jumpItemExactMatch.store(true, std::memory_order_release);
-
-
+                        
                         
                         wasInHiddenMode = inHiddenMode.load(std::memory_order_acquire);
                         if (wasInHiddenMode) {
@@ -6602,6 +6613,7 @@ public:
         }
         
         if (drawHiddenTab && !inHiddenMode.load(std::memory_order_acquire) && !hideHidden) {
+            //addGap(list, 12);
             tsl::elm::ListItem* listItem = new tsl::elm::ListItem(HIDDEN, DROPDOWN_SYMBOL);
             listItem->setClickListener([listItem](uint64_t keys) {
                 if (runningInterpreter.load(std::memory_order_acquire)) return false;
@@ -6627,6 +6639,8 @@ public:
             });
             list->addItem(listItem);
         }
+
+        return noClickableItems;
     }
     
     bool createPackagesMenu(tsl::elm::List* list) {
@@ -6942,6 +6956,7 @@ public:
             packageSet.clear();
             
             if (drawHiddenTab && !inHiddenMode.load(std::memory_order_acquire) && !hideHidden) {
+                //addGap(list, 12);
                 tsl::elm::ListItem* listItem = new tsl::elm::ListItem(HIDDEN, DROPDOWN_SYMBOL);
                 listItem->setClickListener([listItem](uint64_t keys) {
                     if (runningInterpreter.load(acquire)) return false;
@@ -7204,7 +7219,7 @@ public:
                     unlockedSlide.store(false, release);
                 };
                 
-                if (onLeftPage && !isTouching && slideCondition && (keysDown & KEY_RIGHT) && (!onTrack ? !(keysHeld & ~KEY_RIGHT & ALL_KEYS_MASK) : !(keysHeld & ~KEY_RIGHT & ~KEY_R & ALL_KEYS_MASK))) {
+                if (!hidePackages && onLeftPage && !isTouching && slideCondition && (keysDown & KEY_RIGHT) && (!onTrack ? !(keysHeld & ~KEY_RIGHT & ALL_KEYS_MASK) : !(keysHeld & ~KEY_RIGHT & ~KEY_R & ALL_KEYS_MASK))) {
                     {
                         std::lock_guard<std::mutex> lock(tsl::elm::s_safeToSwapMutex);
 
@@ -7222,7 +7237,7 @@ public:
                     }
                 }
                 
-                if (!onLeftPage && !isTouching && slideCondition && (keysDown & KEY_LEFT) && (!onTrack ? !(keysHeld & ~KEY_LEFT & ALL_KEYS_MASK): !(keysHeld & ~KEY_LEFT & ~KEY_R  & ALL_KEYS_MASK))) {
+                if (!hidePackages && !onLeftPage && !isTouching && slideCondition && (keysDown & KEY_LEFT) && (!onTrack ? !(keysHeld & ~KEY_LEFT & ALL_KEYS_MASK): !(keysHeld & ~KEY_LEFT & ~KEY_R  & ALL_KEYS_MASK))) {
                     {
                         std::lock_guard<std::mutex> lock(tsl::elm::s_safeToSwapMutex);
 
@@ -7420,6 +7435,7 @@ void initializeSettingsAndDirectories() {
     
     // Set default values for various settings (works for both existing and new files)
     setDefaultValue("hide_user_guide", FALSE_STR, hideUserGuide);
+    setDefaultValue("hide_packages", FALSE_STR, hidePackages);
     setDefaultValue("hide_hidden", FALSE_STR, hideHidden);
     setDefaultValue("hide_delete", FALSE_STR, hideDelete);
     if (requiresLNY2) {
