@@ -3799,8 +3799,6 @@ void handleCopyCommand(const std::vector<std::string>& cmd, const std::string& p
                 filterSet = std::make_unique<std::unordered_set<std::string>>(readSetFromFile(filterListPath, packagePath));
             }
             copyFileOrDirectoryByPattern(sourcePath, destinationPath, logSource, logDestination, filterSet.get());
-
-            //copyFileOrDirectoryByPattern(sourcePath, destinationPath, logSource, logDestination);
         } else {
             const long long totalSize = getTotalSize(sourcePath);
             long long totalBytesCopied = 0;

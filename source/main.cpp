@@ -871,9 +871,9 @@ public:
                 addListItem(list, WALLPAPER, currentWallpaper, "wallpaperMenu");
             }
             addListItem(list, WIDGET, DROPDOWN_SYMBOL, "widgetMenu");
-            addListItem(list, MISCELLANEOUS, DROPDOWN_SYMBOL, "miscMenu");
 
-            //addGap(list, 12);
+            addGap(list, 12);
+            addListItem(list, MISCELLANEOUS, DROPDOWN_SYMBOL, "miscMenu");
 
         } else if (dropdownSelection == KEY_COMBO_STR) {
             addHeader(list, KEY_COMBO);
@@ -2565,7 +2565,7 @@ public:
             noClickableItems = true;
             std::vector<std::string> sectionLines;  // Holds the sections (commands)
             std::vector<std::string> infoLines;     // Holds the info (empty in this case)
-            
+
             // Table mode: Collect command data for the table
             std::string sectionLine;
             std::string packageSourcePath;
@@ -4338,8 +4338,8 @@ bool drawCommandsMenu(
                                     inPackageMenu = false;
 
                                     nestedMenuCount++;
-                                    // Store return info
 
+                                    // Store return info
                                     returnContextStack.push({
                                         .packagePath = packagePath,
                                         .sectionName = dropdownSection,
@@ -6335,7 +6335,6 @@ public:
                     overlaysNeedsUpdate = true;
     
                     // Build entry key with single allocation
-
                     overlayEntryKey = "0020" + overlayName + ':' + overlayName + ':' + 
                                       overlayVersion + ':' + overlayFileName + ':' + 
                                       (usingLibUltrahand ? '1' : '0') + ':' + 
