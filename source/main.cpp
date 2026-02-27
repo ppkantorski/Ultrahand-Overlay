@@ -50,7 +50,6 @@ constexpr size_t valuePlaceholderLength = valuePlaceholder.size();
 constexpr size_t indexPlaceholderLength = indexPlaceholder.size();
 
 static std::string selectedPackage; // for package forwarders
-
 static std::string nextToggleState;
 
 // Overlay booleans
@@ -82,6 +81,7 @@ static size_t nestedMenuCount = 0;
 static const std::vector<std::string> commandSystems = {DEFAULT_STR, ERISTA_STR, MARIKO_STR};
 static const std::vector<std::string> commandModes = {DEFAULT_STR, HOLD_STR, SLOT_STR, TOGGLE_STR, OPTION_STR, FORWARDER_STR, TEXT_STR, TABLE_STR, TRACKBAR_STR, STEP_TRACKBAR_STR, NAMED_STEP_TRACKBAR_STR};
 static const std::vector<std::string> commandGroupings = {DEFAULT_STR, "split", "split2", "split3", "split4", "split5"};
+
 constexpr std::string_view SYSTEM_PATTERN = ";system=";
 constexpr std::string_view STATE_PATTERN = ";state=";
 constexpr std::string_view HOS_VERSION_PATTERN = ";hos_version=";
@@ -462,7 +462,6 @@ private:
 
                 tsl::shiftItemFocus(listItem);
                 tsl::changeTo<UltrahandSettingsMenu>(targetMenu);
-                //selectedListItem = nullptr;
                 selectedListItem = listItem;
                 return true;
             }
@@ -1677,7 +1676,6 @@ public:
                     lastMenu = "settingsMenu";
                     
                     if (reloadMenu) {
-                        //sl::pop(2);
                         tsl::swapTo<MainMenu>(SwapDepth(3), lastMenuMode);
                         reloadMenu = false;
                     } else {
@@ -2206,7 +2204,6 @@ public:
             jumpItemName = "";
             jumpItemValue = CHECKMARK_SYMBOL;
             jumpItemExactMatch.store(true, release);
-            //g_overlayFilename = "";
         }
         
         list->jumpToItem(jumpItemName, jumpItemValue, jumpItemExactMatch.load(acquire));
@@ -2568,9 +2565,9 @@ public:
             noClickableItems = true;
             std::vector<std::string> sectionLines;  // Holds the sections (commands)
             std::vector<std::string> infoLines;     // Holds the info (empty in this case)
+            
             // Table mode: Collect command data for the table
             std::string sectionLine;
-
             std::string packageSourcePath;
 
             for (auto& command : commands) {
@@ -2786,7 +2783,6 @@ private:
     std::string specifiedFooterKey;
     bool toggleState = false;
     std::string packageConfigIniPath;
-    //std::string commandSystem, commandMode, commandGrouping;
     std::string commandMode, commandGrouping;
 
     std::string lastPackageHeader;
@@ -3865,7 +3861,6 @@ std::vector<std::vector<std::string>> gatherPromptCommands(
                 
                 // Clear and prepare section command
                 sectionCommand.clear();
-                //sectionCommand.shrink_to_fit();
                 sectionCommand.push_back("[" + sectionName + "]");
                 promptCommands.push_back(sectionCommand);
             }
@@ -3873,7 +3868,6 @@ std::vector<std::vector<std::string>> gatherPromptCommands(
             // Process each command by splitting on spaces
             for (auto& cmd : commands) {
                 fullCmd.clear();
-                //fullCmd.shrink_to_fit();
                 
                 for (auto& part : cmd) {
                     splitParts = splitString(part, " ");
@@ -4967,7 +4961,6 @@ bool drawCommandsMenu(
                         addDummyListItem(list);
                     }
 
-
                     addTable(list, tableData, packagePath, tableColumnOffset, tableStartGap, tableEndGap, tableSpacing,
                         tableSectionTextColor, tableInfoTextColor, tableInfoTextColor, tableAlignment, hideTableBackground, useHeaderIndent, isPolling, isScrollableTable, tableWrappingMode, useWrappingIndent);
                     tableData.clear();
@@ -5015,8 +5008,6 @@ bool drawCommandsMenu(
                         const bool isFromMainMenu = (packagePath == PACKAGE_PATH);
 
                         tsl::shiftItemFocus(trackBar);
-
-                        // Switch to ScriptOverlay
                         tsl::changeTo<ScriptOverlay>(std::move(modifiedCmds), packagePath, keyName, isFromMainMenu ? "main" : "package", false, lastPackageHeader, showWidget);
                     });
                 
@@ -5064,7 +5055,6 @@ bool drawCommandsMenu(
                         applyPlaceholderReplacementsToCommands(modifiedCmds, packagePath);
 
                         tsl::shiftItemFocus(stepTrackBar);
-
                         tsl::changeTo<ScriptOverlay>(std::move(modifiedCmds), packagePath, keyName, isFromMainMenu ? "main" : "package", false, lastPackageHeader, showWidget);
                     });
                     
@@ -5186,7 +5176,6 @@ bool drawCommandsMenu(
                         applyPlaceholderReplacementsToCommands(modifiedCmds, packagePath);
 
                         tsl::shiftItemFocus(namedStepTrackBar);
-
                         tsl::changeTo<ScriptOverlay>(std::move(modifiedCmds), packagePath, keyName, isFromMainMenu ? "main" : "package", false, lastPackageHeader, showWidget);
                     });
                     entryList.clear();
@@ -6378,7 +6367,6 @@ public:
                         const bool forceAMS110Support = getValueOrDefault(it->second, "force_support", FALSE_STR) == TRUE_STR;
     
                         // Build entry key with single allocation
-                        
                         overlayEntryKey = (starred == TRUE_STR ? "-1:" : "") + priority + assignedName + ':' + 
                                           assignedName + ':' + assignedVersion + ':' + overlayFileName + ':' + 
                                           (usingLibUltrahand ? '1' : '0') + ':' + 
@@ -7218,7 +7206,6 @@ public:
                     unlockedSlide.store(false, release);
                 };
                 
-                //const bool switchToPackages = (!usePageSwap && menuMode != PACKAGES_STR) || (usePageSwap && menuMode != OVERLAYS_STR);
                 if (onLeftPage && !isTouching && slideCondition && (keysDown & KEY_RIGHT) && (!onTrack ? !(keysHeld & ~KEY_RIGHT & ALL_KEYS_MASK) : !(keysHeld & ~KEY_RIGHT & ~KEY_R & ALL_KEYS_MASK))) {
                     {
                         std::lock_guard<std::mutex> lock(tsl::elm::s_safeToSwapMutex);
@@ -7520,7 +7507,6 @@ void initializeSettingsAndDirectories() {
     if (isFile(langFile))
         parseLanguage(langFile);
     else {
-        //if (defaultLang == "en")
         reinitializeLangVars();
     }
     

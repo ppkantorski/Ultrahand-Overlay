@@ -1956,7 +1956,6 @@ bool isDangerousCombination(const std::string& originalPath) {
     // 1) Normalize repeated wildcards only if wildcards exist
     std::string patternPath;
     if (hasWildcards) {
-        //patternPath.reserve(originalPath.length()); // Avoid reallocations
         bool lastWasStar = false;
         for (char c : originalPath) {
             if (c == '*') {
@@ -2167,9 +2166,7 @@ inline void applyPlaceholderReplacement(std::string& input, const std::string& p
     if (pos == std::string::npos) {
         return;  // Returns original string directly if no placeholder is found
     }
-    //std::string result = input;
     input.replace(pos, placeholder.length(), replacement);
-    //return result;
 }
 
 
@@ -2376,10 +2373,8 @@ std::string replaceJsonPlaceholder(const std::string& arg, const std::string& co
 
 // Helper function to replace placeholders
 void replaceAllPlaceholders(std::string& source, const std::string& placeholder, const std::string& replacement) {
-    //std::string modifiedArg = source;
     std::string lastArg;
     while (source.find(placeholder) != std::string::npos) {
-        //modifiedArg = replacePlaceholder(modifiedArg, placeholder, replacement);
         applyPlaceholderReplacement(source, placeholder, replacement);
         if (source == lastArg)
             break;
@@ -5080,7 +5075,6 @@ void executeInterpreterCommands(std::vector<std::vector<std::string>>&& commands
     }
 
     if (!ult::limitedMemory && ult::useSoundEffects) {
-        //clearSoundCacheNow.store(true, std::memory_order_release);
         if (triggerEnterSound.exchange(false)) {
             ult::Audio::playEnterSound();
         } else if (triggerOnSound.exchange(false)) {
@@ -5089,10 +5083,7 @@ void executeInterpreterCommands(std::vector<std::vector<std::string>>&& commands
             ult::Audio::playOffSound();
         }
 
-        //ult::Audio::exit();
-
         ult::Audio::unloadAllSounds({ult::Audio::SoundType::Wall});
-        //clearSoundCacheNow.wait(true, std::memory_order_acquire);
     }
     
     // Get stack size and setup logging
