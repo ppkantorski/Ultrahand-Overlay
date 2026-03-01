@@ -1538,7 +1538,7 @@ public:
             hideUserGuide = getBoolValue("hide_user_guide", false); // FALSE_STR default
             createToggleListItem(list, USER_GUIDE, hideUserGuide, "hide_user_guide", true, true, true);
             hidePackages = getBoolValue("hide_packages", false); // FALSE_STR default
-            createToggleListItem(list, SHOW_PACKAGES, hidePackages, "hide_packages", true, true, true);
+            createToggleListItem(list, PACKAGES_MENU, hidePackages, "hide_packages", true, true, true);
             hideHidden = getBoolValue("hide_hidden", false); // FALSE_STR default
             createToggleListItem(list, SHOW_HIDDEN, hideHidden, "hide_hidden", true, true);
             hideDelete = getBoolValue("hide_delete", false); // FALSE_STR default
