@@ -943,7 +943,7 @@ public:
             const std::string fullVersionLabel = cleanVersionLabel(parseValueFromIniSection((SETTINGS_PATH+"RELEASE.ini"), "Release Info", "latest_version"));
 
             if (isVersionGreaterOrEqual(fullVersionLabel.c_str(), APP_VERSION) && fullVersionLabel != APP_VERSION && tsl::notification) {
-                tsl::notification->showNow(NOTIFY_HEADER + NEW_UPDATE_IS_AVAILABLE);
+                tsl::notification->showNow(NOTIFY_HEADER + NEW_UPDATE_IS_AVAILABLE, 23);
             
             }
             
@@ -1184,7 +1184,7 @@ public:
                     if (static_cast<float>(newMB) > (totalAvailableMB - SAFETY_MARGIN_MB)) {
                         // Not enough memory - REJECT the change
                         if (tsl::notification) {
-                            tsl::notification->showNow(NOTIFY_HEADER + NOT_ENOUGH_MEMORY);
+                            tsl::notification->showNow(NOTIFY_HEADER + NOT_ENOUGH_MEMORY, 23);
                         }
                         setOverlayHeapSize(currentHeapSize);
                         this->exitOnBack = false;
@@ -1524,7 +1524,9 @@ public:
             useStartupNotification = getBoolValue("startup_notification", true); // TRUE_STR default
             createToggleListItem(list, STARTUP_NOTIFICATION, useStartupNotification, "startup_notification");
             useNotifications = getBoolValue("notifications", true); // TRUE_STR default
-            createToggleListItem(list, EXTERNAL_NOTIFICATIONS, useNotifications, "notifications");
+            createToggleListItem(list, API_NOTIFICATIONS, useNotifications, "notifications");
+            useNotificationsHotkey = getBoolValue("notifications_hotkey", true); // TRUE_STR default
+            createToggleListItem(list, "Notifications Hotkey", useNotificationsHotkey, "notifications_hotkey");
 
             useOpaqueScreenshots = getBoolValue("opaque_screenshots", true); // TRUE_STR default
             createToggleListItem(list, OPAQUE_SCREENSHOTS, useOpaqueScreenshots, "opaque_screenshots");
@@ -6559,7 +6561,7 @@ public:
                         jumpItemName = buildOverlayReturnName(!newStarred, overlayFileName, overlayName);
                         jumpItemValue = hideOverlayVersions ? "" : displayVersion;
                         jumpItemExactMatch.store(true, std::memory_order_release);
-                        
+
                         
                         wasInHiddenMode = inHiddenMode.load(std::memory_order_acquire);
                         if (wasInHiddenMode) {
@@ -7456,6 +7458,7 @@ void initializeSettingsAndDirectories() {
 
     setDefaultValue("launch_combos", TRUE_STR, useLaunchCombos);
     setDefaultValue("notifications", TRUE_STR, useNotifications);
+    setDefaultValue("notifications_hotkey", TRUE_STR, useNotificationsHotkey);
     setDefaultValue("startup_notification", TRUE_STR, useStartupNotification);
     setDefaultValue("sound_effects", TRUE_STR, useSoundEffects);
     setDefaultValue("haptic_feedback", FALSE_STR, useHapticFeedback);
