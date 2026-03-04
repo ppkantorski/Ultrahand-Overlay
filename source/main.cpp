@@ -78,9 +78,9 @@ static bool triggerMenuReload2 = false;
 static size_t nestedMenuCount = 0;
 
 // Command mode globals
-static const std::vector<std::string> commandSystems = {DEFAULT_STR, ERISTA_STR, MARIKO_STR};
-static const std::vector<std::string> commandModes = {DEFAULT_STR, HOLD_STR, SLOT_STR, TOGGLE_STR, OPTION_STR, FORWARDER_STR, TEXT_STR, TABLE_STR, TRACKBAR_STR, STEP_TRACKBAR_STR, NAMED_STEP_TRACKBAR_STR};
-static const std::vector<std::string> commandGroupings = {DEFAULT_STR, "split", "split2", "split3", "split4", "split5"};
+static const std::array<std::string_view, 3> commandSystems = {DEFAULT_STR, ERISTA_STR, MARIKO_STR};
+static const std::array<std::string_view, 11> commandModes = {DEFAULT_STR, HOLD_STR, SLOT_STR, TOGGLE_STR, OPTION_STR, FORWARDER_STR, TEXT_STR, TABLE_STR, TRACKBAR_STR, STEP_TRACKBAR_STR, NAMED_STEP_TRACKBAR_STR};
+static const std::array<std::string_view, 6> commandGroupings = {DEFAULT_STR, "split", "split2", "split3", "split4", "split5"};
 
 constexpr std::string_view SYSTEM_PATTERN = ";system=";
 constexpr std::string_view STATE_PATTERN = ";state=";
@@ -91,7 +91,7 @@ constexpr std::string_view GROUPING_PATTERN = ";grouping=";
 constexpr std::string_view FOOTER_PATTERN = ";footer=";
 constexpr std::string_view FOOTER_HIGHLIGHT_PATTERN = ";footer_highlight=";
 constexpr std::string_view HOLD_PATTERN = ";hold=";
-constexpr std::string_view WIDGET_PATTERN = ";widget=";
+//constexpr std::string_view WIDGET_PATTERN = ";widget=";
 
 constexpr std::string_view MINI_PATTERN = ";mini=";
 constexpr std::string_view SELECTION_MINI_PATTERN = ";selection_mini=";
@@ -203,6 +203,25 @@ inline void clearMemory() {
     selectedFooterDict = {};
     clearIniMutexCache();
     clearHexSumCache();
+}
+
+
+inline bool parseBoolFlag(const std::string& name, std::string_view pattern, bool& out) {
+    const size_t len = pattern.size();
+    if (name.compare(0, len, pattern) != 0) return false;
+    if (name[len] == 't' && name.compare(len, TRUE_STR_LEN, TRUE_STR) == 0) out = true;
+    else if (name[len] == 'f' && name.compare(len, FALSE_STR_LEN, FALSE_STR) == 0) out = false;
+    return true;
+}
+
+
+inline void updateSelectionUI(tsl::elm::ListItem* listItem, const std::string& selectedValue) {
+    if (lastSelectedListItem) lastSelectedListItem->setValue("");
+    if (selectedListItem) selectedListItem->setValue(selectedValue);
+    listItem->setValue(CHECKMARK_SYMBOL);
+    lastSelectedListItem = listItem;
+    tsl::shiftItemFocus(listItem);
+    if (lastSelectedListItem) lastSelectedListItem->triggerClickAnimation();
 }
 
 
@@ -552,7 +571,8 @@ private:
         }
     }
 
-    void handleSelection(tsl::elm::List* list, const std::vector<std::string>& items, const std::string& defaultItem, const std::string& iniKey, const std::string& targetMenu) {
+    template<typename Container>
+    void handleSelection(tsl::elm::List* list, const Container& items, const std::string& defaultItem, const std::string& iniKey, const std::string& targetMenu) {
         
         std::string mappedItem;
         for (const auto& item : items) {
@@ -586,16 +606,7 @@ private:
                     
                     reloadMenu = true;
                     
-                    if (lastSelectedListItem)
-                        lastSelectedListItem->setValue("");
-                    if (selectedListItem)
-                        selectedListItem->setValue(mappedItem);
-
-                    listItem->setValue(CHECKMARK_SYMBOL);
-                    lastSelectedListItem = listItem;
-                    tsl::shiftItemFocus(listItem);
-                    if (lastSelectedListItem)
-                        lastSelectedListItem->triggerClickAnimation();
+                    updateSelectionUI(listItem, mappedItem);
                     
                     return true;
                 }
@@ -1360,12 +1371,7 @@ public:
                     setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "sound_effects", FALSE_STR);
                     useSoundEffects = false;
                     
-                    if (lastSelectedListItem) lastSelectedListItem->setValue("");
-                    if (selectedListItem) selectedListItem->setValue(OPTION_SYMBOL);
-                    listItem->setValue(CHECKMARK_SYMBOL);
-                    lastSelectedListItem = listItem;
-                    tsl::shiftItemFocus(listItem);
-                    if (lastSelectedListItem) lastSelectedListItem->triggerClickAnimation();
+                    updateSelectionUI(listItem, OPTION_SYMBOL);
                     return true;
                 }
                 return false;
@@ -1521,6 +1527,10 @@ public:
             useHapticFeedback = getBoolValue("haptic_feedback", false); // FALSE_STR default
             createToggleListItem(list, HAPTIC_FEEDBACK, useHapticFeedback, "haptic_feedback");
 
+            if (!ult::limitedMemory) {
+                silenceNotifications = getBoolValue("silence_notifications", false); // FALSE_STR default
+                createToggleListItem(list, "Silence Notifications", silenceNotifications, "silence_notifications");
+            }
             useStartupNotification = getBoolValue("startup_notification", true); // TRUE_STR default
             createToggleListItem(list, STARTUP_NOTIFICATION, useStartupNotification, "startup_notification");
             useNotifications = getBoolValue("notifications", true); // TRUE_STR default
@@ -2109,7 +2119,7 @@ public:
             }
             
         } else if (dropdownSelection.rfind("mode_combo_", 0) == 0) {
-            const size_t idx = std::stoi(dropdownSelection.substr(11)); // 11 = strlen("mode_combo_")
+            const size_t idx = ult::stoi(dropdownSelection.substr(11)); // 11 = strlen("mode_combo_")
             
             const std::vector<std::string> labelList = splitIniList(getValue("mode_labels"));
             const std::string labelText = (idx < labelList.size() && !labelList[idx].empty()) ? 
@@ -3944,21 +3954,8 @@ static CommandSettings parseCommandSettings(std::vector<std::vector<std::string>
             if (cmdLen > 1 && commandName[0] == ';' && commandName[1] == 'm') {
                 // Check for ;mini=
                 if (!foundMini && cmdLen >= MINI_PATTERN_LEN + TRUE_STR_LEN && commandName[2] == 'i') {
-                    if (commandName.compare(0, MINI_PATTERN_LEN, MINI_PATTERN) == 0) {
-                        switch (commandName[MINI_PATTERN_LEN]) {
-                            case 't':
-                                if (commandName.compare(MINI_PATTERN_LEN, TRUE_STR_LEN, TRUE_STR) == 0) {
-                                    foundMini = true;
-                                    miniValue = true;
-                                }
-                                break;
-                            case 'f':
-                                if (commandName.compare(MINI_PATTERN_LEN, FALSE_STR_LEN, FALSE_STR) == 0) {
-                                    foundMini = true;
-                                    miniValue = false;
-                                }
-                                break;
-                        }
+                    if (parseBoolFlag(commandName, MINI_PATTERN, miniValue)) {
+                        foundMini = true;
                     }
                 }
                 
@@ -4262,23 +4259,9 @@ bool drawCommandsMenu(
                                             }
                                             
                                             if (!foundFooterHighlight && cmdLen >= FOOTER_HIGHLIGHT_PATTERN_LEN + TRUE_STR_LEN && _commandName[7] == '_') {
-                                                if (_commandName.compare(0, FOOTER_HIGHLIGHT_PATTERN_LEN, FOOTER_HIGHLIGHT_PATTERN) == 0) {
-                                                    switch (_commandName[FOOTER_HIGHLIGHT_PATTERN_LEN]) {
-                                                        case 't':
-                                                            if (_commandName.compare(FOOTER_HIGHLIGHT_PATTERN_LEN, TRUE_STR_LEN, TRUE_STR) == 0) {
-                                                                commandFooterHighlight = true;
-                                                                commandFooterHighlightDefined = true;
-                                                                foundFooterHighlight = true;
-                                                            }
-                                                            break;
-                                                        case 'f':
-                                                            if (_commandName.compare(FOOTER_HIGHLIGHT_PATTERN_LEN, FALSE_STR_LEN, FALSE_STR) == 0) {
-                                                                commandFooterHighlight = false;
-                                                                commandFooterHighlightDefined = true;
-                                                                foundFooterHighlight = true;
-                                                            }
-                                                            break;
-                                                    }
+                                                if (parseBoolFlag(_commandName, FOOTER_HIGHLIGHT_PATTERN, commandFooterHighlight)) {
+                                                    commandFooterHighlightDefined = true;
+                                                    foundFooterHighlight = true;
                                                 }
                                             }
                                             break;
@@ -4481,21 +4464,8 @@ bool drawCommandsMenu(
                                     continue;
                                 }
 
-                                if (commandName.compare(0, SCROLLABLE_PATTERN_LEN, SCROLLABLE_PATTERN) == 0) {
-                                    switch (commandName[SCROLLABLE_PATTERN_LEN]) {
-                                        case 't':
-                                            if (commandName.compare(SCROLLABLE_PATTERN_LEN, TRUE_STR_LEN, TRUE_STR) == 0) {
-                                                isScrollableTable = true;
-                                            }
-                                            break;
-                                        case 'f':
-                                            if (commandName.compare(SCROLLABLE_PATTERN_LEN, FALSE_STR_LEN, FALSE_STR) == 0) {
-                                                isScrollableTable = false;
-                                            }
-                                            break;
-                                    }
-                                    continue;
-                                }
+                                if (parseBoolFlag(commandName, SCROLLABLE_PATTERN, isScrollableTable)) continue;
+
                                 if (commandName.compare(0, START_GAP_PATTERN_LEN, START_GAP_PATTERN) == 0) {
                                     tableStartGap = ult::stoi(commandName.substr(START_GAP_PATTERN_LEN));
                                     continue;
@@ -4528,21 +4498,7 @@ bool drawCommandsMenu(
                                     }
                                     continue;
                                 }
-                                if (commandName.compare(0, MINI_PATTERN_LEN, MINI_PATTERN) == 0) {
-                                    switch (commandName[MINI_PATTERN_LEN]) {
-                                        case 't':
-                                            if (commandName.compare(MINI_PATTERN_LEN, TRUE_STR_LEN, TRUE_STR) == 0) {
-                                                isMini = true;
-                                            }
-                                            break;
-                                        case 'f':
-                                            if (commandName.compare(MINI_PATTERN_LEN, FALSE_STR_LEN, FALSE_STR) == 0) {
-                                                isMini = false;
-                                            }
-                                            break;
-                                    }
-                                    continue;
-                                }
+                                if (parseBoolFlag(commandName, MINI_PATTERN, isMini)) continue;
                                 if (commandName.compare(0, MIN_VALUE_PATTERN_LEN, MIN_VALUE_PATTERN) == 0) {
                                     minValue = ult::stoi(commandName.substr(MIN_VALUE_PATTERN_LEN));
                                     continue;
@@ -4567,21 +4523,8 @@ bool drawCommandsMenu(
                                 break;
                                 
                             case 'f':
-                                if (commandName.compare(0, FOOTER_HIGHLIGHT_PATTERN_LEN, FOOTER_HIGHLIGHT_PATTERN) == 0) {
-                                    switch (commandName[FOOTER_HIGHLIGHT_PATTERN_LEN]) {
-                                        case 't':
-                                            if (commandName.compare(FOOTER_HIGHLIGHT_PATTERN_LEN, TRUE_STR_LEN, TRUE_STR) == 0) {
-                                                commandFooterHighlight = true;
-                                                commandFooterHighlightDefined = true;
-                                            }
-                                            break;
-                                        case 'f':
-                                            if (commandName.compare(FOOTER_HIGHLIGHT_PATTERN_LEN, FALSE_STR_LEN, FALSE_STR) == 0) {
-                                                commandFooterHighlight = false;
-                                                commandFooterHighlightDefined = true;
-                                            }
-                                            break;
-                                    }
+                                if (parseBoolFlag(commandName, FOOTER_HIGHLIGHT_PATTERN, commandFooterHighlight)) {
+                                    commandFooterHighlightDefined = true;
                                     continue;
                                 }
                                 if (commandName.compare(0, FOOTER_PATTERN_LEN, FOOTER_PATTERN) == 0) {
@@ -4600,118 +4543,25 @@ bool drawCommandsMenu(
                                     commandHOSFirmware = commandName.substr(HOS_VERSION_PATTERN_LEN);
                                     continue;
                                 }
-                                if (commandName.compare(0, HOLD_PATTERN_LEN, HOLD_PATTERN) == 0) {
-                                    switch (commandName[HOLD_PATTERN_LEN]) {
-                                        case 't':
-                                            if (commandName.compare(HOLD_PATTERN_LEN, TRUE_STR_LEN, TRUE_STR) == 0) {
-                                                isHold = true;
-                                            }
-                                            break;
-                                        case 'f':
-                                            if (commandName.compare(HOLD_PATTERN_LEN, FALSE_STR_LEN, FALSE_STR) == 0) {
-                                                isHold = false;
-                                            }
-                                            break;
-                                    }
-                                    continue;
-                                }
-                                if (commandName.compare(0, HEADER_INDENT_PATTERN_LEN, HEADER_INDENT_PATTERN) == 0) {
-                                    switch (commandName[HEADER_INDENT_PATTERN_LEN]) {
-                                        case 't':
-                                            if (commandName.compare(HEADER_INDENT_PATTERN_LEN, TRUE_STR_LEN, TRUE_STR) == 0) {
-                                                useHeaderIndent = true;
-                                            }
-                                            break;
-                                        case 'f':
-                                            if (commandName.compare(HEADER_INDENT_PATTERN_LEN, FALSE_STR_LEN, FALSE_STR) == 0) {
-                                                useHeaderIndent = false;
-                                            }
-                                            break;
-                                    }
-                                    continue;
-                                }
+                                if (parseBoolFlag(commandName, HOLD_PATTERN, isHold)) continue;
+                                if (parseBoolFlag(commandName, HEADER_INDENT_PATTERN, useHeaderIndent)) continue;
                                 break;
                                 
                             case 'p':
-                                if (commandName.compare(0, PROGRESS_PATTERN_LEN, PROGRESS_PATTERN) == 0) {
-                                    switch (commandName[PROGRESS_PATTERN_LEN]) {
-                                        case 't':
-                                            if (commandName.compare(PROGRESS_PATTERN_LEN, TRUE_STR_LEN, TRUE_STR) == 0) {
-                                                usingProgress = true;
-                                            }
-                                            break;
-                                        case 'f':
-                                            if (commandName.compare(PROGRESS_PATTERN_LEN, FALSE_STR_LEN, FALSE_STR) == 0) {
-                                                usingProgress = false;
-                                            }
-                                            break;
-                                    }
-                                    continue;
-                                }
-                                if (commandName.compare(0, POLLING_PATTERN_LEN, POLLING_PATTERN) == 0) {
-                                    switch (commandName[POLLING_PATTERN_LEN]) {
-                                        case 't':
-                                            if (commandName.compare(POLLING_PATTERN_LEN, TRUE_STR_LEN, TRUE_STR) == 0) {
-                                                isPolling = true;
-                                            }
-                                            break;
-                                        case 'f':
-                                            if (commandName.compare(POLLING_PATTERN_LEN, FALSE_STR_LEN, FALSE_STR) == 0) {
-                                                isPolling = false;
-                                            }
-                                            break;
-                                    }
-                                    continue;
-                                }
+                                if (parseBoolFlag(commandName, PROGRESS_PATTERN, usingProgress)) continue;
+                                if (parseBoolFlag(commandName, POLLING_PATTERN, isPolling)) continue;
                                 break;
                                 
                             case 't':
-                                if (commandName.compare(0, TOP_PIVOT_PATTERN_LEN, TOP_PIVOT_PATTERN) == 0) {
-                                    switch (commandName[TOP_PIVOT_PATTERN_LEN]) {
-                                        case 't':
-                                            if (commandName.compare(TOP_PIVOT_PATTERN_LEN, TRUE_STR_LEN, TRUE_STR) == 0) {
-                                                usingTopPivot = true;
-                                            }
-                                            break;
-                                        case 'f':
-                                            if (commandName.compare(TOP_PIVOT_PATTERN_LEN, FALSE_STR_LEN, FALSE_STR) == 0) {
-                                                usingTopPivot = false;
-                                            }
-                                            break;
-                                    }
-                                    continue;
-                                }
+                                if (parseBoolFlag(commandName, TOP_PIVOT_PATTERN, usingTopPivot)) continue;
                                 break;
                                 
                             case 'b':
-                                if (commandName.compare(0, BOTTOM_PIVOT_PATTERN_LEN, BOTTOM_PIVOT_PATTERN) == 0) {
-                                    switch (commandName[BOTTOM_PIVOT_PATTERN_LEN]) {
-                                        case 't':
-                                            if (commandName.compare(BOTTOM_PIVOT_PATTERN_LEN, TRUE_STR_LEN, TRUE_STR) == 0) {
-                                                usingBottomPivot = true;
-                                            }
-                                            break;
-                                        case 'f':
-                                            if (commandName.compare(BOTTOM_PIVOT_PATTERN_LEN, FALSE_STR_LEN, FALSE_STR) == 0) {
-                                                usingBottomPivot = false;
-                                            }
-                                            break;
-                                    }
-                                    continue;
-                                }
+                                if (parseBoolFlag(commandName, BOTTOM_PIVOT_PATTERN, usingBottomPivot)) continue;
                                 if (commandName.compare(0, BACKGROUND_PATTERN_LEN, BACKGROUND_PATTERN) == 0) {
-                                    switch (commandName[BACKGROUND_PATTERN_LEN]) {
-                                        case 't':
-                                            if (commandName.compare(BACKGROUND_PATTERN_LEN, TRUE_STR_LEN, TRUE_STR) == 0) {
-                                                hideTableBackground = false;
-                                            }
-                                            break;
-                                        case 'f':
-                                            if (commandName.compare(BACKGROUND_PATTERN_LEN, FALSE_STR_LEN, FALSE_STR) == 0) {
-                                                hideTableBackground = true;
-                                            }
-                                            break;
-                                    }
+                                    bool bg = !hideTableBackground;
+                                    parseBoolFlag(commandName, BACKGROUND_PATTERN, bg);
+                                    hideTableBackground = !bg;
                                     continue;
                                 }
                                 break;
@@ -4728,21 +4578,7 @@ bool drawCommandsMenu(
                                     tableColumnOffset = ult::stoi(commandName.substr(OFFSET_PATTERN_LEN));
                                     continue;
                                 }
-                                if (commandName.compare(0, ON_EVERY_TICK_PATTERN_LEN, ON_EVERY_TICK_PATTERN) == 0) {
-                                    switch (commandName[ON_EVERY_TICK_PATTERN_LEN]) {
-                                        case 't':
-                                            if (commandName.compare(ON_EVERY_TICK_PATTERN_LEN, TRUE_STR_LEN, TRUE_STR) == 0) {
-                                                onEveryTick = true;
-                                            }
-                                            break;
-                                        case 'f':
-                                            if (commandName.compare(ON_EVERY_TICK_PATTERN_LEN, FALSE_STR_LEN, FALSE_STR) == 0) {
-                                                onEveryTick = false;
-                                            }
-                                            break;
-                                    }
-                                    continue;
-                                }
+                                if (parseBoolFlag(commandName, ON_EVERY_TICK_PATTERN, onEveryTick)) continue;
                                 break;
                                 
                             case 'i':
@@ -4768,21 +4604,7 @@ bool drawCommandsMenu(
                                     tableWrappingMode = commandName.substr(WRAPPING_MODE_PATTERN_LEN);
                                     continue;
                                 }
-                                if (commandName.compare(0, WRAPPING_INDENT_PATTERN_LEN, WRAPPING_INDENT_PATTERN) == 0) {
-                                    switch (commandName[WRAPPING_INDENT_PATTERN_LEN]) {
-                                        case 't':
-                                            if (commandName.compare(WRAPPING_INDENT_PATTERN_LEN, TRUE_STR_LEN, TRUE_STR) == 0) {
-                                                useWrappingIndent = true;
-                                            }
-                                            break;
-                                        case 'f':
-                                            if (commandName.compare(WRAPPING_INDENT_PATTERN_LEN, FALSE_STR_LEN, FALSE_STR) == 0) {
-                                                useWrappingIndent = false;
-                                            }
-                                            break;
-                                    }
-                                    continue;
-                                }
+                                if (parseBoolFlag(commandName, WRAPPING_INDENT_PATTERN, useWrappingIndent)) continue;
                                 break;
                                 
                             case 'u':
@@ -4791,21 +4613,7 @@ bool drawCommandsMenu(
                                     removeQuotes(units);
                                     continue;
                                 }
-                                if (commandName.compare(0, UNLOCKED_PATTERN_LEN, UNLOCKED_PATTERN) == 0) {
-                                    switch (commandName[UNLOCKED_PATTERN_LEN]) {
-                                        case 't':
-                                            if (commandName.compare(UNLOCKED_PATTERN_LEN, TRUE_STR_LEN, TRUE_STR) == 0) {
-                                                unlockedTrackbar = true;
-                                            }
-                                            break;
-                                        case 'f':
-                                            if (commandName.compare(UNLOCKED_PATTERN_LEN, FALSE_STR_LEN, FALSE_STR) == 0) {
-                                                unlockedTrackbar = false;
-                                            }
-                                            break;
-                                    }
-                                    continue;
-                                }
+                                if (parseBoolFlag(commandName, UNLOCKED_PATTERN, unlockedTrackbar)) continue;
                                 break;
                         }
                         
@@ -7460,6 +7268,7 @@ void initializeSettingsAndDirectories() {
     setDefaultValue("notifications", TRUE_STR, useNotifications);
     setDefaultValue("notifications_hotkey", TRUE_STR, useNotificationsHotkey);
     setDefaultValue("startup_notification", TRUE_STR, useStartupNotification);
+    setDefaultValue("silence_notifications", FALSE_STR, silenceNotifications);
     setDefaultValue("sound_effects", TRUE_STR, useSoundEffects);
     setDefaultValue("haptic_feedback", FALSE_STR, useHapticFeedback);
     setDefaultValue("page_swap", FALSE_STR, usePageSwap);
