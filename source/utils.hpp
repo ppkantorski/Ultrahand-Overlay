@@ -854,8 +854,8 @@ void initializeTheme(const std::string& themeIniPath = THEME_CONFIG_INI_PATH) {
     bool needsUpdate = false;
 
     const bool hasThemeSection = isFile(themeIniPath) && (themeData.count(THEME_STR) > 0);
-    for (size_t i = 0; i < ult::defaultThemeSettingsCount; ++i) {
-        const auto& setting = ult::defaultThemeSettings[i];
+    for (size_t i = 0; i < tsl::defaultThemeSettingsCount; ++i) {
+        const auto& setting = tsl::defaultThemeSettings[i];
         if (!hasThemeSection || themeSection.count(setting.key) == 0) {
             themeSection[setting.key] = setting.value;
             needsUpdate = true;
