@@ -1527,6 +1527,15 @@ public:
             useHapticFeedback = getBoolValue("haptic_feedback", false); // FALSE_STR default
             createToggleListItem(list, HAPTIC_FEEDBACK, useHapticFeedback, "haptic_feedback");
 
+
+            useOpaqueScreenshots = getBoolValue("opaque_screenshots", true); // TRUE_STR default
+            createToggleListItem(list, OPAQUE_SCREENSHOTS, useOpaqueScreenshots, "opaque_screenshots");
+            useSwipeToOpen = getBoolValue("swipe_to_open", true); // TRUE_STR default
+            createToggleListItem(list, SWIPE_TO_OPEN, useSwipeToOpen, "swipe_to_open");
+            rightAlignmentState = useRightAlignment = getBoolValue("right_alignment"); // FALSE_STR default
+            createToggleListItem(list, RIGHT_SIDE_MODE, useRightAlignment, "right_alignment");
+
+            addHeader(list, "Notification Settings");
             if (!ult::limitedMemory) {
                 silenceNotifications = getBoolValue("silence_notifications", false); // FALSE_STR default
                 createToggleListItem(list, "Silence Notifications", silenceNotifications, "silence_notifications");
@@ -1536,21 +1545,14 @@ public:
             useNotifications = getBoolValue("notifications", true); // TRUE_STR default
             createToggleListItem(list, API_NOTIFICATIONS, useNotifications, "notifications");
             useNotificationsHotkey = getBoolValue("notifications_hotkey", true); // TRUE_STR default
-            createToggleListItem(list, "Notifications Hotkey", useNotificationsHotkey, "notifications_hotkey");
-
-            useOpaqueScreenshots = getBoolValue("opaque_screenshots", true); // TRUE_STR default
-            createToggleListItem(list, OPAQUE_SCREENSHOTS, useOpaqueScreenshots, "opaque_screenshots");
-            useSwipeToOpen = getBoolValue("swipe_to_open", true); // TRUE_STR default
-            createToggleListItem(list, SWIPE_TO_OPEN, useSwipeToOpen, "swipe_to_open");
-            rightAlignmentState = useRightAlignment = getBoolValue("right_alignment"); // FALSE_STR default
-            createToggleListItem(list, RIGHT_SIDE_MODE, useRightAlignment, "right_alignment");
+            createToggleListItem(list, "API Toggle Hotkey", useNotificationsHotkey, "notifications_hotkey");
 
 
             addHeader(list, MENU_SETTINGS);
-            hideUserGuide = getBoolValue("hide_user_guide", false); // FALSE_STR default
-            createToggleListItem(list, USER_GUIDE, hideUserGuide, "hide_user_guide", true, true, true);
             hidePackages = getBoolValue("hide_packages", false); // FALSE_STR default
             createToggleListItem(list, PACKAGES_MENU, hidePackages, "hide_packages", true, true, true);
+            hideUserGuide = getBoolValue("hide_user_guide", false); // FALSE_STR default
+            createToggleListItem(list, USER_GUIDE, hideUserGuide, "hide_user_guide", true, true, true);
             hideHidden = getBoolValue("hide_hidden", false); // FALSE_STR default
             createToggleListItem(list, SHOW_HIDDEN, hideHidden, "hide_hidden", true, true);
             hideDelete = getBoolValue("hide_delete", false); // FALSE_STR default
@@ -7265,16 +7267,22 @@ void initializeSettingsAndDirectories() {
     setDefaultValue("package_versions", TRUE_STR, usePackageVersions);
 
     setDefaultValue("launch_combos", TRUE_STR, useLaunchCombos);
-    setDefaultValue("notifications", TRUE_STR, useNotifications);
-    setDefaultValue("notifications_hotkey", TRUE_STR, useNotificationsHotkey);
-    setDefaultValue("startup_notification", TRUE_STR, useStartupNotification);
-    setDefaultValue("silence_notifications", FALSE_STR, silenceNotifications);
     setDefaultValue("sound_effects", TRUE_STR, useSoundEffects);
     setDefaultValue("haptic_feedback", FALSE_STR, useHapticFeedback);
     setDefaultValue("page_swap", FALSE_STR, usePageSwap);
     setDefaultValue("swipe_to_open", TRUE_STR, useSwipeToOpen);
     setDefaultValue("right_alignment", FALSE_STR, useRightAlignment);
     setDefaultValue("opaque_screenshots", TRUE_STR, useOpaqueScreenshots);
+
+    setDefaultValue("startup_notification", TRUE_STR, useStartupNotification);
+    setDefaultValue("silence_notifications", FALSE_STR, silenceNotifications);
+    setDefaultValue("notifications", TRUE_STR, useNotifications);
+    setDefaultValue("notifications_hotkey", TRUE_STR, useNotificationsHotkey);
+    
+    std::string maxNotificationsStr;
+    setDefaultStrValue("max_notifications", "3", maxNotificationsStr);
+    const int maxNotifVal = ult::stoi(maxNotificationsStr);
+    if (maxNotifVal >= 1 && maxNotifVal <= 4) tsl::maxNotifications = maxNotifVal;
     
     setDefaultStrValue(DEFAULT_LANG_STR, defaultLang, defaultLang);
 
