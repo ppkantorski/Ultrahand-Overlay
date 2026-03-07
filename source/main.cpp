@@ -1410,7 +1410,8 @@ public:
                         setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "sound_effects", TRUE_STR);
                         useSoundEffects = true;
 
-                        ult::Audio::initialize();
+                        if (!ult::Audio::m_initialized)
+                            ult::Audio::initialize();
                         reloadSoundCacheNow.store(true, std::memory_order_release);
                         triggerEnterFeedback();
 

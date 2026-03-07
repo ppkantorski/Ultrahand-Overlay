@@ -4310,8 +4310,8 @@ void processCommand(const std::vector<std::string>& cmd, const std::string& pack
             break;
             
         case 'n':
-            if ((commandName == "notify" || commandName == "notification" || 
-                 commandName == "notify-now" || commandName == "notification-now")) {
+            if ((commandName == "notify" || commandName == "notify-now" || 
+                 commandName == "notification" || commandName == "notification-now")) {
                 if (cmdSize > 1) {
                     const std::string text = getUnquoted(cmd, 1);
         
