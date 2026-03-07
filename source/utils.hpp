@@ -3056,9 +3056,7 @@ bool applyPlaceholderReplacements(std::vector<std::string>& cmd, const std::stri
         }
 
         // Normalize {timestamp} → {timestamp()} so the recursive handler picks it up
-        size_t tsPos;
-        while ((tsPos = arg.find("{timestamp}")) != std::string::npos)
-            arg.replace(tsPos, 11, "{timestamp()}");
+        replaceAllPlaceholders(arg, "{timestamp}", "{timestamp()}");
 
         // Resolve nested placeholders - only if all internals resolve
         if (replacePlaceholdersRecursively(arg, placeholders)) {
@@ -4655,6 +4653,21 @@ void processCommand(const std::vector<std::string>& cmd, const std::string& pack
             }
             break;
             
+        case 't':
+            if (commandName == "touch") {
+                if (cmdSize >= 2) {
+                    std::string filePath = cmd[1];
+                    preprocessPath(filePath, packagePath);
+                    const std::string parentDir = filePath.substr(0, filePath.rfind('/'));
+                    if (!parentDir.empty())
+                        createDirectory(parentDir);
+                    FILE* f = fopen(filePath.c_str(), "a");
+                    if (f) fclose(f);
+                }
+                return;
+            }
+            break;
+
         case 'u':
             if (cmdSize >= 3 && commandName == "unzip") {
                 std::string sourcePath = cmd[1];
