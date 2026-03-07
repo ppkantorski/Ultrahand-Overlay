@@ -848,26 +848,6 @@ void powerOffAllControllers() {
 
 
 
-void initializeTheme(const std::string& themeIniPath = THEME_CONFIG_INI_PATH) {
-    tsl::hlp::ini::IniData themeData = getParsedDataFromIniFile(themeIniPath);
-    auto& themeSection = themeData[THEME_STR];
-    bool needsUpdate = false;
-
-    const bool hasThemeSection = isFile(themeIniPath) && (themeData.count(THEME_STR) > 0);
-    for (size_t i = 0; i < tsl::defaultThemeSettingsCount; ++i) {
-        const auto& setting = tsl::defaultThemeSettings[i];
-        if (!hasThemeSection || themeSection.count(setting.key) == 0) {
-            themeSection[setting.key] = setting.value;
-            needsUpdate = true;
-        }
-    }
-
-    if (needsUpdate)
-        saveIniFileData(themeIniPath, themeData);
-    if (!isDirectory(THEMES_PATH))
-        createDirectory(THEMES_PATH);
-}
-
 /**
  * @brief Synchronize Tesla and Ultrahand key combos.
  *
@@ -4334,22 +4314,51 @@ void processCommand(const std::vector<std::string>& cmd, const std::string& pack
                  commandName == "notify-now" || commandName == "notification-now")) {
                 if (cmdSize > 1) {
                     const std::string text = getUnquoted(cmd, 1);
-                    
+        
+                    size_t argIdx = 2;
+        
+                    // Optional: fontSize (only consumed if it's a number)
                     int fontSize = 23;
-                    if (cmdSize > 2) {
-                        const std::string fontStr = getUnquoted(cmd, 2);
+                    if (argIdx < cmdSize) {
+                        const std::string fontStr = getUnquoted(cmd, argIdx);
                         if (isValidNumber(fontStr)) {
                             fontSize = std::clamp(ult::stoi(fontStr), 1, 34);
+                            ++argIdx;
                         }
                     }
-                    
+        
+                    // Optional: title
+                    std::string title = "";
+                    if (argIdx < cmdSize) {
+                        title = getUnquoted(cmd, argIdx);
+                        ++argIdx;
+                    }
+        
+                    // Optional: show_time ("true" / "false")
+                    bool showTime = true;
+                    if (argIdx < cmdSize) {
+                        const std::string showTimeStr = getUnquoted(cmd, argIdx);
+                        if (showTimeStr == TRUE_STR || showTimeStr == FALSE_STR) {
+                            showTime = (showTimeStr != FALSE_STR);
+                            ++argIdx;
+                        }
+                    }
+        
+                    // Optional: app id
+                    std::string appId = "";
+                    if (argIdx < cmdSize) {
+                        appId = getUnquoted(cmd, argIdx);
+                    }
+        
+                    // Adjust default font size when a title is present and no explicit size was given
+                    if (!title.empty() && fontSize == 23)
+                        fontSize = 24;
+        
                     if (tsl::notification) {
                         const bool now = (commandName.find("-now") != std::string::npos);
-                        
-                        if (now)
-                            tsl::notification->showNow(text, fontSize);
-                        else
-                            tsl::notification->show(text, fontSize);
+                        tsl::notification->show(text, fontSize, 20,
+                                                appId, title, 4000,
+                                                448, 88, now, false, showTime);
                     }
                 }
                 return;
@@ -4771,9 +4780,9 @@ void backgroundInterpreter(void* workPtr) {
     if (ult::isHidden.load(std::memory_order_acquire)) {
         if (tsl::notification && ult::useNotifications) {
             if (commandSuccess.load(std::memory_order_acquire))
-                tsl::notification->show(NOTIFY_HEADER + TASK_IS_COMPLETE);
+                tsl::notification->showNow(NOTIFY_HEADER + TASK_IS_COMPLETE);
             else
-                tsl::notification->show(NOTIFY_HEADER + TASK_HAS_FAILED);
+                tsl::notification->showNow(NOTIFY_HEADER + TASK_HAS_FAILED);
         }
     }
 

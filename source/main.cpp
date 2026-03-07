@@ -91,7 +91,6 @@ constexpr std::string_view GROUPING_PATTERN = ";grouping=";
 constexpr std::string_view FOOTER_PATTERN = ";footer=";
 constexpr std::string_view FOOTER_HIGHLIGHT_PATTERN = ";footer_highlight=";
 constexpr std::string_view HOLD_PATTERN = ";hold=";
-//constexpr std::string_view WIDGET_PATTERN = ";widget=";
 
 constexpr std::string_view MINI_PATTERN = ";mini=";
 constexpr std::string_view SELECTION_MINI_PATTERN = ";selection_mini=";
@@ -882,6 +881,7 @@ public:
                 addListItem(list, WALLPAPER, currentWallpaper, "wallpaperMenu");
             }
             addListItem(list, WIDGET, DROPDOWN_SYMBOL, "widgetMenu");
+            addListItem(list, NOTIFICATIONS, DROPDOWN_SYMBOL, "notificationsMenu");
 
             addGap(list, 12);
             addListItem(list, MISCELLANEOUS, DROPDOWN_SYMBOL, "miscMenu");
@@ -1285,7 +1285,7 @@ public:
                         copyFileOrDirectory(defaultTheme, THEME_CONFIG_INI_PATH);
                         copyPercentage.store(-1, release);
                     }
-                    else initializeTheme();
+                    else tsl::initializeTheme();
                     tsl::initializeThemeVars();
                     reloadMenu = reloadMenu2 = true;
                     if (lastSelectedListItem)
@@ -1325,7 +1325,7 @@ public:
                         setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "current_theme", themeName);
                         copyFileOrDirectory(themeFile, THEME_CONFIG_INI_PATH);
                         copyPercentage.store(-1, release);
-                        initializeTheme();
+                        tsl::initializeTheme();
                         tsl::initializeThemeVars();
                         reloadMenu = reloadMenu2 = true;
                         if (lastSelectedListItem)
@@ -1510,6 +1510,64 @@ public:
             createToggleListItem(list, CENTER_ALIGNMENT, centerWidgetAlignment, "center_widget_alignment");
             createToggleListItem(list, EXTENDED_BACKDROP, extendedWidgetBackdrop, "extended_widget_backdrop", true);
 
+        } else if (dropdownSelection == "notificationsMenu") {
+            // Load INI section once instead of 14 separate file reads
+            auto ultrahandSection = getKeyValuePairsFromSection(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME);
+            
+            // Helper lambda to safely get boolean values
+            auto getBoolValue = [&](const std::string& key, bool defaultValue = false) -> bool {
+                auto it = ultrahandSection.find(key);
+                return (it != ultrahandSection.end()) ? (it->second == TRUE_STR) : defaultValue;
+            };
+
+            addHeader(list, NOTIFICATION_SETTINGS);
+            if (!ult::limitedMemory) {
+                silenceNotifications = getBoolValue("silence_notifications", false); // FALSE_STR default
+                createToggleListItem(list, SILENCE_NOTIFICATIONS, silenceNotifications, "silence_notifications");
+            }
+            useStartupNotification = getBoolValue("startup_notification", true); // TRUE_STR default
+            createToggleListItem(list, STARTUP_NOTIFICATION, useStartupNotification, "startup_notification");
+            useNotifications = getBoolValue("notifications", true); // TRUE_STR default
+            createToggleListItem(list, API_NOTIFICATIONS, useNotifications, "notifications");
+            useNotificationsHotkey = getBoolValue("notifications_hotkey", true); // TRUE_STR default
+            createToggleListItem(list, API_TOGGLE_HOTKEY, useNotificationsHotkey, "notifications_hotkey");
+
+            // Max Notifications trackbar
+            {
+                const std::string maxNotifIniStr = parseValueFromIniSection(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "max_notifications");
+                const int maxNotifCurrent = std::max(1, std::min(ult::stoi(maxNotifIniStr.empty() ? "3" : maxNotifIniStr), (ult::limitedMemory ? 4 : 8)));
+
+                const int sliderMax = ult::limitedMemory ? 4 : tsl::NotificationPrompt::MAX_VISIBLE;
+                std::vector<std::string> notifLabels;
+                for (int i = 1; i <= sliderMax; ++i)
+                    notifLabels.push_back(std::to_string(i));
+                auto* notifTrackbar = new tsl::elm::NamedStepTrackBarV2(
+                    MAX_SLOTS,
+                    "",
+                    notifLabels,
+                    nullptr, nullptr, {}, "",
+                    false,
+                    false
+                );
+
+                // Set callback FIRST so setProgress uses the correct value range
+                notifTrackbar->setSimpleCallback([](s16 /*value*/, s16 index) {
+                    const int newVal = static_cast<int>(index) + 1;
+                    const int maxAllowed = ult::limitedMemory ? 4 : tsl::NotificationPrompt::MAX_VISIBLE;
+                    const int clamped = std::max(1, std::min(newVal, maxAllowed));
+                    setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "max_notifications", std::to_string(clamped));
+                    tsl::maxNotifications = clamped;
+                });
+
+                // Set progress AFTER callback so StepTrackBarV2::setProgress takes the simpleCallback branch
+                notifTrackbar->setProgress(static_cast<u8>(maxNotifCurrent - 1));
+                notifTrackbar->disableClickAnimation();
+
+                //addHeader(list, "Max Notifications");
+                addGap(list, 12);
+                list->addItem(notifTrackbar);
+            }
+
         } else if (dropdownSelection == "miscMenu") {
             // Load INI section once instead of 14 separate file reads
             auto ultrahandSection = getKeyValuePairsFromSection(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME);
@@ -1534,18 +1592,6 @@ public:
             createToggleListItem(list, SWIPE_TO_OPEN, useSwipeToOpen, "swipe_to_open");
             rightAlignmentState = useRightAlignment = getBoolValue("right_alignment"); // FALSE_STR default
             createToggleListItem(list, RIGHT_SIDE_MODE, useRightAlignment, "right_alignment");
-
-            addHeader(list, "Notification Settings");
-            if (!ult::limitedMemory) {
-                silenceNotifications = getBoolValue("silence_notifications", false); // FALSE_STR default
-                createToggleListItem(list, "Silence Notifications", silenceNotifications, "silence_notifications");
-            }
-            useStartupNotification = getBoolValue("startup_notification", true); // TRUE_STR default
-            createToggleListItem(list, STARTUP_NOTIFICATION, useStartupNotification, "startup_notification");
-            useNotifications = getBoolValue("notifications", true); // TRUE_STR default
-            createToggleListItem(list, API_NOTIFICATIONS, useNotifications, "notifications");
-            useNotificationsHotkey = getBoolValue("notifications_hotkey", true); // TRUE_STR default
-            createToggleListItem(list, "API Toggle Hotkey", useNotificationsHotkey, "notifications_hotkey");
 
 
             addHeader(list, MENU_SETTINGS);
@@ -4023,7 +4069,7 @@ bool drawCommandsMenu(
     const bool packageMenuMode,
     const bool showWidget = false) {
 
-    tsl::hlp::ini::IniData packageConfigData;
+    std::map<std::string, std::map<std::string, std::string>> packageConfigData;
     
 
     bool toggleStateOn;
@@ -7189,27 +7235,24 @@ public:
 // Extract the settings initialization logic into a separate method
 void initializeSettingsAndDirectories() {
     versionLabel = cleanVersionLabel(APP_VERSION) + " " + DIVIDER_SYMBOL + " " + loaderTitle + " " + cleanVersionLabel(loaderInfo);
-    std::string defaultLang = "en";
 
     // Create necessary directories
     createDirectory(PACKAGE_PATH);
     createDirectory(LANG_PATH);
     createDirectory(FLAGS_PATH);
+    createDirectory(NOTIFICATIONS_FLAGS_PATH);
     createDirectory(NOTIFICATIONS_PATH);
     createDirectory(THEMES_PATH);
     createDirectory(WALLPAPERS_PATH);
     createDirectory(SOUNDS_PATH);
     createDirectory(LOADED_SOUNDS_PATH);
     createDirectory(ASSETS_PATH);
-    
-    bool settingsLoaded = false;
+    createDirectory(NOTIFICATIONS_ICONS_PATH);
+
     bool needsUpdate = false;
-    
     std::map<std::string, std::map<std::string, std::string>> iniData;
 
-    // Check if file didn't exist
     if (isFile(ULTRAHAND_CONFIG_INI_PATH)) {
-        // Always try to load INI data (will be empty if file doesn't exist)
         iniData = getParsedDataFromIniFile(ULTRAHAND_CONFIG_INI_PATH);
         for (int i = 0; i < 3; i++) {
             if (iniData.empty() || iniData[ULTRAHAND_PROJECT_NAME].empty()) {
@@ -7221,141 +7264,81 @@ void initializeSettingsAndDirectories() {
         }
     }
 
+    auto& sec = iniData[ULTRAHAND_PROJECT_NAME];
 
-    auto& ultrahandSection = iniData[ULTRAHAND_PROJECT_NAME];
-    
-    // Efficient lambdas that modify in-memory data and track updates
-    auto setDefaultValue = [&](const std::string& section, const std::string& defaultValue, bool& settingFlag) {
-        if (ultrahandSection.count(section) > 0) {
-            settingFlag = (ultrahandSection.at(section) == TRUE_STR);
-        } else {
-            ultrahandSection[section] = defaultValue;
-            settingFlag = (defaultValue == TRUE_STR);
-            needsUpdate = true;
-        }
+    // Write-back only: provision any missing keys with their defaults.
+    // All variables are already set correctly by parseOverlaySettings.
+    // This pass ensures the INI file is complete so settings menus always reflect real values.
+    auto ensureDefault = [&](const std::string& key, const std::string& def) {
+        if (sec.count(key) == 0) { sec[key] = def; needsUpdate = true; }
     };
-    
-    auto setDefaultStrValue = [&](const std::string& section, const std::string& defaultValue, std::string& settingValue) {
-        if (ultrahandSection.count(section) > 0) {
-            settingValue = ultrahandSection.at(section);
-        } else {
-            ultrahandSection[section] = defaultValue;
-            settingValue = defaultValue;
-            needsUpdate = true;
-        }
+
+    // Shared keys (variables set by parseOverlaySettings — INI write-back only)
+    ensureDefault("dynamic_logo",             TRUE_STR);
+    ensureDefault("selection_bg",             TRUE_STR);
+    ensureDefault("selection_text",           FALSE_STR);
+    ensureDefault("selection_value",          FALSE_STR);
+    ensureDefault("launch_combos",            TRUE_STR);
+    ensureDefault("sound_effects",            TRUE_STR);
+    ensureDefault("haptic_feedback",          FALSE_STR);
+    ensureDefault("swipe_to_open",            TRUE_STR);
+    ensureDefault("opaque_screenshots",       TRUE_STR);
+    ensureDefault("silence_notifications",    FALSE_STR);
+    ensureDefault("notifications",            TRUE_STR);
+    ensureDefault("notifications_hotkey",     TRUE_STR);
+    ensureDefault("max_notifications",        "3");
+    ensureDefault("hide_clock",               FALSE_STR);
+    ensureDefault("hide_battery",             TRUE_STR);
+    ensureDefault("hide_pcb_temp",            TRUE_STR);
+    ensureDefault("hide_soc_temp",            TRUE_STR);
+    ensureDefault("dynamic_widget_colors",    TRUE_STR);
+    ensureDefault("hide_widget_backdrop",     FALSE_STR);
+    ensureDefault("center_widget_alignment",  TRUE_STR);
+    ensureDefault("extended_widget_backdrop", FALSE_STR);
+    ensureDefault("datetime_format",          DEFAULT_DT_FORMAT);
+    ensureDefault(DEFAULT_LANG_STR,           "en");
+
+    // Launcher-only keys (variables also set by parseOverlaySettings where accessible,
+    // the rest are static to main.cpp so setDefaultValue is still needed here)
+    auto setDefaultValue = [&](const std::string& key, const std::string& def, bool& flag) {
+        if (sec.count(key) > 0) flag = (sec.at(key) == TRUE_STR);
+        else { sec[key] = def; flag = (def == TRUE_STR); needsUpdate = true; }
     };
-    
-    // Set default values for various settings (works for both existing and new files)
-    setDefaultValue("hide_user_guide", FALSE_STR, hideUserGuide);
-    setDefaultValue("hide_packages", FALSE_STR, hidePackages);
-    setDefaultValue("hide_hidden", FALSE_STR, hideHidden);
-    setDefaultValue("hide_delete", FALSE_STR, hideDelete);
-    if (requiresLNY2) {
-        setDefaultValue("hide_unsupported", FALSE_STR, hideUnsupported);
+
+    setDefaultValue("hide_user_guide",        FALSE_STR, hideUserGuide);
+    setDefaultValue("hide_packages",          FALSE_STR, hidePackages);
+    setDefaultValue("hide_hidden",            FALSE_STR, hideHidden);  // also set by parseOverlaySettings
+    setDefaultValue("hide_delete",            FALSE_STR, hideDelete);
+    if (requiresLNY2)
+        setDefaultValue("hide_unsupported",   FALSE_STR, hideUnsupported);
+    setDefaultValue("clean_version_labels",   FALSE_STR, cleanVersionLabels);
+    setDefaultValue("hide_overlay_versions",  FALSE_STR, hideOverlayVersions);
+    setDefaultValue("hide_package_versions",  FALSE_STR, hidePackageVersions);
+    setDefaultValue("libultrahand_titles",    FALSE_STR, useLibultrahandTitles);
+    setDefaultValue("libultrahand_versions",  TRUE_STR,  useLibultrahandVersions);
+    setDefaultValue("package_titles",         FALSE_STR, usePackageTitles);
+    setDefaultValue("package_versions",       TRUE_STR,  usePackageVersions);
+    setDefaultValue("page_swap",              FALSE_STR, usePageSwap);        // also set by parseOverlaySettings
+    setDefaultValue("right_alignment",        FALSE_STR, useRightAlignment);  // also set by parseOverlaySettings
+    setDefaultValue("startup_notification",   TRUE_STR,  useStartupNotification);
+
+    // State keys — read current value, provision default if missing
+    ensureDefault(IN_OVERLAY_STR, FALSE_STR);
+    inOverlay  = (sec.at(IN_OVERLAY_STR) == TRUE_STR);
+    if (sec.count("to_packages") > 0) {
+        trim(sec["to_packages"]);
+        toPackages = (sec["to_packages"] == TRUE_STR);
     }
-    setDefaultValue("clean_version_labels", FALSE_STR, cleanVersionLabels);
-    setDefaultValue("hide_overlay_versions", FALSE_STR, hideOverlayVersions);
-    setDefaultValue("hide_package_versions", FALSE_STR, hidePackageVersions);
 
-    setDefaultValue("dynamic_logo", TRUE_STR, useDynamicLogo);
-    setDefaultValue("selection_bg", TRUE_STR, useSelectionBG);
-    setDefaultValue("selection_text", FALSE_STR, useSelectionText);
-    setDefaultValue("selection_value", FALSE_STR, useSelectionValue);
-    setDefaultValue("libultrahand_titles", FALSE_STR, useLibultrahandTitles);
-    setDefaultValue("libultrahand_versions", TRUE_STR, useLibultrahandVersions);
-    setDefaultValue("package_titles", FALSE_STR, usePackageTitles);
-    setDefaultValue("package_versions", TRUE_STR, usePackageVersions);
-
-    setDefaultValue("launch_combos", TRUE_STR, useLaunchCombos);
-    setDefaultValue("sound_effects", TRUE_STR, useSoundEffects);
-    setDefaultValue("haptic_feedback", FALSE_STR, useHapticFeedback);
-    setDefaultValue("page_swap", FALSE_STR, usePageSwap);
-    setDefaultValue("swipe_to_open", TRUE_STR, useSwipeToOpen);
-    setDefaultValue("right_alignment", FALSE_STR, useRightAlignment);
-    setDefaultValue("opaque_screenshots", TRUE_STR, useOpaqueScreenshots);
-
-    setDefaultValue("startup_notification", TRUE_STR, useStartupNotification);
-    setDefaultValue("silence_notifications", FALSE_STR, silenceNotifications);
-    setDefaultValue("notifications", TRUE_STR, useNotifications);
-    setDefaultValue("notifications_hotkey", TRUE_STR, useNotificationsHotkey);
-    
-    std::string maxNotificationsStr;
-    setDefaultStrValue("max_notifications", "3", maxNotificationsStr);
-    const int maxNotifVal = ult::stoi(maxNotificationsStr);
-    if (maxNotifVal >= 1 && maxNotifVal <= 4) tsl::maxNotifications = maxNotifVal;
-    
-    setDefaultStrValue(DEFAULT_LANG_STR, defaultLang, defaultLang);
-
-    // Widget settings - now properly loaded into variables
-    setDefaultValue("hide_clock", FALSE_STR, hideClock);
-    setDefaultValue("hide_battery", TRUE_STR, hideBattery);
-    setDefaultValue("hide_pcb_temp", TRUE_STR, hidePCBTemp);
-    setDefaultValue("hide_soc_temp", TRUE_STR, hideSOCTemp);
-    setDefaultValue("dynamic_widget_colors", TRUE_STR, dynamicWidgetColors);
-    setDefaultValue("hide_widget_backdrop", FALSE_STR, hideWidgetBackdrop);
-    setDefaultValue("center_widget_alignment", TRUE_STR, centerWidgetAlignment);
-    setDefaultValue("extended_widget_backdrop", FALSE_STR, extendedWidgetBackdrop);
-    
-    // Datetime format string setting
-    setDefaultStrValue("datetime_format", DEFAULT_DT_FORMAT, datetimeFormat);
-    
-    // Check if settings were previously loaded
-    settingsLoaded = ultrahandSection.count(IN_OVERLAY_STR) > 0;
-
-    // Handle the 'to_packages' option if it exists
-    if (ultrahandSection.count("to_packages") > 0) {
-        trim(ultrahandSection["to_packages"]);
-        toPackages = (ultrahandSection["to_packages"] == TRUE_STR);
-    }
-    
-    // Handle the 'in_overlay' setting
-    if (settingsLoaded) {
-        inOverlay = (ultrahandSection[IN_OVERLAY_STR] == TRUE_STR);
-    }
-    
-    // If settings weren't previously loaded, add the missing defaults
-    if (!settingsLoaded) {
-        ultrahandSection[DEFAULT_LANG_STR] = defaultLang;
-        ultrahandSection[IN_OVERLAY_STR] = FALSE_STR;
-        needsUpdate = true;
-    }
-    
-    // Only write back to file if we made changes
-    if (needsUpdate) {
+    if (needsUpdate)
         saveIniFileData(ULTRAHAND_CONFIG_INI_PATH, iniData);
-    }
 
-    if (useNotifications) {
-        if (!isFile(NOTIFICATIONS_FLAG_FILEPATH)) {
-            FILE* file = std::fopen((NOTIFICATIONS_FLAG_FILEPATH).c_str(), "w");
-            if (file) {
-                std::fclose(file);
-            }
-        }
-    } else {
-        deleteFileOrDirectory(NOTIFICATIONS_FLAG_FILEPATH);
-    }
-    
-    // Load language file
-    const std::string langFile = LANG_PATH + defaultLang + ".json";
-    if (isFile(langFile))
-        parseLanguage(langFile);
-    else {
-        reinitializeLangVars();
-    }
-    
-    // Initialize theme
-    initializeTheme();
-    tsl::initializeThemeVars();
+    // Sync combo and set initial menu page (run once)
     updateMenuCombos = copyTeslaKeyComboToUltrahand();
-    
-    // Set current menu based on settings
+
     static bool hasInitialized = false;
     if (!hasInitialized) {
-        if (!usePageSwap)
-            currentMenu = OVERLAYS_STR;
-        else
-            currentMenu = PACKAGES_STR;
+        currentMenu = usePageSwap ? PACKAGES_STR : OVERLAYS_STR;
         hasInitialized = true;
     }
 }
