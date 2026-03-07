@@ -2130,14 +2130,11 @@ std::string replaceJsonPlaceholder(const std::string& arg, const std::string& co
 
 // Helper function to replace placeholders
 void replaceAllPlaceholders(std::string& source, const std::string& placeholder, const std::string& replacement) {
-    std::string lastArg;
-    while (source.find(placeholder) != std::string::npos) {
-        applyPlaceholderReplacement(source, placeholder, replacement);
-        if (source == lastArg)
-            break;
-        lastArg = source;
+    size_t pos = 0;
+    while ((pos = source.find(placeholder, pos)) != std::string::npos) {
+        source.replace(pos, placeholder.size(), replacement);
+        pos += replacement.size();
     }
-    return;
 }
 
 
@@ -3057,6 +3054,11 @@ bool applyPlaceholderReplacements(std::vector<std::string>& cmd, const std::stri
         if (replacePlaceholdersInArg(arg, symbolPlaceholders)) {
             replacementsMade = true;
         }
+
+        // Normalize {timestamp} → {timestamp()} so the recursive handler picks it up
+        size_t tsPos;
+        while ((tsPos = arg.find("{timestamp}")) != std::string::npos)
+            arg.replace(tsPos, 11, "{timestamp()}");
 
         // Resolve nested placeholders - only if all internals resolve
         if (replacePlaceholdersRecursively(arg, placeholders)) {

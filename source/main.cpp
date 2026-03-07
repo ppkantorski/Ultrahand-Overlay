@@ -1355,7 +1355,7 @@ public:
                 else
                     currentSounds = OPTION_SYMBOL;
             }
-            auto* listItem = new tsl::elm::ListItem(OPTION_SYMBOL);
+            auto* listItem = new tsl::elm::SilentListItem(OPTION_SYMBOL);
             if (currentSounds == OPTION_SYMBOL) {
                 listItem->setValue(CHECKMARK_SYMBOL);
                 lastSelectedListItem = listItem;
@@ -1393,7 +1393,7 @@ public:
                 soundsName = getNameFromPath(soundsFile);
                 dropExtension(soundsName);
         
-                tsl::elm::ListItem* listItem = new tsl::elm::ListItem(soundsName);
+                tsl::elm::ListItem* listItem = new tsl::elm::SilentListItem(soundsName);
                 if (soundsName == currentSounds) {
                     listItem->setValue(CHECKMARK_SYMBOL);
                     lastSelectedListItem = listItem;
@@ -1402,13 +1402,17 @@ public:
                     if (runningInterpreter.load(acquire)) return false;
         
                     if ((keys & KEY_A && !(keys & ~KEY_A & ALL_KEYS_MASK))) {
+                        
                         setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "current_sounds", soundsName);
                         deleteFileOrDirectoryByPattern(LOADED_SOUNDS_PATH+"*.wav");
                         unzipFile(soundsFile, LOADED_SOUNDS_PATH);
                         
                         setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "sound_effects", TRUE_STR);
                         useSoundEffects = true;
+
+                        ult::Audio::initialize();
                         reloadSoundCacheNow.store(true, std::memory_order_release);
+                        triggerEnterFeedback();
 
                         if (lastSelectedListItem) lastSelectedListItem->setValue("");
                         if (selectedListItem) selectedListItem->setValue(soundsName);
