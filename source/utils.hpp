@@ -4319,14 +4319,14 @@ void processCommand(const std::vector<std::string>& cmd, const std::string& pack
                     // Helper: peek next arg, consume and advance only if predicate is true
                     auto tryConsume = [&](auto pred) -> std::string {
                         if (argIdx < cmdSize) {
-                            std::string val = getUnquoted(cmd, argIdx);
+                            const std::string val = getUnquoted(cmd, argIdx);
                             if (pred(val)) { ++argIdx; return val; }
                         }
                         return {};
                     };
             
                     const std::string fontStr = tryConsume([](const std::string& s){ return isValidNumber(s) && ult::stoi(s) <= 34; });
-                    const std::string alignStr = tryConsume([](const std::string& s){ return s == LEFT_STR || s == CENTER_STR; });
+                    const std::string alignStr = tryConsume([](const std::string& s){ return s == LEFT_STR || s == CENTER_STR || s == RIGHT_STR; });
                     const std::string splitStr = tryConsume([](const std::string& s){ return s == WORD_STR || s == CHAR_STR; });
                     const std::string durStr = tryConsume([](const std::string& s){ return isValidNumber(s); });
                     const std::string title    = tryConsume([](const std::string& s){ return s != TRUE_STR && s != FALSE_STR; });
@@ -4336,21 +4336,21 @@ void processCommand(const std::vector<std::string>& cmd, const std::string& pack
                     const bool hasTitle = !title.empty();
                     const int  fontSize = !fontStr.empty()  ? ult::clamp(ult::stoi(fontStr), 1, 34)
                                                              : (hasTitle ? 24 : 23);
-                    const char* alignment = !alignStr.empty() ? alignStr.c_str()
-                                                               : (hasTitle ? LEFT_STR.c_str() : CENTER_STR.c_str());
+                    const std::string_view alignment = !alignStr.empty() ? std::string_view(alignStr)
+                                                                          : (hasTitle ? LEFT_STR : CENTER_STR);
                     const bool showTime = showTimeStr.empty() || showTimeStr == TRUE_STR;
             
                     const bool now = commandName.size() > 4 &&
                                      commandName.compare(commandName.size() - 4, 4, "-now") == 0;
                     
-                    const u32 duration = durStr.empty()    ? 4000u
+                    const u32 duration = durStr.empty()    ? (!now ? 4000u : 3000u)
                                        : durStr == "0"     ? 0u
                                        : static_cast<u32>(ult::clamp(ult::stoi(durStr), 500, 30000));
                     tsl::notification->show(text, fontSize, 20,
                                             appId, title, duration,
                                             now, false, showTime,
                                             alignment,
-                                            splitStr.empty() ? nullptr : splitStr.c_str());
+                                            splitStr);
                 }
                 return;
             }
