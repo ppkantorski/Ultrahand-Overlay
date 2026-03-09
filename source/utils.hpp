@@ -4334,7 +4334,7 @@ void processCommand(const std::vector<std::string>& cmd, const std::string& pack
                     const std::string appId    = (argIdx < cmdSize) ? getUnquoted(cmd, argIdx) : "";
             
                     const bool hasTitle = !title.empty();
-                    const int  fontSize = !fontStr.empty()  ? ult::clamp(ult::stoi(fontStr), 1, 34)
+                    const int  fontSize = !fontStr.empty()  ? std::clamp(ult::stoi(fontStr), 1, 34)
                                                              : (hasTitle ? 24 : 23);
                     const std::string_view alignment = !alignStr.empty() ? std::string_view(alignStr)
                                                                           : (hasTitle ? LEFT_STR : CENTER_STR);
@@ -4345,7 +4345,7 @@ void processCommand(const std::vector<std::string>& cmd, const std::string& pack
                     
                     const u32 duration = durStr.empty()    ? (!now ? 4000u : 3000u)
                                        : durStr == "0"     ? 0u
-                                       : static_cast<u32>(ult::clamp(ult::stoi(durStr), 500, 30000));
+                                       : static_cast<u32>(std::clamp(ult::stoi(durStr), 500, 30000));
                     tsl::notification->show(text, fontSize, 20,
                                             appId, title, duration,
                                             now, false, showTime,
