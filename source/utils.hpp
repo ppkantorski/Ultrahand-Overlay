@@ -1390,6 +1390,7 @@ static tsl::Color getRawColor(const std::string& c, tsl::Color defaultColor) {
     return tsl::RGB888(c);
 }
 
+
 void drawTable(
     tsl::elm::List*      list,
     const std::vector<std::vector<std::string>>& tableData,
@@ -1432,25 +1433,37 @@ void drawTable(
     const bool sameCol = (tableInfoTextColor == tableInfoTextHighlightColor);
 
     // Use nanoseconds for high-performance timing
-    auto lastUpdateNS = std::make_shared<u64>(ult::nowNs());
+    u64 lastUpdateNS = ult::nowNs();
     static constexpr u64 ONE_SECOND_NS = 1000000000ULL;
 
-    static const std::vector<std::string> specialCharacters =  {""};
-    
+    static const std::vector<std::string> specialCharacters = {ult::DIVIDER_SYMBOL};
+
+    // Pre-compute height before moving the vectors into the closure
+    const u32 itemHeight = static_cast<u32>(
+        16 * cacheExpSec.size()
+        + newlineGap * (cacheExpSec.empty() ? 0 : cacheExpSec.size() - 1)
+        + endGap
+    );
+
     list->addItem(new tsl::elm::TableDrawer(
-        [=](tsl::gfx::Renderer* renderer, s32 x, s32 y, s32 w, s32 h) mutable {
+        [=,
+         cacheExpSec  = std::move(cacheExpSec),
+         cacheExpInfo = std::move(cacheExpInfo),
+         cacheYOff    = std::move(cacheYOff),
+         cacheXOff    = std::move(cacheXOff)]
+        (tsl::gfx::Renderer* renderer, s32 x, s32 y, s32 w, s32 h) mutable {
 
             if (usingPlaceholders) {
                 const u64 currentNS = ult::nowNs();
                 
-                if ((currentNS - *lastUpdateNS) >= ONE_SECOND_NS) {
+                if ((currentNS - lastUpdateNS) >= ONE_SECOND_NS) {
                     buildTableDrawerLines(
                         tableData, sectionLines, infoLines, packagePath,
                         columnOffset, startGap, newlineGap,
                         wrappingMode, alignment, useWrappedTextIndent,
                         cacheExpSec, cacheExpInfo, cacheYOff, cacheXOff
                     );
-                    *lastUpdateNS = currentNS;
+                    lastUpdateNS = currentNS;
                 }
             }
 
@@ -1491,13 +1504,9 @@ void drawTable(
         hideTableBackground,
         endGap,
         isScrollable
-    ),
-    static_cast<u32>(
-        16 * cacheExpSec.size()
-        + newlineGap * (cacheExpSec.empty() ? 0 : cacheExpSec.size() - 1)
-        + endGap
-    ));
+    ), itemHeight);
 }
+
 
 // ─── addTable simply forwards through ───────────────────────────────────────────
 void addTable(
@@ -1533,13 +1542,8 @@ void addTable(
 
 
 void addHelpInfo(tsl::elm::List* list) {
-    // Add a section break with small text to indicate the "Commands" section
     addHeader(list, USER_GUIDE);
 
-    // Adjust the horizontal offset as needed
-    const int xOffset = ult::stoi(USERGUIDE_OFFSET);
-
-    // Define the section lines and info lines directly
     std::vector<std::string> sectionLines = {
         SETTINGS_MENU,
         SCRIPT_OVERLAY,
@@ -1554,10 +1558,14 @@ void addHelpInfo(tsl::elm::List* list) {
         "\uE0E3 (" + ON_OVERLAY_PACKAGE + ")"
     };
 
-    std::vector<std::vector<std::string>> dummyTableData;
+    size_t maxInfoWidth = 0;
+    for (const auto& s : infoLines)
+        maxInfoWidth = std::max(maxInfoWidth, static_cast<size_t>(tsl::gfx::calculateStringWidth(s, 16, false)));
 
-    // Draw the table with the defined lines
-    drawTable(list, dummyTableData, sectionLines, infoLines, xOffset, 20, 9, 4);
+    std::vector<std::vector<std::string>> dummyTableData;
+    drawTable(list, dummyTableData, sectionLines, infoLines,
+        static_cast<size_t>(tsl::cfg::FramebufferWidth) - 90 - maxInfoWidth,
+        20, 9, 4);
 }
 
 
