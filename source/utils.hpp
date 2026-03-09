@@ -1432,7 +1432,7 @@ void drawTable(
     const bool sameCol = (tableInfoTextColor == tableInfoTextHighlightColor);
 
     // Use nanoseconds for high-performance timing
-    auto lastUpdateNS = std::make_shared<u64>(armTicksToNs(armGetSystemTick()));
+    auto lastUpdateNS = std::make_shared<u64>(ult::nowNs());
     static constexpr u64 ONE_SECOND_NS = 1000000000ULL;
 
     static const std::vector<std::string> specialCharacters =  {""};
@@ -1441,7 +1441,7 @@ void drawTable(
         [=](tsl::gfx::Renderer* renderer, s32 x, s32 y, s32 w, s32 h) mutable {
 
             if (usingPlaceholders) {
-                const u64 currentNS = armTicksToNs(armGetSystemTick());
+                const u64 currentNS = ult::nowNs();
                 
                 if ((currentNS - *lastUpdateNS) >= ONE_SECOND_NS) {
                     buildTableDrawerLines(
@@ -2330,7 +2330,7 @@ std::vector<std::vector<std::string>> getSourceReplacement(const std::vector<std
 std::string getCurrentTimestamp(const std::string& format) {
     // Try using standard POSIX time() function
     time_t seconds = time(nullptr);
-    const u32 milliseconds = (armTicksToNs(armGetSystemTick()) / 1000000ULL) % 1000; // We lose millisecond precision with this method
+    const u32 milliseconds = (ult::nowNs() / 1000000ULL) % 1000; // We lose millisecond precision with this method
     
     std::string modifiedFormat = format;
     bool hasMilliseconds = false;
@@ -4310,56 +4310,47 @@ void processCommand(const std::vector<std::string>& cmd, const std::string& pack
             break;
             
         case 'n':
-            if ((commandName == "notify" || commandName == "notify-now" || 
-                 commandName == "notification" || commandName == "notification-now")) {
-                if (cmdSize > 1) {
+            if (commandName == "notify" || commandName == "notify-now" ||
+                commandName == "notification" || commandName == "notification-now") {
+                if (cmdSize > 1 && tsl::notification) {
                     const std::string text = getUnquoted(cmd, 1);
-        
                     size_t argIdx = 2;
-        
-                    // Optional: fontSize (only consumed if it's a number)
-                    int fontSize = 23;
-                    if (argIdx < cmdSize) {
-                        const std::string fontStr = getUnquoted(cmd, argIdx);
-                        if (isValidNumber(fontStr)) {
-                            fontSize = std::clamp(ult::stoi(fontStr), 1, 34);
-                            ++argIdx;
+            
+                    // Helper: peek next arg, consume and advance only if predicate is true
+                    auto tryConsume = [&](auto pred) -> std::string {
+                        if (argIdx < cmdSize) {
+                            std::string val = getUnquoted(cmd, argIdx);
+                            if (pred(val)) { ++argIdx; return val; }
                         }
-                    }
-        
-                    // Optional: title
-                    std::string title = "";
-                    if (argIdx < cmdSize) {
-                        title = getUnquoted(cmd, argIdx);
-                        ++argIdx;
-                    }
-        
-                    // Optional: show_time ("true" / "false")
-                    bool showTime = true;
-                    if (argIdx < cmdSize) {
-                        const std::string showTimeStr = getUnquoted(cmd, argIdx);
-                        if (showTimeStr == TRUE_STR || showTimeStr == FALSE_STR) {
-                            showTime = (showTimeStr != FALSE_STR);
-                            ++argIdx;
-                        }
-                    }
-        
-                    // Optional: app id
-                    std::string appId = "";
-                    if (argIdx < cmdSize) {
-                        appId = getUnquoted(cmd, argIdx);
-                    }
-        
-                    // Adjust default font size when a title is present and no explicit size was given
-                    if (!title.empty() && fontSize == 23)
-                        fontSize = 24;
-        
-                    if (tsl::notification) {
-                        const bool now = (commandName.find("-now") != std::string::npos);
-                        tsl::notification->show(text, fontSize, 20,
-                                                appId, title, 4000,
-                                                448, 88, now, false, showTime);
-                    }
+                        return {};
+                    };
+            
+                    const std::string fontStr = tryConsume([](const std::string& s){ return isValidNumber(s) && ult::stoi(s) <= 34; });
+                    const std::string alignStr = tryConsume([](const std::string& s){ return s == LEFT_STR || s == CENTER_STR; });
+                    const std::string splitStr = tryConsume([](const std::string& s){ return s == WORD_STR || s == CHAR_STR; });
+                    const std::string durStr = tryConsume([](const std::string& s){ return isValidNumber(s); });
+                    const std::string title    = tryConsume([](const std::string& s){ return s != TRUE_STR && s != FALSE_STR; });
+                    const std::string showTimeStr = tryConsume([](const std::string& s){ return s == TRUE_STR || s == FALSE_STR; });
+                    const std::string appId    = (argIdx < cmdSize) ? getUnquoted(cmd, argIdx) : "";
+            
+                    const bool hasTitle = !title.empty();
+                    const int  fontSize = !fontStr.empty()  ? ult::clamp(ult::stoi(fontStr), 1, 34)
+                                                             : (hasTitle ? 24 : 23);
+                    const char* alignment = !alignStr.empty() ? alignStr.c_str()
+                                                               : (hasTitle ? LEFT_STR.c_str() : CENTER_STR.c_str());
+                    const bool showTime = showTimeStr.empty() || showTimeStr == TRUE_STR;
+            
+                    const bool now = commandName.size() > 4 &&
+                                     commandName.compare(commandName.size() - 4, 4, "-now") == 0;
+                    
+                    const u32 duration = durStr.empty()    ? 4000u
+                                       : durStr == "0"     ? 0u
+                                       : static_cast<u32>(ult::clamp(ult::stoi(durStr), 500, 30000));
+                    tsl::notification->show(text, fontSize, 20,
+                                            appId, title, duration,
+                                            now, false, showTime,
+                                            alignment,
+                                            splitStr.empty() ? nullptr : splitStr.c_str());
                 }
                 return;
             }
