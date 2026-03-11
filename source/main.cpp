@@ -1069,7 +1069,7 @@ public:
             const float freeRamMB = static_cast<float>(RAM_Total_system_u - RAM_Used_system_u) / (1024.0f * 1024.0f);
             snprintf(ramString, sizeof(ramString), "%.2f MB %s", freeRamMB, FREE.c_str());
             
-            const char* ramColor = freeRamMB >= 9.0f ? "healthy_ram" : (freeRamMB >= 3.0f ? "neutral_ram" : "bad_ram");
+            const char* ramColor = freeRamMB >= 9.0f ? "healthy_ram" : (freeRamMB >= 4.0f ? "neutral_ram" : "bad_ram");
             
             auto* systemMemoryHeader = new tsl::elm::CategoryHeader(SYSTEM_RAM);
             systemMemoryHeader->setValue(ramString, getRawColor(ramColor, tsl::infoTextColor));
@@ -1124,7 +1124,7 @@ public:
                 const auto updateRamDisplay = [&](float freeMB) {
                     char buf[24];
                     snprintf(buf, sizeof(buf), "%.2f MB %s", freeMB, FREE.c_str());
-                    const char* color = freeMB >= 9.0f ? "healthy_ram" : (freeMB >= 3.0f ? "neutral_ram" : "bad_ram");
+                    const char* color = freeMB >= 9.0f ? "healthy_ram" : (freeMB >= 4.0f ? "neutral_ram" : "bad_ram");
                     systemMemoryHeader->setValue(buf, getRawColor(color, tsl::infoTextColor));
                 };
             
