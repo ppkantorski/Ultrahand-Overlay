@@ -85,6 +85,8 @@
     "SOUND_SUPPORT_ENABLED": "Dźwięk włączony",
     "EXIT_OVERLAY_SYSTEM": "Wyjdź z systemu nakładek",
     "ULTRAHAND_ABOUT": "Ultrahand Overlay jest konfigurowalnym ekosystemem overlayów dla poleceń, overlayów, skrótów klawiszowych i zaawansowanej interakcji z systemem.",
+    "ULTRAHAND_CREDITS_START": "Specjalne podziękowania dla ",
+    "ULTRAHAND_CREDITS_END": " i wielu innym. ♥",
     "LOCAL_IP": "Lokalny IP",
     "WALLPAPER": "Tapeta",
     "THEME": "Motyw",
