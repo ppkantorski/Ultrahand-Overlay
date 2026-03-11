@@ -1436,8 +1436,6 @@ void drawTable(
     u64 lastUpdateNS = ult::nowNs();
     static constexpr u64 ONE_SECOND_NS = 1000000000ULL;
 
-    static const std::vector<std::string> specialCharacters = {ult::DIVIDER_SYMBOL};
-
     // Pre-compute height before moving the vectors into the closure
     const u32 itemHeight = static_cast<u32>(
         16 * cacheExpSec.size()
@@ -1484,8 +1482,8 @@ void drawTable(
                 // Fastest path: same colors, minimal function calls
                 for (size_t i = 0; i < count; ++i) {
                     const s32 yPos = y + cacheYOff[i];
-                    renderer->drawStringWithColoredSections(cacheExpSec[i], false, specialCharacters, baseX, yPos, 16, secColor, dividerColor);
-                    renderer->drawStringWithColoredSections(cacheExpInfo[i], false, specialCharacters, x + cacheXOff[i], yPos, 16, infoColor, dividerColor);
+                    renderer->drawStringWithColoredSections(cacheExpSec[i], false, tsl::s_dividerSpecialChars, baseX, yPos, 16, secColor, dividerColor);
+                    renderer->drawStringWithColoredSections(cacheExpInfo[i], false, tsl::s_dividerSpecialChars, x + cacheXOff[i], yPos, 16, infoColor, dividerColor);
                 }
             } else {
                 // Different colors path
@@ -1493,7 +1491,7 @@ void drawTable(
                 
                 for (size_t i = 0; i < count; ++i) {
                     const s32 yPos = y + cacheYOff[i];
-                    renderer->drawStringWithColoredSections(cacheExpSec[i], false, specialCharacters, baseX, yPos, 16, secColor, dividerColor);
+                    renderer->drawStringWithColoredSections(cacheExpSec[i], false, tsl::s_dividerSpecialChars, baseX, yPos, 16, secColor, dividerColor);
                     renderer->drawStringWithHighlight(
                         cacheExpInfo[i], false, x + cacheXOff[i], yPos, 16,
                         infoColor, hiliteColor
@@ -1624,8 +1622,8 @@ void addPackageInfo(tsl::elm::List* list, auto& packageHeader, std::string type 
     addField(_TITLE,        packageHeader.title,                  "none");
     addField(_VERSION,      packageHeader.version,                "none");
     addField(creatorHeader, packageHeader.creator,                "none");
-    addField(_ABOUT,        getTranslated(packageHeader.about),   defaultLang == "en" ? "word" : "char");
-    addField(_CREDITS,      getTranslated(packageHeader.credits), "word");
+    addField(_ABOUT,        getTranslated(packageHeader.about),   defaultLang == "en" ? WORD_STR : CHAR_STR);
+    addField(_CREDITS,      getTranslated(packageHeader.credits), WORD_STR);
     std::vector<std::vector<std::string>> dummyTableData;
     drawTable(list, dummyTableData, sectionLines, infoLines, xOffset, 20, 9, 3, DEFAULT_STR, DEFAULT_STR, DEFAULT_STR, LEFT_STR, false, false, true);
 }

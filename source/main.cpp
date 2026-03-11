@@ -40,7 +40,7 @@ constexpr auto acquire = std::memory_order_acquire;
 constexpr auto acq_rel = std::memory_order_acq_rel;
 constexpr auto release = std::memory_order_release;
 
-static std::mutex transitionMutex;
+//static std::mutex transitionMutex;
 
 
 // Placeholder replacement
@@ -870,8 +870,10 @@ public:
             
             addListItem(list, KEY_COMBO, keyCombo, KEY_COMBO_STR);
             addListItem(list, LANGUAGE, defaultLang, "languageMenu");
+            addListItem(list, NOTIFICATIONS, DROPDOWN_SYMBOL, "notificationsMenu");
             addListItem(list, SYSTEM, DROPDOWN_SYMBOL, "systemMenu");
             addListItem(list, SOFTWARE_UPDATE, DROPDOWN_SYMBOL, "softwareUpdateMenu");
+
             addHeader(list, UI_SETTINGS);
             addListItem(list, THEME, currentTheme, "themeMenu");
             if (!limitedMemory) {
@@ -881,7 +883,6 @@ public:
                 addListItem(list, WALLPAPER, currentWallpaper, "wallpaperMenu");
             }
             addListItem(list, WIDGET, DROPDOWN_SYMBOL, "widgetMenu");
-            addListItem(list, NOTIFICATIONS, DROPDOWN_SYMBOL, "notificationsMenu");
 
             addGap(list, 12);
             addListItem(list, MISCELLANEOUS, DROPDOWN_SYMBOL, "miscMenu");
@@ -1045,35 +1046,35 @@ public:
             if ((cpuSpeedo0 | cpuSpeedo2 | socSpeedo0 | cpuIDDQ | gpuIDDQ | socIDDQ) != 0) {
                 tableData = {
                     {"Speedo", "", customAlign(cpuSpeedo0) + " "+DIVIDER_SYMBOL+" " + customAlign(cpuSpeedo2) + " "+DIVIDER_SYMBOL+" " + customAlign(socSpeedo0)},
-                    {"IDDQ", "", customAlign(cpuIDDQ) + " "+DIVIDER_SYMBOL+" " + customAlign(gpuIDDQ) + " "+DIVIDER_SYMBOL+" " + customAlign(socIDDQ)}
+                    {"IDDQ",   "", customAlign(cpuIDDQ) + " "+DIVIDER_SYMBOL+" " + customAlign(gpuIDDQ) + " "+DIVIDER_SYMBOL+" " + customAlign(socIDDQ)}
                 };
             } else {
                 tableData = {
                     {"Speedo", "", "⋯    "+DIVIDER_SYMBOL+"    ⋯    "+DIVIDER_SYMBOL+"    ⋯  "},
-                    {"IDDQ", "", "⋯    "+DIVIDER_SYMBOL+"    ⋯    "+DIVIDER_SYMBOL+"    ⋯  "}
+                    {"IDDQ",   "", "⋯    "+DIVIDER_SYMBOL+"    ⋯    "+DIVIDER_SYMBOL+"    ⋯  "}
                 };
             }
-            addTable(list, tableData, "", 164, 20, -2, 4);
+            addTable(list, tableData, "", 164, 20, 1, 4);
 
-            addGap(list, 33);
+            //addGap(list, 3);
             
+            tableData.clear();
+
             // Get system memory info
             u64 RAM_Used_system_u, RAM_Total_system_u;
             svcGetSystemInfo(&RAM_Used_system_u, 1, INVALID_HANDLE, 2);
             svcGetSystemInfo(&RAM_Total_system_u, 0, INVALID_HANDLE, 2);
             
-            // Stack buffer for RAM string - optimal size
             char ramString[24];
             const float freeRamMB = static_cast<float>(RAM_Total_system_u - RAM_Used_system_u) / (1024.0f * 1024.0f);
             snprintf(ramString, sizeof(ramString), "%.2f MB %s", freeRamMB, FREE.c_str());
             
-            // Nested ternary compiles to conditional select (CSEL) on ARMv8-A - no branches
             const char* ramColor = freeRamMB >= 9.0f ? "healthy_ram" : (freeRamMB >= 3.0f ? "neutral_ram" : "bad_ram");
             
-            tableData.clear();
-            tableData = {{SYSTEM_RAM, "", ramString}};
-            addTable(list, tableData, "", 165+2, 19-2, 19-2, 0, "header", ramColor, DEFAULT_STR, RIGHT_STR, true, true);
-
+            auto* systemMemoryHeader = new tsl::elm::CategoryHeader(SYSTEM_RAM);
+            systemMemoryHeader->setValue(ramString, getRawColor(ramColor, tsl::infoTextColor));
+            list->addItem(systemMemoryHeader);
+            
             // Read custom overlay memory from INI
             const std::string customMemoryStr = parseValueFromIniSection(ULTRAHAND_CONFIG_INI_PATH, MEMORY_STR, "custom_overlay_memory_MB");
             
@@ -1081,21 +1082,12 @@ public:
             bool hasIniEntry = false;
             
             if (!customMemoryStr.empty()) {
-                // Manual parsing without try-catch
-                int parsedValue = 0;
                 bool isValid = true;
-                
-                // Check if string contains only digits
                 for (char c : customMemoryStr) {
-                    if (c < '0' || c > '9') {
-                        isValid = false;
-                        break;
-                    }
+                    if (c < '0' || c > '9') { isValid = false; break; }
                 }
-                
-                if (isValid && !customMemoryStr.empty()) {
-                    parsedValue = std::atoi(customMemoryStr.c_str());
-                    // Validate: must be even, greater than 8
+                if (isValid) {
+                    const int parsedValue = std::atoi(customMemoryStr.c_str());
                     if (parsedValue > 8 && parsedValue % 2 == 0) {
                         customMemoryMB = static_cast<u32>(parsedValue);
                         heapSizeCache.customSizeMB = customMemoryMB;
@@ -1104,135 +1096,92 @@ public:
                 }
             }
             
-            // Get current heap size in MB
             const u32 currentHeapMB = bytesToMB(static_cast<u64>(currentHeapSize));
             
-            // Check if current heap is larger than 8MB but no INI entry exists
-            // This handles the case where memory was set but INI was removed/not present
-            if (!hasIniEntry && currentHeapMB > 8) {
+            if (!hasIniEntry && currentHeapMB > 8)
                 customMemoryMB = currentHeapMB;
-            }
             
-            // Create step descriptions for the trackbar
             std::vector<std::string> heapSizeLabels = {"4 MB", "6 MB", "8 MB"};
-            
-            // Add custom size if valid (either from INI or current heap > 8MB)
-            if (customMemoryMB > 8) {
+            if (customMemoryMB > 8)
                 heapSizeLabels.push_back(std::to_string(customMemoryMB) + " MB");
-            }
             
-            // Create the V2 trackbar
             auto* heapTrackbar = new tsl::elm::NamedStepTrackBarV2(
-                OVERLAY_MEMORY,
-                "",  // Empty packagePath - callback will handle everything
-                heapSizeLabels,
-                nullptr, nullptr, {}, "",  // No command system needed
-                false,   // unlockedTrackbar - can drag immediately
-                false   // executeOnEveryTick - only save on release
+                OVERLAY_MEMORY, "", heapSizeLabels,
+                nullptr, nullptr, {}, "",
+                false, false
             );
             
-            // Set the initial position based on current heap size
-            u8 initialStep = 1; // Default to 6MB (index 1)
+            u8 initialStep = 1;
+            if      (currentHeapMB == 4)                                   initialStep = 0;
+            else if (currentHeapMB == 6)                                   initialStep = 1;
+            else if (currentHeapMB == 8)                                   initialStep = 2;
+            else if (customMemoryMB > 8 && currentHeapMB == customMemoryMB) initialStep = 3;
             
-            if (currentHeapMB == 4) {
-                initialStep = 0;
-            } else if (currentHeapMB == 6) {
-                initialStep = 1;
-            } else if (currentHeapMB == 8) {
-                initialStep = 2;
-            } else if (customMemoryMB > 8 && currentHeapMB == customMemoryMB) {
-                initialStep = 3;  // Custom size is always last (index 3 now)
-            }
-            
-            // Track the last MB value the slider was at
             auto lastSliderMB = std::make_shared<u32>(currentHeapMB);
             
-            // Use simple callback - gets called when user releases the trackbar
-            heapTrackbar->setSimpleCallback([this, freeRamMB, lastSliderMB, customMemoryMB, hasIniEntry](s16 value, s16 index) {
-                // Map step index → heap size
+            heapTrackbar->setSimpleCallback([this, systemMemoryHeader, freeRamMB, lastSliderMB, customMemoryMB, hasIniEntry](s16 value, s16 index) {
+                // Deduplicated: update RAM header display from a free-RAM value
+                const auto updateRamDisplay = [&](float freeMB) {
+                    char buf[24];
+                    snprintf(buf, sizeof(buf), "%.2f MB %s", freeMB, FREE.c_str());
+                    const char* color = freeMB >= 9.0f ? "healthy_ram" : (freeMB >= 3.0f ? "neutral_ram" : "bad_ram");
+                    systemMemoryHeader->setValue(buf, getRawColor(color, tsl::infoTextColor));
+                };
+            
                 u64 newHeapBytes;
                 u32 newMB;
-                
                 switch (index) {
-                    case 0: newHeapBytes = 0x400000;  newMB = 4; break;   // 4MB
-                    case 1: newHeapBytes = 0x600000;  newMB = 6; break;   // 6MB
-                    case 2: newHeapBytes = 0x800000;  newMB = 8; break;   // 8MB
-                    case 3: 
-                        // Only allow custom size if it came from INI entry
+                    case 0: newHeapBytes = 0x400000; newMB = 4; break;
+                    case 1: newHeapBytes = 0x600000; newMB = 6; break;
+                    case 2: newHeapBytes = 0x800000; newMB = 8; break;
+                    case 3:
                         if (hasIniEntry && customMemoryMB > 8) {
                             newHeapBytes = mbToBytes(customMemoryMB);
                             newMB = customMemoryMB;
-                        } else {
-                            return;  // Invalid or temporary custom size
-                        }
+                        } else return;
                         break;
                     default: return;
                 }
-                
-                OverlayHeapSize newHeapSize = static_cast<OverlayHeapSize>(newHeapBytes);
-                
-                const u32 oldMB = bytesToMB(static_cast<u64>(currentHeapSize));
+            
                 const u32 previousSliderMB = *lastSliderMB;
-                
-                // If no actual change, do nothing
-                if (newMB == previousSliderMB) {
-                    return;
-                }
-                
-                // Determine slider direction
-                bool isSliderShrinking = (newMB < previousSliderMB);
-                bool isSliderGrowing = (newMB > previousSliderMB);
-                
-                // If growing heap relative to ORIGINAL size, check if we have enough memory
+                if (newMB == previousSliderMB) return;
+            
+                const u32 oldMB = bytesToMB(static_cast<u64>(currentHeapSize));
+                const float freeAfterHeapMB = freeRamMB + static_cast<float>(oldMB) - static_cast<float>(newMB);
+            
+                // Reject if growing beyond safe threshold
                 if (newMB > oldMB) {
-                    // Calculate total memory that would be available after freeing current heap
-                    const float totalAvailableMB = freeRamMB + static_cast<float>(oldMB);
-                    
-                    // Safety margin
                     constexpr float SAFETY_MARGIN_MB = 4.0f;
-                    
-                    // Check if new heap size fits in total available memory
-                    if (static_cast<float>(newMB) > (totalAvailableMB - SAFETY_MARGIN_MB)) {
-                        // Not enough memory - REJECT the change
-                        if (tsl::notification) {
+                    if (static_cast<float>(newMB) > (freeRamMB + static_cast<float>(oldMB) - SAFETY_MARGIN_MB)) {
+                        updateRamDisplay(freeAfterHeapMB);
+                        if (tsl::notification)
                             tsl::notification->showNow(NOTIFY_HEADER + NOT_ENOUGH_MEMORY, 23);
-                        }
-                        setOverlayHeapSize(currentHeapSize);
                         this->exitOnBack = false;
                         *lastSliderMB = newMB;
                         return;
                     }
                 }
-                
-                // Change is allowed (either shrinking or enough memory for growth)
+            
+                const OverlayHeapSize newHeapSize = static_cast<OverlayHeapSize>(newHeapBytes);
                 setOverlayHeapSize(newHeapSize);
                 this->exitOnBack = (currentHeapSize != newHeapSize);
-                
-                // Show feature notifications based on slider direction
+            
+                updateRamDisplay(freeAfterHeapMB);
+                *lastSliderMB = newMB;
+            
                 if (tsl::notification) {
-                    if (isSliderShrinking) {
-                        // Going down - check for disabled features
-                        if (previousSliderMB >= 8 && newMB < 8) {
-                            // Wallpaper disabled
+                    if (newMB < previousSliderMB) {
+                        if (previousSliderMB >= 8 && newMB < 8)
                             tsl::notification->showNow(NOTIFY_HEADER + WALLPAPER_SUPPORT_DISABLED, 23);
-                        } else if (previousSliderMB >= 6 && newMB < 6) {
-                            // Sound disabled
-                            tsl::notification->showNow(NOTIFY_HEADER + SOUND_SUPPORT_DISABLED, 23);
-                        }
-                    } else if (isSliderGrowing) {
-                        // Going up - check for enabled features
-                        if (previousSliderMB < 8 && newMB >= 8) {
-                            // Wallpaper enabled
-                            tsl::notification->showNow(NOTIFY_HEADER + WALLPAPER_SUPPORT_ENABLED, 23);
-                        } else if (previousSliderMB < 6 && newMB >= 6) {
-                            // Sound enabled
+                        else if (previousSliderMB >= 6 && newMB < 6)
                             tsl::notification->showNow(NOTIFY_HEADER + SOUND_SUPPORT_ENABLED, 23);
-                        }
+                    } else {
+                        if (previousSliderMB < 8 && newMB >= 8)
+                            tsl::notification->showNow(NOTIFY_HEADER + WALLPAPER_SUPPORT_ENABLED, 23);
+                        else if (previousSliderMB < 6 && newMB >= 6)
+                            tsl::notification->showNow(NOTIFY_HEADER + SOUND_SUPPORT_ENABLED, 23);
                     }
                 }
-                
-                // Update slider position after successful change
-                *lastSliderMB = newMB;
             });
             
             heapTrackbar->setProgress(initialStep);
@@ -1244,7 +1193,7 @@ public:
             // Add an "Exit Overlay System" menu item
             auto* exitItem = new tsl::elm::ListItem(EXIT_OVERLAY_SYSTEM, "", true);
             exitItem->enableTouchHolding();
-            exitItem->setValue("", true);
+            exitItem->setValue(HOLD_A_SYMBOL, true);
 
             exitItem->setClickListener([this, exitItem](uint64_t keys) {
                 if ((keys & KEY_A) && !(keys & ~KEY_A & ALL_KEYS_MASK)) {
@@ -1571,6 +1520,29 @@ public:
                 //addHeader(list, "Max Notifications");
                 addGap(list, 12);
                 list->addItem(notifTrackbar);
+            }
+
+            {
+                addHeader(list, USER_GUIDE);
+                
+                std::vector<std::string> sectionLines = {
+                    DISMISS_NOTIFICATION,
+                    API_TOGGLE,
+                };
+                
+                std::vector<std::string> infoLines = {
+                    "\uE0B6 ("+CLICK+")\uE058 ("+TAP+")",
+                    "\uE0B6 ("+HOLD_FOR_4S+")",
+                };
+                
+                size_t maxInfoWidth = 0;
+                for (const auto& s : infoLines)
+                    maxInfoWidth = std::max(maxInfoWidth, static_cast<size_t>(tsl::gfx::calculateStringWidth(s, 16, false)));
+                
+                std::vector<std::vector<std::string>> dummyTableData;
+                drawTable(list, dummyTableData, sectionLines, infoLines,
+                    static_cast<size_t>(tsl::cfg::FramebufferWidth) - 90 - maxInfoWidth,
+                    20, 9, 4);
             }
 
         } else if (dropdownSelection == "miscMenu") {
@@ -1931,7 +1903,7 @@ public:
         addGap(list, 12);
 
         auto* deleteListItem = new tsl::elm::ListItem(isOverlay ? DELETE_OVERLAY : DELETE_PACKAGE);
-        deleteListItem->setValue("", true);
+        deleteListItem->setValue(HOLD_A_SYMBOL, true);
         
         deleteListItem->setClickListener([this, deleteListItem](uint64_t keys) -> bool {
             if (runningInterpreter.load(std::memory_order_acquire))
@@ -2896,13 +2868,13 @@ private:
 public:
     SelectionOverlay(const std::string& path, const std::string& key, const std::string& footerKey, const std::string& _lastPackageHeader, const std::vector<std::vector<std::string>>& commands, bool showWidget = false)
         : filePath(path), specificKey(key), specifiedFooterKey(footerKey), lastPackageHeader(_lastPackageHeader), selectionCommands(commands), showWidget(showWidget) {
-        std::lock_guard<std::mutex> lock(transitionMutex);
+        //std::lock_guard<std::mutex> lock(transitionMutex);
         lastSelectedListItem = nullptr;
         tsl::clearGlyphCacheNow.store(true, release);
     }
 
     ~SelectionOverlay() {
-        std::lock_guard<std::mutex> lock(transitionMutex);
+        //std::lock_guard<std::mutex> lock(transitionMutex);
         lastSelectedListItem = nullptr;
         tsl::clearGlyphCacheNow.store(true, release);
     }
@@ -3196,7 +3168,7 @@ public:
     }
 
     virtual tsl::elm::Element* createUI() override {
-        std::lock_guard<std::mutex> lock(transitionMutex);
+        //std::lock_guard<std::mutex> lock(transitionMutex);
         inSelectionMenu = true;
         
     
@@ -5415,7 +5387,7 @@ public:
     PackageMenu(const std::string& path, const std::string& sectionName = "", const std::string& page = LEFT_STR,
         const std::string& _packageName = PACKAGE_FILENAME, const size_t _nestedlayer = 0, const std::string& _pageHeader = "") :
         packagePath(path), dropdownSection(sectionName), currentPage(page), packageName(_packageName), nestedLayer(_nestedlayer), pageHeader(_pageHeader) {
-            std::lock_guard<std::mutex> lock(transitionMutex);
+            //std::lock_guard<std::mutex> lock(transitionMutex);
 
             if (!skipJumpReset.load(acquire)) {
                 jumpItemName = "";
@@ -5433,7 +5405,7 @@ public:
      * Cleans up any resources associated with the `PackageMenu` instance.
      */
     ~PackageMenu() {
-        std::lock_guard<std::mutex> lock(transitionMutex);
+        //std::lock_guard<std::mutex> lock(transitionMutex);
 
         if (returningToMain || returningToHiddenMain) {
             tsl::clearGlyphCacheNow.store(true, release);
@@ -5482,7 +5454,7 @@ public:
      * @return A pointer to the GUI element representing the sub-menu overlay.
      */
     virtual tsl::elm::Element* createUI() override {
-        std::lock_guard<std::mutex> lock(transitionMutex);
+        //std::lock_guard<std::mutex> lock(transitionMutex);
 
         if (dropdownSection.empty()){
             inPackageMenu = true;
@@ -6033,7 +6005,7 @@ public:
      * Initializes a new instance of the `MainMenu` class with the necessary parameters.
      */
     MainMenu(const std::string& hiddenMenuMode = "", const std::string& sectionName = "") : hiddenMenuMode(hiddenMenuMode), dropdownSection(sectionName) {
-        std::lock_guard<std::mutex> lock(transitionMutex);
+        //std::lock_guard<std::mutex> lock(transitionMutex);
 
         {
             if (skipJumpReset.exchange(false, std::memory_order_acq_rel)) {
@@ -6051,7 +6023,7 @@ public:
      * Cleans up any resources associated with the `MainMenu` instance.
      */
     ~MainMenu() {
-        std::lock_guard<std::mutex> lock(transitionMutex);
+        //std::lock_guard<std::mutex> lock(transitionMutex);
     }
     
     /**
@@ -6063,7 +6035,7 @@ public:
      * @return A pointer to the GUI element representing the main menu overlay.
      */
     virtual tsl::elm::Element* createUI() override {
-        std::lock_guard<std::mutex> lock(transitionMutex);
+        //std::lock_guard<std::mutex> lock(transitionMutex);
     
         // Handle hidden mode flags
         {
@@ -7077,6 +7049,8 @@ public:
                         jumpItemName = "";
                         jumpItemValue = "";
                         jumpItemExactMatch.store(true, release);
+                        returnJumpItemName = "";
+                        returnJumpItemValue = "";
                     }
                     allowSlide.store(false, release);
                     unlockedSlide.store(false, release);
@@ -7088,8 +7062,8 @@ public:
 
                         if (tsl::elm::s_safeToSwap.load(acquire)) {
                             currentMenu = usePageSwap ? OVERLAYS_STR : PACKAGES_STR;
-                            tsl::swapTo<MainMenu>();
                             resetNavState();
+                            tsl::swapTo<MainMenu>();
 
                             if (!wasSimulated)
                                 triggerNavigationFeedback();
@@ -7106,8 +7080,8 @@ public:
 
                         if (tsl::elm::s_safeToSwap.load(acquire)) {
                             currentMenu = usePageSwap ? PACKAGES_STR : OVERLAYS_STR;
-                            tsl::swapTo<MainMenu>();
                             resetNavState();
+                            tsl::swapTo<MainMenu>();
                             if (!wasSimulated)
                                 triggerNavigationFeedback();
                             else
