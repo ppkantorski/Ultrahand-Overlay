@@ -884,7 +884,7 @@ public:
             }
             addListItem(list, WIDGET, DROPDOWN_SYMBOL, "widgetMenu");
 
-            addGap(list, 12);
+            //addGap(list, 12);
             addListItem(list, MISCELLANEOUS, DROPDOWN_SYMBOL, "miscMenu");
 
         } else if (dropdownSelection == KEY_COMBO_STR) {
@@ -2026,7 +2026,7 @@ public:
             const std::vector<std::string> labelList = splitIniList(getValue("mode_labels"));
             
             if (!modeList.empty()) {
-                
+
                 auto* systemMemoryHeader = new tsl::elm::CategoryHeader(MODE);
                 systemMemoryHeader->setValue(KEY_COMBO, tsl::headerTextColor);
                 list->addItem(systemMemoryHeader);
