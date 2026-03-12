@@ -2026,8 +2026,10 @@ public:
             const std::vector<std::string> labelList = splitIniList(getValue("mode_labels"));
             
             if (!modeList.empty()) {
-                addTable(list, {{MODE, "", KEY_COMBO}}, "", 165+2, 19-2, 19-2, 0, 
-                        "header", "header", DEFAULT_STR, RIGHT_STR, true, true, false, true, "none", false);
+                
+                auto* systemMemoryHeader = new tsl::elm::CategoryHeader(MODE);
+                systemMemoryHeader->setValue(KEY_COMBO, tsl::headerTextColor);
+                list->addItem(systemMemoryHeader);
                 
                 std::vector<std::string> combos = comboList;
                 if (combos.size() < modeList.size()) combos.resize(modeList.size(), "");
