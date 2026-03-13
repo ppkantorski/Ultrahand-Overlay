@@ -2500,7 +2500,7 @@ private:
 
     void addListItem(tsl::elm::List* list, const std::string& line) {
         auto* listItem = new tsl::elm::ListItem(line);
-
+        listItem->setKeepTag(true);
         listItem->setClickListener([filePath=filePath, specificKey=specificKey, listItem, line](uint64_t keys) {
             if (runningInterpreter.load(acquire)) return false;
 

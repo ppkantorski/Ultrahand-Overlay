@@ -2114,6 +2114,19 @@ std::string replaceJsonPlaceholder(const std::string& arg, const std::string& co
         if (validValue && value && cJSON_IsString(value) && value->valuestring) {
             // Append the value as-is, even if it's an empty string
             result.append(value->valuestring);
+        } else if (validValue && value && cJSON_IsNumber(value)) {
+            // Handle numeric JSON values
+            double d = value->valuedouble;
+            if (d == (double)(long long)d) {
+                result.append(std::to_string((long long)d));
+            } else {
+                char buf[32];
+                snprintf(buf, sizeof(buf), "%g", d);
+                result.append(buf);
+            }
+        } else if (validValue && value && cJSON_IsBool(value)) {
+            // Handle boolean JSON values
+            result.append(cJSON_IsTrue(value) ? TRUE_STR : FALSE_STR);
         } else {
             // Key doesn't exist or isn't a string - try "null" fallback
             cJSON* fallbackValue = cJSON_GetObjectItemCaseSensitive(root, NULL_STR.c_str());
