@@ -4341,7 +4341,7 @@ void processCommand(const std::vector<std::string>& cmd, const std::string& pack
             
                     const bool hasTitle = !title.empty();
                     const int  fontSize = !fontStr.empty()  ? std::clamp(ult::stoi(fontStr), 1, 34)
-                                                             : (hasTitle ? 24 : 23);
+                                                             : (hasTitle ? 24 : 26);
                     const std::string_view alignment = !alignStr.empty() ? std::string_view(alignStr)
                                                                           : (hasTitle ? LEFT_STR : CENTER_STR);
                     const bool showTime = showTimeStr.empty() || showTimeStr == TRUE_STR;
