@@ -1324,7 +1324,7 @@ static bool buildTableDrawerLines(
                 }
                 else {
                     baseSection.push_back(getTranslated(cmd[0]));
-                    baseInfo.push_back(getTranslated(cmd.size() > 2 ? cmd[2] : ""));
+                    baseInfo.push_back(getTranslated(cmd.size() > 1 ? cmd[1] : ""));
                 }
             }
         }

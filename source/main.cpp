@@ -1016,28 +1016,28 @@ public:
             const std::string hekateStr = hekateVersion.empty() ? UNAVAILABLE_SELECTION : hekateVersion;
             
             tableData = {
-                {FIRMWARE, "", versionString},
-                {"└ hekate", "", hekateStr},
-                {LOCAL_IP, "", getLocalIpAddress()}
+                {FIRMWARE, versionString},
+                {"└ hekate", hekateStr},
+                {LOCAL_IP, getLocalIpAddress()}
             };
             addTable(list, tableData, "", 164, 20, 28, 4);
             
             // Hardware and storage info - clear() is cheap, reuses capacity
             tableData.clear();
             tableData = {
-                {HARDWARE, "", modelRev},
-                {MEMORY, "", memorySize},
-                {"└ " + VENDOR, "", memoryVendor},
-                {"└ " + MODEL, "", memoryModel},
-                {STORAGE, "", usingEmunand ? "emuMMC" : "sysMMC"},
-                {"└ eMMC ", "", getStorageInfo("emmc")},
-                {"└ SD Card", "", getStorageInfo("sdmc")}
+                {HARDWARE, modelRev},
+                {MEMORY, memorySize},
+                {"└ " + VENDOR, memoryVendor},
+                {"└ " + MODEL, memoryModel},
+                {STORAGE, usingEmunand ? "emuMMC" : "sysMMC"},
+                {"└ eMMC ", getStorageInfo("emmc")},
+                {"└ SD Card", getStorageInfo("sdmc")}
             };
             addTable(list, tableData, "", 164, 20, 28, 4);
             
             // CPU, GPU, and SOC info
             tableData.clear();
-            tableData = {{"", "", "CPU      GPU      SOC"}};
+            tableData = {{"", "CPU      GPU      SOC"}};
             addTable(list, tableData, "", 163, 9, 3, 0, DEFAULT_STR, "section", "section", RIGHT_STR, true);
             
             tableData.clear();
@@ -1045,13 +1045,13 @@ public:
             // Branchless validation check - single bitwise OR instead of 6 comparisons
             if ((cpuSpeedo0 | cpuSpeedo2 | socSpeedo0 | cpuIDDQ | gpuIDDQ | socIDDQ) != 0) {
                 tableData = {
-                    {"Speedo", "", customAlign(cpuSpeedo0) + " "+DIVIDER_SYMBOL+" " + customAlign(cpuSpeedo2) + " "+DIVIDER_SYMBOL+" " + customAlign(socSpeedo0)},
-                    {"IDDQ",   "", customAlign(cpuIDDQ) + " "+DIVIDER_SYMBOL+" " + customAlign(gpuIDDQ) + " "+DIVIDER_SYMBOL+" " + customAlign(socIDDQ)}
+                    {"Speedo", customAlign(cpuSpeedo0) + " "+DIVIDER_SYMBOL+" " + customAlign(cpuSpeedo2) + " "+DIVIDER_SYMBOL+" " + customAlign(socSpeedo0)},
+                    {"IDDQ",   customAlign(cpuIDDQ) + " "+DIVIDER_SYMBOL+" " + customAlign(gpuIDDQ) + " "+DIVIDER_SYMBOL+" " + customAlign(socIDDQ)}
                 };
             } else {
                 tableData = {
-                    {"Speedo", "", "⋯    "+DIVIDER_SYMBOL+"    ⋯    "+DIVIDER_SYMBOL+"    ⋯  "},
-                    {"IDDQ",   "", "⋯    "+DIVIDER_SYMBOL+"    ⋯    "+DIVIDER_SYMBOL+"    ⋯  "}
+                    {"Speedo", "⋯    "+DIVIDER_SYMBOL+"    ⋯    "+DIVIDER_SYMBOL+"    ⋯  "},
+                    {"IDDQ",   "⋯    "+DIVIDER_SYMBOL+"    ⋯    "+DIVIDER_SYMBOL+"    ⋯  "}
                 };
             }
             addTable(list, tableData, "", 164, 20, 1, 4);
