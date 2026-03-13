@@ -104,6 +104,7 @@ def main():
             "config/ultrahand",
             "config/ultrahand/downloads",
             "config/ultrahand/flags",
+            "config/ultrahand/flags/notifications",
             "config/ultrahand/lang",
             "config/ultrahand/notifications",
             "config/ultrahand/payloads",
