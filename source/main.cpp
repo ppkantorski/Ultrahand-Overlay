@@ -1174,7 +1174,7 @@ public:
                         if (previousSliderMB >= 8 && newMB < 8)
                             tsl::notification->showNow(NOTIFY_HEADER + WALLPAPER_SUPPORT_DISABLED, 23);
                         else if (previousSliderMB >= 6 && newMB < 6)
-                            tsl::notification->showNow(NOTIFY_HEADER + SOUND_SUPPORT_ENABLED, 23);
+                            tsl::notification->showNow(NOTIFY_HEADER + SOUND_SUPPORT_DISABLED, 23);
                     } else {
                         if (previousSliderMB < 8 && newMB >= 8)
                             tsl::notification->showNow(NOTIFY_HEADER + WALLPAPER_SUPPORT_ENABLED, 23);
