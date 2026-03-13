@@ -7456,7 +7456,7 @@ public:
             }
         }
         if (firstBoot && tsl::notification && useStartupNotification) {
-            tsl::notification->show("  "+ ((!reloadingBoot) ? ULTRAHAND_HAS_STARTED : ULTRAHAND_HAS_RESTARTED));
+            tsl::notification->showNow("  "+ ((!reloadingBoot) ? ULTRAHAND_HAS_STARTED : ULTRAHAND_HAS_RESTARTED));
         }
 
         // Default behavior - load main menu
