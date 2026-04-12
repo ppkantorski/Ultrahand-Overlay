@@ -1051,7 +1051,7 @@ void addDummyListItem(auto& list, s32 index = -1) {
 }
 
 void addSelectionIsEmptyDrawer(auto& list) {
-    addDummyListItem(list);
+    //addDummyListItem(list);
     auto* warning = new tsl::elm::CustomDrawer([](tsl::gfx::Renderer* renderer, u16, u16, u16, u16){
         // Icon
         const size_t iconX = (448 - renderer->getTextDimensions("\uE150", false, 90).first) / 2;
@@ -1477,11 +1477,48 @@ void drawTable(
             
             const size_t count = cacheExpSec.size();
             const s32 baseX = x + 12;
-            
+
+            // ── Viewport culling ──────────────────────────────────────────────
+            // TableDrawer::draw calls enableScissoring(0, 88, w, FramebufferHeight-163)
+            // before invoking this lambda, so any row whose pixels fall entirely
+            // outside [kClipTop, kClipBottom) produces no visible output.
+            // drawString still runs full glyph-lookup work (mutex lock, shared_ptr
+            // atomic ops per character) for every row it is called on — including
+            // off-screen ones — because the scissor clip happens deep inside
+            // renderGlyph, after all setup is done.
+            //
+            // cacheYOff is monotonically increasing (processLines increments curY
+            // by lineHeight+newlineGap every step), so:
+            //   • Binary-search for the first row whose bottom edge reaches kClipTop.
+            //   • Break as soon as a row's baseline is at or past kClipBottom —
+            //     all subsequent rows are further down and also invisible.
+            //
+            // Result: O(log N) skip of off-screen rows above + O(1) exit below,
+            // reducing drawString calls from O(total) to O(visible) every frame.
+            static constexpr s32 kRowH     = 16;   // lineHeight / fontSize constant
+            static constexpr s32 kClipTop  = 88;
+            const s32 kClipBottom = kClipTop
+                + static_cast<s32>(tsl::cfg::FramebufferHeight) - 73 - 97 + 2 + 5;
+
+            // Lower-bound binary search: first row where bottom edge > kClipTop.
+            size_t firstVis = 0;
+            {
+                size_t lo = 0, hi = count;
+                while (lo < hi) {
+                    const size_t mid = (lo + hi) >> 1;
+                    if (y + cacheYOff[mid] + kRowH <= kClipTop)
+                        lo = mid + 1;
+                    else
+                        hi = mid;
+                }
+                firstVis = lo;
+            }
+
             if (sameCol) {
                 // Fastest path: same colors, minimal function calls
-                for (size_t i = 0; i < count; ++i) {
+                for (size_t i = firstVis; i < count; ++i) {
                     const s32 yPos = y + cacheYOff[i];
+                    if (yPos >= kClipBottom) break;
                     renderer->drawStringWithColoredSections(cacheExpSec[i], false, tsl::s_dividerSpecialChars, baseX, yPos, 16, secColor, dividerColor);
                     renderer->drawStringWithColoredSections(cacheExpInfo[i], false, tsl::s_dividerSpecialChars, x + cacheXOff[i], yPos, 16, infoColor, dividerColor);
                 }
@@ -1489,8 +1526,9 @@ void drawTable(
                 // Different colors path
                 const auto hiliteColor = hiliteRaw;
                 
-                for (size_t i = 0; i < count; ++i) {
+                for (size_t i = firstVis; i < count; ++i) {
                     const s32 yPos = y + cacheYOff[i];
+                    if (yPos >= kClipBottom) break;
                     renderer->drawStringWithColoredSections(cacheExpSec[i], false, tsl::s_dividerSpecialChars, baseX, yPos, 16, secColor, dividerColor);
                     renderer->drawStringWithHighlight(
                         cacheExpInfo[i], false, x + cacheXOff[i], yPos, 16,
@@ -4344,7 +4382,9 @@ void processCommand(const std::vector<std::string>& cmd, const std::string& pack
                         return {};
                     };
             
-                    const std::string fontStr = tryConsume([](const std::string& s){ return isValidNumber(s) && ult::stoi(s) <= 34; });
+                    const std::string fontStr = tryConsume([](const std::string& s){ 
+                        return isValidNumber(s) && ult::stoi(s) >= 1 && ult::stoi(s) <= 34; 
+                    });
                     const std::string alignStr = tryConsume([](const std::string& s){ return s == LEFT_STR || s == CENTER_STR || s == RIGHT_STR; });
                     const std::string splitStr = tryConsume([](const std::string& s){ return s == WORD_STR || s == CHAR_STR; });
                     const std::string durStr = tryConsume([](const std::string& s){ return isValidNumber(s); });
