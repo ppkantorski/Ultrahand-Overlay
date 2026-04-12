@@ -1496,7 +1496,7 @@ void drawTable(
             // Result: O(log N) skip of off-screen rows above + O(1) exit below,
             // reducing drawString calls from O(total) to O(visible) every frame.
             static constexpr s32 kRowH     = 16;   // lineHeight / fontSize constant
-            static constexpr s32 kClipTop  = 88;
+            static constexpr s32 kClipTop  = 88+10;
             const s32 kClipBottom = kClipTop
                 + static_cast<s32>(tsl::cfg::FramebufferHeight) - 73 - 97 + 2 + 5;
 

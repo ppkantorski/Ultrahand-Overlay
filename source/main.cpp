@@ -412,8 +412,9 @@ bool processHold(uint64_t keysDown, uint64_t keysHeld, u64& holdStartTick, bool&
     const int percentage = std::min(100, static_cast<int>((elapsedMs * 100) / 3000));
     displayPercentage.store(percentage, std::memory_order_release);
     
-    if (percentage > 20 && (percentage % 30) == 0)
-        triggerRumbleDoubleClick.store(true, std::memory_order_release);
+    if (percentage > 20 && (percentage % 30) == 0) {
+        triggerRumbleDoubleClickFeedback();
+    }
     
     // Completed hold
     if (percentage >= 100) {
@@ -437,6 +438,118 @@ bool processHold(uint64_t keysDown, uint64_t keysHeld, u64& holdStartTick, bool&
 
 static std::string returnJumpItemName;
 static std::string returnJumpItemValue;
+
+// ── Shared helpers ────────────────────────────────────────────────────────────
+// These free functions consolidate repeated logic that appears identically in
+// multiple handleInput overrides. Extracting them produces a single copy in
+// the binary instead of one per class, which LTO cannot merge on its own
+// because each class has its own `this` layout.
+
+// Wraps the common setIniFileValue call for the Ultrahand config section.
+// Called 17× in this file; centralising removes repeated argument setup at
+// each call site.
+[[gnu::noinline]]
+static void setUltrahandConfig(const std::string& key, const std::string& value) {
+    setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, key, value);
+}
+
+// Handles the wallpaper-reload side-effect block that follows interpreter
+// completion in PackageMenu and MainMenu.
+[[gnu::noinline]]
+static void handleWallpaperReload() {
+    closeInterpreterThread();
+    ult::reloadWallpaper();
+    if (!limitedMemory && useSoundEffects) {
+        reloadSoundCacheNow.store(true, std::memory_order_release);
+        signalSound();
+    }
+}
+
+// Handles the goBackAfter flag that appears identically in 6 handleInput
+// overrides. Returns true when the flag was set (caller should propagate).
+[[gnu::noinline]]
+static bool handleGoBackAfter() {
+    if (goBackAfter.exchange(false, std::memory_order_acq_rel)) {
+        disableSound.store(true, std::memory_order_release);
+        simulatedBack.store(true, std::memory_order_release);
+        return true;
+    }
+    return false;
+}
+
+// Handles the full interpreter-completion block shared by PackageMenu and
+// MainMenu: updates the list-item footer/checkmark/toggle, closes the thread,
+// resets percentages, and triggers sound/rumble feedback.
+// packageConfigIniPath is the only value that differs between the two callers.
+[[gnu::noinline]]
+static void handleInterpreterCompletion(const std::string& packageConfigIniPath) {
+    isDownloadCommand.store(false, std::memory_order_release);
+
+    if (lastSelectedListItem) {
+        const bool success = commandSuccess.load(std::memory_order_acquire);
+
+        if (lastCommandMode == OPTION_STR || lastCommandMode == SLOT_STR) {
+            if (success) {
+                if (isFile(packageConfigIniPath)) {
+                    auto packageConfigData = getParsedDataFromIniFile(packageConfigIniPath);
+
+                    if (auto it = packageConfigData.find(lastKeyName); it != packageConfigData.end()) {
+                        auto& optionSection = it->second;
+
+                        if (auto footerIt = optionSection.find(FOOTER_STR);
+                            footerIt != optionSection.end() &&
+                            footerIt->second.find(NULL_STR) == std::string::npos)
+                        {
+                            auto footerHighlightIt = optionSection.find(FOOTER_HIGHLIGHT_STR);
+                            if (footerHighlightIt != optionSection.end()) {
+                                bool footerHighlightFromIni = (footerHighlightIt->second == TRUE_STR);
+                                lastSelectedListItem->setValue(footerIt->second, !footerHighlightFromIni);
+                            } else {
+                                lastSelectedListItem->setValue(footerIt->second, false);
+                            }
+                        }
+                    }
+
+                    lastCommandMode.clear();
+                } else {
+                    lastSelectedListItem->setValue(CHECKMARK_SYMBOL);
+                }
+            } else {
+                lastSelectedListItem->setValue(CROSSMARK_SYMBOL);
+            }
+        } else {
+            if (nextToggleState.empty()) {
+                lastSelectedListItem->setValue(success ? CHECKMARK_SYMBOL : CROSSMARK_SYMBOL);
+            } else {
+                const std::string finalState = success
+                    ? nextToggleState
+                    : (nextToggleState == CAPITAL_ON_STR ? CAPITAL_OFF_STR : CAPITAL_ON_STR);
+
+                lastSelectedListItem->setValue(finalState);
+                static_cast<tsl::elm::ToggleListItem*>(lastSelectedListItem)
+                    ->setState(finalState == CAPITAL_ON_STR);
+                setIniFileValue(packageConfigIniPath, lastKeyName, FOOTER_STR, finalState);
+
+                lastKeyName.clear();
+                nextToggleState.clear();
+            }
+        }
+
+        lastSelectedListItem->enableClickAnimation();
+        lastSelectedListItem = nullptr;
+        lastFooterHighlight = lastFooterHighlightDefined = false;
+    }
+
+    closeInterpreterThread();
+    resetPercentages();
+
+    if (!commandSuccess.load())
+        triggerRumbleDoubleClick.store(true, std::memory_order_release);
+    if (!limitedMemory && useSoundEffects)
+        reloadSoundCacheNow.store(true, std::memory_order_release);
+    signalFeedback();
+}
+// ─────────────────────────────────────────────────────────────────────────────
 
 // Forward declaration of the MainMenu class.
 class MainMenu;
@@ -590,7 +703,7 @@ private:
                 
 
                 if ((keys & KEY_A && !(keys & ~KEY_A & ALL_KEYS_MASK))) {
-                    setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, iniKey, item);
+                    setUltrahandConfig(iniKey, item);
                     
                     if (targetMenu == KEY_COMBO_STR) {
                         // Also set it in tesla config
@@ -728,7 +841,7 @@ private:
             // Calculate the actual logical state first
             const bool actualState = invertLogic ? !newState : newState;
             
-            setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, iniKey, actualState ? TRUE_STR : FALSE_STR);
+            setUltrahandConfig(iniKey, actualState ? TRUE_STR : FALSE_STR);
 
             // Store actualState on first click
             if (!firstState->has_value()) {
@@ -926,7 +1039,7 @@ public:
                     }
                     if (triggerClick && tsl::elm::s_currentScrollVelocity <= 1.0f && tsl::elm::s_currentScrollVelocity >= -1.0f) {
                         triggerClick = false;
-                        setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, DEFAULT_LANG_STR, defaultLangMode);
+                        setUltrahandConfig(DEFAULT_LANG_STR, defaultLangMode);
                         reloadMenu = reloadMenu2 = true;
                         parseLanguage(langFile);
                         if (skipLang && defaultLangMode == "en") reinitializeLangVars();
@@ -1228,7 +1341,7 @@ public:
                 if (runningInterpreter.load(acquire)) return false;
 
                 if ((keys & KEY_A && !(keys & ~KEY_A & ALL_KEYS_MASK))) {
-                    setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "current_theme", DEFAULT_STR);
+                    setUltrahandConfig("current_theme", DEFAULT_STR);
                     deleteFileOrDirectory(THEME_CONFIG_INI_PATH);
                     if (isFile(defaultTheme)) {
                         copyFileOrDirectory(defaultTheme, THEME_CONFIG_INI_PATH);
@@ -1271,7 +1384,7 @@ public:
                     if (runningInterpreter.load(acquire)) return false;
 
                     if ((keys & KEY_A && !(keys & ~KEY_A & ALL_KEYS_MASK))) {
-                        setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "current_theme", themeName);
+                        setUltrahandConfig("current_theme", themeName);
                         copyFileOrDirectory(themeFile, THEME_CONFIG_INI_PATH);
                         copyPercentage.store(-1, release);
                         tsl::initializeTheme();
@@ -1313,11 +1426,11 @@ public:
                 if (runningInterpreter.load(acquire)) return false;
         
                 if ((keys & KEY_A && !(keys & ~KEY_A & ALL_KEYS_MASK))) {
-                    setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "current_sounds", OPTION_SYMBOL);
+                    setUltrahandConfig("current_sounds", OPTION_SYMBOL);
                     deleteFileOrDirectoryByPattern(LOADED_SOUNDS_PATH+"*.wav");
                     ult::Audio::unloadAllSounds({});
 
-                    setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "sound_effects", FALSE_STR);
+                    setUltrahandConfig("sound_effects", FALSE_STR);
                     useSoundEffects = false;
                     
                     updateSelectionUI(listItem, OPTION_SYMBOL);
@@ -1352,11 +1465,11 @@ public:
         
                     if ((keys & KEY_A && !(keys & ~KEY_A & ALL_KEYS_MASK))) {
                         
-                        setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "current_sounds", soundsName);
+                        setUltrahandConfig("current_sounds", soundsName);
                         deleteFileOrDirectoryByPattern(LOADED_SOUNDS_PATH+"*.wav");
                         unzipFile(soundsFile, LOADED_SOUNDS_PATH);
                         
-                        setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "sound_effects", TRUE_STR);
+                        setUltrahandConfig("sound_effects", TRUE_STR);
                         useSoundEffects = true;
 
                         if (!ult::Audio::m_initialized)
@@ -1394,7 +1507,7 @@ public:
                 if (runningInterpreter.load(acquire)) return false;
 
                 if ((keys & KEY_A && !(keys & ~KEY_A & ALL_KEYS_MASK))) {
-                    setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "current_wallpaper", "");
+                    setUltrahandConfig("current_wallpaper", "");
                     deleteFileOrDirectory(WALLPAPER_PATH);
                     reloadWallpaper();
                     if (lastSelectedListItem)
@@ -1430,7 +1543,7 @@ public:
                     if (runningInterpreter.load(acquire)) return false;
 
                     if ((keys & KEY_A && !(keys & ~KEY_A & ALL_KEYS_MASK))) {
-                        setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "current_wallpaper", wallpaperName);
+                        setUltrahandConfig("current_wallpaper", wallpaperName);
                         copyFileOrDirectory(wallpaperFile, WALLPAPER_PATH);
                         copyPercentage.store(-1, release);
                         reloadWallpaper();
@@ -1509,7 +1622,7 @@ public:
                     const int newVal = static_cast<int>(index) + 1;
                     const int maxAllowed = ult::limitedMemory ? 4 : tsl::NotificationPrompt::MAX_VISIBLE;
                     const int clamped = std::max(1, std::min(newVal, maxAllowed));
-                    setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "max_notifications", std::to_string(clamped));
+                    setUltrahandConfig("max_notifications", std::to_string(clamped));
                     tsl::maxNotifications = clamped;
                 });
 
@@ -1687,15 +1800,12 @@ public:
             if (!limitedMemory && useSoundEffects) {
                 reloadSoundCacheNow.store(true, std::memory_order_release);
             }
+            signalFeedback();
 
             return true;
         }
         
-        if (goBackAfter.exchange(false, std::memory_order_acq_rel)) {
-            disableSound.store(true, std::memory_order_release);
-            simulatedBack.store(true, std::memory_order_release);
-            return true;
-        }
+        if (handleGoBackAfter()) return true;
         
         if (inSettingsMenu && !inSubSettingsMenu) {
             if (!returningToSettings) {
@@ -1741,7 +1851,7 @@ public:
 
                 if (softwareHasUpdated) {
                     // Instead of going back, trigger the reload directly
-                    setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, IN_OVERLAY_STR, TRUE_STR);
+                    setUltrahandConfig(IN_OVERLAY_STR, TRUE_STR);
 
                     ult::launchingOverlay.store(true, std::memory_order_release);
                     tsl::setNextOverlay(OVERLAY_PATH+"ovlmenu.ovl", "--skipCombo --comboReturn");
@@ -2269,11 +2379,7 @@ public:
      */
     virtual bool handleInput(u64 keysDown, u64 keysHeld, touchPosition touchInput, JoystickPosition leftJoyStick, JoystickPosition rightJoyStick) override {
 
-        if (goBackAfter.exchange(false, std::memory_order_acq_rel)) {
-            disableSound.store(true, std::memory_order_release);
-            simulatedBack.store(true, std::memory_order_release);
-            return true;
-        }
+        if (handleGoBackAfter()) return true;
 
         static bool runAfter = false;
         if (runAfter) {
@@ -2295,7 +2401,7 @@ public:
                 inMainMenu.store(false, std::memory_order_release);
                 inHiddenMode.store(true, std::memory_order_release);
                 if (entryMode == OVERLAY_STR)
-                    setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, IN_HIDDEN_OVERLAY_STR, TRUE_STR);
+                    setUltrahandConfig(IN_HIDDEN_OVERLAY_STR, TRUE_STR);
                 else
                     popCount = 2;
             } else {
@@ -2334,9 +2440,8 @@ public:
                         lastSelectedListItem->setValue(CHECKMARK_SYMBOL);
                         lastSelectedListItem = nullptr;
                     }
-        
-                    triggerRumbleDoubleClick.store(true, std::memory_order_release);
-                    triggerMoveSound.store(true, std::memory_order_release);
+                    
+                    triggerMoveFeedback(true);
                     runAfter = true;
                 } else if (lastSelectedListItem) {
                     lastSelectedListItem->setValue(CROSSMARK_SYMBOL);
@@ -2380,7 +2485,7 @@ public:
                             inMainMenu.store(false, std::memory_order_release);
                             inHiddenMode.store(true, std::memory_order_release);
                             if (entryMode == OVERLAY_STR)
-                                setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, IN_HIDDEN_OVERLAY_STR, TRUE_STR);
+                                setUltrahandConfig(IN_HIDDEN_OVERLAY_STR, TRUE_STR);
                             else
                                 popCount = 2;
                         } else {
@@ -2559,8 +2664,6 @@ public:
             isFromMainMenu = (fromMenu == "main");
             isFromPackage = (fromMenu == "package");
             isFromSelectionMenu = (fromMenu == "selection");
-            triggerRumbleClick.store(true, std::memory_order_release);
-            triggerSettingsSound.store(true, std::memory_order_release);
         }
 
     ~ScriptOverlay() {}
@@ -2681,6 +2784,8 @@ public:
         rootFrame->setContent(list);
         if (showWidget)
             rootFrame->m_showWidget = true;
+
+        triggerSettingsFeedback();
         return rootFrame;
     }
 
@@ -2706,14 +2811,11 @@ public:
             if (!limitedMemory && useSoundEffects) {
                 reloadSoundCacheNow.store(true, std::memory_order_release);
             }
+            signalFeedback();
             return true;
         }
         
-        if (goBackAfter.exchange(false, std::memory_order_acq_rel)) {
-            disableSound.store(true, std::memory_order_release);
-            simulatedBack.store(true, std::memory_order_release);
-            return true;
-        }
+        if (handleGoBackAfter()) return true;
         
         if (inScriptMenu) {
             simulatedNextPage.exchange(false, std::memory_order_acq_rel);
@@ -3773,15 +3875,12 @@ public:
             if (!limitedMemory && useSoundEffects) {
                 reloadSoundCacheNow.store(true, std::memory_order_release);
             }
+            signalFeedback();
 
             return true;
         }
         
-        if (goBackAfter.exchange(false, std::memory_order_acq_rel)) {
-            disableSound.store(true, std::memory_order_release);
-            simulatedBack.store(true, std::memory_order_release);
-            return true;
-        }
+        if (handleGoBackAfter()) return true;
         
         // Cache touching state for refresh operations (used in same logical block)
         const bool isTouching = stillTouching.load(acquire);
@@ -5564,102 +5663,14 @@ public:
         }
             
         if (lastRunningInterpreter.exchange(false, std::memory_order_acq_rel)) {
-            isDownloadCommand.store(false, release);
-        
-            if (lastSelectedListItem) {
-                const bool success = commandSuccess.load(acquire);
-        
-                if (lastCommandMode == OPTION_STR || lastCommandMode == SLOT_STR) {
-                    if (success) {
-                        if (isFile(packageConfigIniPath)) {
-                            auto packageConfigData = getParsedDataFromIniFile(packageConfigIniPath);
-                
-                            if (auto it = packageConfigData.find(lastKeyName); it != packageConfigData.end()) {
-                                auto& optionSection = it->second;
-                
-                                // Update footer if valid
-                                if (auto footerIt = optionSection.find(FOOTER_STR);
-                                    footerIt != optionSection.end() &&
-                                    footerIt->second.find(NULL_STR) == std::string::npos)
-                                {
-                                    // Check if footer_highlight exists in the INI
-                                    auto footerHighlightIt = optionSection.find(FOOTER_HIGHLIGHT_STR);
-                                    if (footerHighlightIt != optionSection.end()) {
-                                        // Use the value from the INI
-                                        bool footerHighlightFromIni = (footerHighlightIt->second == TRUE_STR);
-                                        lastSelectedListItem->setValue(footerIt->second, !footerHighlightFromIni);
-                                    } else {
-                                        // footer_highlight not defined in INI, use default
-                                        lastSelectedListItem->setValue(footerIt->second, false);
-                                    }
-                                }
-                            }
-                
-                            lastCommandMode.clear();
-                        } else {
-                            lastSelectedListItem->setValue(CHECKMARK_SYMBOL);
-                        }
-                    } else {
-                        lastSelectedListItem->setValue(CROSSMARK_SYMBOL);
-                    }
-                } else {
-                    // Handle toggle or checkmark logic
-                    if (nextToggleState.empty()) {
-                        lastSelectedListItem->setValue(success ? CHECKMARK_SYMBOL : CROSSMARK_SYMBOL);
-                    } else {
-                        // Determine the final state to save
-                        const std::string finalState = success 
-                            ? nextToggleState 
-                            : (nextToggleState == CAPITAL_ON_STR ? CAPITAL_OFF_STR : CAPITAL_ON_STR);
-                        
-                        // Update displayed value
-                        lastSelectedListItem->setValue(finalState);
-                
-                        // Update toggle state
-                        static_cast<tsl::elm::ToggleListItem*>(lastSelectedListItem)
-                            ->setState(finalState == CAPITAL_ON_STR);
-                
-                        // Save to config file
-                        setIniFileValue(packageConfigIniPath, lastKeyName, FOOTER_STR, finalState);
-                        
-                        lastKeyName.clear();
-                        nextToggleState.clear();
-                    }
-                }
-        
-                lastSelectedListItem->enableClickAnimation();
-                lastSelectedListItem = nullptr;
-                lastFooterHighlight = lastFooterHighlightDefined = false;
-            }
-        
-            closeInterpreterThread();
-            resetPercentages();
-            
-
-            if (!commandSuccess.load()) {
-                triggerRumbleDoubleClick.store(true, std::memory_order_release);
-            }
-
-            if (!limitedMemory && useSoundEffects) {
-                reloadSoundCacheNow.store(true, std::memory_order_release);
-            }
-
+            handleInterpreterCompletion(packageConfigIniPath);
             return true;
         }
 
-        if (ult::refreshWallpaperNow.exchange(false, std::memory_order_acq_rel)) {
-            closeInterpreterThread();
-            ult::reloadWallpaper();
-            if (!limitedMemory && useSoundEffects) {
-                reloadSoundCacheNow.store(true, std::memory_order_release);
-            }
-        }
+        if (ult::refreshWallpaperNow.exchange(false, std::memory_order_acq_rel))
+            handleWallpaperReload();
     
-        if (goBackAfter.exchange(false, std::memory_order_acq_rel)) {
-            disableSound.store(true, std::memory_order_release);
-            simulatedBack.store(true, std::memory_order_release);
-            return true;
-        }
+        if (handleGoBackAfter()) return true;
     
         if (!returningToPackage && !isTouching) {
             if (refreshPage.exchange(false, std::memory_order_acq_rel)) {
@@ -5737,8 +5748,10 @@ public:
 
                             if (!wasSimulated)
                                 triggerNavigationFeedback();
-                            else
+                            else {
                                 triggerRumbleClick.store(true, release);
+                                signalHaptics();
+                            }
                         }
                         return true;
                     }
@@ -5755,8 +5768,10 @@ public:
 
                             if (!wasSimulated)
                                 triggerNavigationFeedback();
-                            else
+                            else {
                                 triggerRumbleClick.store(true, release);
+                                signalHaptics();
+                            }
                         }
                         return true;
                     }
@@ -5813,7 +5828,7 @@ public:
         auto handleMainMenuReturn = [&]() {
             if (returningToMain || returningToHiddenMain) {
                 if (returningToHiddenMain) {
-                    setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, IN_HIDDEN_PACKAGE_STR, TRUE_STR);
+                    setUltrahandConfig(IN_HIDDEN_PACKAGE_STR, TRUE_STR);
                 }
 
                 jumpItemName.clear();
@@ -6093,7 +6108,7 @@ public:
         }
         
         if (toPackages) {
-            setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "to_packages", FALSE_STR);
+            setUltrahandConfig("to_packages", FALSE_STR);
             toPackages = false;
             currentMenu = PACKAGES_STR;
         }
@@ -6317,7 +6332,7 @@ public:
                 
                 const bool newStarred = !overlayStarred;
                 
-                tsl::elm::ListItem* listItem = new tsl::elm::ListItem(newOverlayName, "");
+                tsl::elm::ListItem* listItem = new tsl::elm::SilentListItem(newOverlayName, "");
                 listItem->enableShortHoldKey();
                 listItem->enableLongHoldKey();
                 
@@ -6407,8 +6422,7 @@ public:
                         }
                         
                         refreshPage.store(true, std::memory_order_release);
-                        triggerRumbleClick.store(true, std::memory_order_release);
-                        triggerMoveSound.store(true, std::memory_order_release);
+                        triggerMoveFeedback();
                         return true;
                     }
                     
@@ -6427,8 +6441,7 @@ public:
                         
                         //tsl::shiftItemFocus(listItem);
                         tsl::changeTo<SettingsMenu>(overlayFileName, OVERLAY_STR, overlayName, overlayVersion, "", !supportsAMS110);
-                        triggerRumbleClick.store(true, std::memory_order_release);
-                        triggerSettingsSound.store(true, std::memory_order_release);
+                        triggerSettingsFeedback();
                         return true;
                     }
                     
@@ -6755,8 +6768,7 @@ public:
                         }
                         
                         refreshPage.store(true, release);
-                        triggerRumbleClick.store(true, std::memory_order_release);
-                        triggerMoveSound.store(true, std::memory_order_release);
+                        triggerMoveFeedback();
                         return true;
                     }
                     
@@ -6775,8 +6787,7 @@ public:
 
                         //tsl::shiftItemFocus(listItem);
                         tsl::changeTo<SettingsMenu>(packageName, PACKAGE_STR, newPackageName, packageVersion);
-                        triggerRumbleClick.store(true, std::memory_order_release);
-                        triggerSettingsSound.store(true, std::memory_order_release);
+                        triggerSettingsFeedback();
                         return true;
                     }
                     
@@ -6872,101 +6883,14 @@ public:
             return handleRunningInterpreter(keysDown, keysHeld);
     
         if (lastRunningInterpreter.exchange(false, std::memory_order_acq_rel)) {
-            isDownloadCommand.store(false, release);
-        
-            if (lastSelectedListItem) {
-                const bool success = commandSuccess.load(acquire);
-        
-                if (lastCommandMode == OPTION_STR || lastCommandMode == SLOT_STR) {
-                    if (success) {
-                        if (isFile(packageConfigIniPath)) {
-                            auto packageConfigData = getParsedDataFromIniFile(packageConfigIniPath);
-                
-                            if (auto it = packageConfigData.find(lastKeyName); it != packageConfigData.end()) {
-                                auto& optionSection = it->second;
-                
-                                // Update footer if valid
-                                if (auto footerIt = optionSection.find(FOOTER_STR);
-                                    footerIt != optionSection.end() &&
-                                    footerIt->second.find(NULL_STR) == std::string::npos)
-                                {
-                                    // Check if footer_highlight exists in the INI
-                                    auto footerHighlightIt = optionSection.find(FOOTER_HIGHLIGHT_STR);
-                                    if (footerHighlightIt != optionSection.end()) {
-                                        // Use the value from the INI
-                                        bool footerHighlightFromIni = (footerHighlightIt->second == TRUE_STR);
-                                        lastSelectedListItem->setValue(footerIt->second, !footerHighlightFromIni);
-                                    } else {
-                                        // footer_highlight not defined in INI, use default
-                                        lastSelectedListItem->setValue(footerIt->second, false);
-                                    }
-                                }
-                            }
-                
-                            lastCommandMode.clear();
-                        } else {
-                            lastSelectedListItem->setValue(CHECKMARK_SYMBOL);
-                        }
-                    } else {
-                        lastSelectedListItem->setValue(CROSSMARK_SYMBOL);
-                    }
-                } else {
-                    // Handle toggle or checkmark logic
-                    if (nextToggleState.empty()) {
-                        lastSelectedListItem->setValue(success ? CHECKMARK_SYMBOL : CROSSMARK_SYMBOL);
-                    } else {
-                        // Determine the final state to save
-                        const std::string finalState = success 
-                            ? nextToggleState 
-                            : (nextToggleState == CAPITAL_ON_STR ? CAPITAL_OFF_STR : CAPITAL_ON_STR);
-                        
-                        // Update displayed value
-                        lastSelectedListItem->setValue(finalState);
-                
-                        // Update toggle state
-                        static_cast<tsl::elm::ToggleListItem*>(lastSelectedListItem)
-                            ->setState(finalState == CAPITAL_ON_STR);
-                
-                        // Save to config file
-                        setIniFileValue(packageConfigIniPath, lastKeyName, FOOTER_STR, finalState);
-                        
-                        lastKeyName.clear();
-                        nextToggleState.clear();
-                    }
-                }
-        
-                lastSelectedListItem->enableClickAnimation();
-                lastSelectedListItem = nullptr;
-                lastFooterHighlight = lastFooterHighlightDefined = false;
-            }
-        
-            closeInterpreterThread();
-            resetPercentages();
-
-            if (!commandSuccess.load()) {
-                triggerRumbleDoubleClick.store(true, std::memory_order_release);
-            }
-            if (!limitedMemory && useSoundEffects) {
-                reloadSoundCacheNow.store(true, std::memory_order_release);
-            }
-
+            handleInterpreterCompletion(packageConfigIniPath);
             return true;
         }
         
-        if (ult::refreshWallpaperNow.exchange(false, std::memory_order_acq_rel)) {
-            closeInterpreterThread();
-            ult::reloadWallpaper();
+        if (ult::refreshWallpaperNow.exchange(false, std::memory_order_acq_rel))
+            handleWallpaperReload();
 
-            if (!limitedMemory && useSoundEffects) {
-                reloadSoundCacheNow.store(true, std::memory_order_release);
-            }
-        }
-
-        if (goBackAfter.exchange(false, std::memory_order_acq_rel)) {
-            disableSound.store(true, std::memory_order_release);
-            simulatedBack.store(true, std::memory_order_release);
-            return true;
-        }
+        if (handleGoBackAfter()) return true;
     
         if (refreshPage.load(acquire) && !isTouching) {
             refreshPage.store(false, release);
@@ -7071,8 +6995,10 @@ public:
 
                             if (!wasSimulated)
                                 triggerNavigationFeedback();
-                            else
+                            else {
                                 triggerRumbleClick.store(true, release);
+                                signalHaptics();
+                            }
                         }
                         return true;
                     }
@@ -7088,8 +7014,10 @@ public:
                             tsl::swapTo<MainMenu>();
                             if (!wasSimulated)
                                 triggerNavigationFeedback();
-                            else
+                            else {
                                 triggerRumbleClick.store(true, release);
+                                signalHaptics();
+                            }
                         }
                         return true;
                     }
@@ -7121,8 +7049,7 @@ public:
                     inMainMenu.store(false, std::memory_order_release);
                     skipJumpReset.store(false, std::memory_order_release);
                     tsl::changeTo<UltrahandSettingsMenu>();
-                    triggerRumbleClick.store(true, std::memory_order_release);
-                    triggerSettingsSound.store(true, std::memory_order_release);
+                    triggerSettingsFeedback();
                     return true;
                 }
             }
@@ -7186,8 +7113,7 @@ public:
                 skipJumpReset.store(false, std::memory_order_release);
                 lastMenu = "hiddenMenuMode";
                 tsl::changeTo<UltrahandSettingsMenu>();
-                triggerRumbleClick.store(true, std::memory_order_release);
-                triggerSettingsSound.store(true, std::memory_order_release);
+                triggerSettingsFeedback();
                 return true;
             }
         }
