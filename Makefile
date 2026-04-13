@@ -117,6 +117,7 @@ LIBS := -lcurl -lz -lminizip -lmbedtls -lmbedx509 -lmbedcrypto -lnx
 CXXFLAGS += -fno-exceptions -ffunction-sections -fdata-sections -fno-rtti
 LDFLAGS += -Wl,--as-needed -Wl,--gc-sections
 
+# Requires inclusion of exception_wrap.hpp in main
 LDFLAGS += -Wl,-wrap,__cxa_throw \
            -Wl,-wrap,_Unwind_Resume \
            -Wl,-wrap,__gxx_personality_v0
