@@ -27,6 +27,7 @@
 #define STBTT_STATIC
 #define TESLA_INIT_IMPL
 
+#include <exception_wrap.hpp> // must be declared in main
 #include <ultra.hpp>
 #include <tesla.hpp>
 #include <utils.hpp>
