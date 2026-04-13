@@ -11,7 +11,7 @@
 #   GitHub Repository: https://github.com/ppkantorski/Ultrahand-Overlay
 #
 # Licensed under GPLv2
-# Copyright (c) 2023-2026 ppkantorski
+# Copyright (c) 2023-2025 ppkantorski
 ##################################################################################
 
 #---------------------------------------------------------------------------------
@@ -97,12 +97,12 @@ USING_LOGGING_DIRECTIVE := 1  # or true
 CFLAGS += -DUSING_LOGGING_DIRECTIVE=$(USING_LOGGING_DIRECTIVE)
 
 # FPS Indicator (for debugging)
-USING_FPS_INDICATOR_DIRECTIVE := 0
+USING_FPS_INDICATOR_DIRECTIVE ?= 1
 CFLAGS += -DUSING_FPS_INDICATOR_DIRECTIVE=$(USING_FPS_INDICATOR_DIRECTIVE)
 
-# Enable fstream (ideally for other overlays want full fstream instead of FILE*)
-#USING_FSTREAM_DIRECTIVE := 0
-#CFLAGS += -DUSING_FSTREAM_DIRECTIVE=$(USING_FSTREAM_DIRECTIVE)
+# Targeted speed optimizations
+#CFLAGS += -DTESLA_TARGETED_SPEED
+
 #---------------------------------------------------------------------------------
 
 
@@ -116,6 +116,10 @@ LIBS := -lcurl -lz -lminizip -lmbedtls -lmbedx509 -lmbedcrypto -lnx
 
 CXXFLAGS += -fno-exceptions -ffunction-sections -fdata-sections -fno-rtti
 LDFLAGS += -Wl,--as-needed -Wl,--gc-sections
+
+LDFLAGS += -Wl,-wrap,__cxa_throw \
+           -Wl,-wrap,_Unwind_Resume \
+           -Wl,-wrap,__gxx_personality_v0
 
 # For Ensuring Parallel LTRANS Jobs w/ GCC, make -j N (for convenience)
 # ------------------------------------------------------------
