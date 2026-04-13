@@ -459,7 +459,7 @@ static void setUltrahandConfig(const std::string& key, const std::string& value)
 static void handleWallpaperReload() {
     closeInterpreterThread();
     ult::reloadWallpaper();
-    if (!limitedMemory && useSoundEffects) {
+    if (useSoundEffects) {
         reloadSoundCacheNow.store(true, std::memory_order_release);
         signalSound();
     }
@@ -545,7 +545,7 @@ static void handleInterpreterCompletion(const std::string& packageConfigIniPath)
 
     if (!commandSuccess.load())
         triggerRumbleDoubleClick.store(true, std::memory_order_release);
-    if (!limitedMemory && useSoundEffects)
+    if (useSoundEffects)
         reloadSoundCacheNow.store(true, std::memory_order_release);
     signalFeedback();
 }
@@ -602,87 +602,6 @@ private:
         list->addItem(listItem);
     }
     
-    // Remove all combos from other overlays / packages
-    void removeKeyComboFromAllOthers(const std::string& keyCombo) {
-        // Declare variables once for reuse across both scopes
-        std::string existingCombo;
-        std::string comboListStr;
-        std::vector<std::string> comboList;
-        bool modified;
-        std::string newComboStr;
-        
-        // Process overlays first
-        {
-            auto overlaysIniData = getParsedDataFromIniFile(OVERLAYS_INI_FILEPATH);
-            bool overlaysModified = false;
-            
-            for (auto& [overlayName, overlaySection] : overlaysIniData) {
-                
-                // 1. Remove from main key_combo field if it matches
-                auto keyComboIt = overlaySection.find(KEY_COMBO_STR);
-                if (keyComboIt != overlaySection.end()) {
-                    existingCombo = keyComboIt->second;
-                    if (!existingCombo.empty() && tsl::hlp::comboStringToKeys(existingCombo) == tsl::hlp::comboStringToKeys(keyCombo)) {
-                        overlaySection[KEY_COMBO_STR] = "";
-                        overlaysModified = true;
-                    }
-                }
-                
-                // 2. Remove from mode_combos list if any element matches
-                auto modeCombosIt = overlaySection.find("mode_combos");
-                if (modeCombosIt != overlaySection.end()) {
-                    comboListStr = modeCombosIt->second;
-                    if (!comboListStr.empty()) {
-                        comboList = splitIniList(comboListStr);
-                        modified = false;
-                        
-                        for (std::string& combo : comboList) {
-                            if (!combo.empty() && tsl::hlp::comboStringToKeys(combo) == tsl::hlp::comboStringToKeys(keyCombo)) {
-                                combo.clear();
-                                modified = true;
-                            }
-                        }
-                        
-                        if (modified) {
-                            newComboStr = "(" + joinIniList(comboList) + ")";
-                            overlaySection["mode_combos"] = newComboStr;
-                            overlaysModified = true;
-                        }
-                    }
-                }
-            }
-            
-            // Write back if modified, then clear memory
-            if (overlaysModified) {
-                saveIniFileData(OVERLAYS_INI_FILEPATH, overlaysIniData);
-            }
-            // overlaysIniData automatically cleared when scope ends
-        }
-        
-        // Process packages second (overlays INI data is already cleared)
-        {
-            auto packagesIniData = getParsedDataFromIniFile(PACKAGES_INI_FILEPATH);
-            bool packagesModified = false;
-            
-            for (auto& [packageName, packageSection] : packagesIniData) {
-                auto keyComboIt = packageSection.find(KEY_COMBO_STR);
-                if (keyComboIt != packageSection.end()) {
-                    existingCombo = keyComboIt->second; // Reusing the same variable
-                    if (!existingCombo.empty() && tsl::hlp::comboStringToKeys(existingCombo) == tsl::hlp::comboStringToKeys(keyCombo)) {
-                        packageSection[KEY_COMBO_STR] = "";
-                        packagesModified = true;
-                    }
-                }
-            }
-            
-            // Write back if modified, then clear memory
-            if (packagesModified) {
-                saveIniFileData(PACKAGES_INI_FILEPATH, packagesIniData);
-            }
-            // packagesIniData automatically cleared when scope ends
-        }
-    }
-
     template<typename Container>
     void handleSelection(tsl::elm::List* list, const Container& items, const std::string& defaultItem, const std::string& iniKey, const std::string& targetMenu) {
         
@@ -710,7 +629,7 @@ private:
                         setIniFileValue(TESLA_CONFIG_INI_PATH, TESLA_STR, iniKey, item);
 
                         // Remove this key combo from any overlays using it (both key_combo and mode_combos)
-                        this->removeKeyComboFromAllOthers(item);
+                        removeKeyComboFromOthers(item, "");
                             
                         // Reload the overlay key combos to reflect changes
                         tsl::hlp::loadEntryKeyCombos();
@@ -948,14 +867,12 @@ public:
                     currentTheme = themeIt->second;
                 }
                 
-                if (!limitedMemory) {
-                    auto soundsIt = sectionIt->second.find("current_sounds");
-                    if (soundsIt != sectionIt->second.end()) {
-                        currentSounds = soundsIt->second;
-                    }
+                auto soundsIt = sectionIt->second.find("current_sounds");
+                if (soundsIt != sectionIt->second.end()) {
+                    currentSounds = soundsIt->second;
                 }
 
-                if (expandedMemory) {
+                if (!limitedMemory) {
                     auto wallpaperIt = sectionIt->second.find("current_wallpaper");
                     if (wallpaperIt != sectionIt->second.end()) {
                         currentWallpaper = wallpaperIt->second;
@@ -970,14 +887,12 @@ public:
             convertComboToUnicode(keyCombo);
             currentTheme = (currentTheme.empty() || currentTheme == DEFAULT_STR) ? DEFAULT : currentTheme;
 
-            if (!limitedMemory) {
-                if (isDirectory(LOADED_SOUNDS_PATH))
-                    currentSounds = currentSounds.empty() ? DEFAULT_STR : currentSounds;
-                else
-                    currentSounds = currentSounds.empty() ? OPTION_SYMBOL : currentSounds;
-            }
+            if (isDirectory(LOADED_SOUNDS_PATH))
+                currentSounds = currentSounds.empty() ? DEFAULT_STR : currentSounds;
+            else
+                currentSounds = currentSounds.empty() ? OPTION_SYMBOL : currentSounds;
 
-            if (expandedMemory) {
+            if (!limitedMemory) {
                 currentWallpaper = (currentWallpaper.empty() || currentWallpaper == OPTION_SYMBOL) ? OPTION_SYMBOL : currentWallpaper;
             }
             
@@ -989,10 +904,9 @@ public:
 
             addHeader(list, UI_SETTINGS);
             addListItem(list, THEME, currentTheme, "themeMenu");
+            addListItem(list, SOUNDS, currentSounds, "soundsMenu");
+
             if (!limitedMemory) {
-                addListItem(list, SOUNDS, currentSounds, "soundsMenu");
-            }
-            if (expandedMemory) {
                 addListItem(list, WALLPAPER, currentWallpaper, "wallpaperMenu");
             }
             addListItem(list, WIDGET, DROPDOWN_SYMBOL, "widgetMenu");
@@ -1284,14 +1198,14 @@ public:
             
                 if (tsl::notification) {
                     if (newMB < previousSliderMB) {
-                        if (previousSliderMB >= 8 && newMB < 8)
+                        if (previousSliderMB >= 6 && newMB < 6)
                             tsl::notification->showNow(NOTIFY_HEADER + WALLPAPER_SUPPORT_DISABLED, 23);
-                        else if (previousSliderMB >= 6 && newMB < 6)
+                        else if (previousSliderMB >= 4 && newMB < 4)
                             tsl::notification->showNow(NOTIFY_HEADER + SOUND_SUPPORT_DISABLED, 23);
                     } else {
-                        if (previousSliderMB < 8 && newMB >= 8)
+                        if (previousSliderMB < 6 && newMB >= 6)
                             tsl::notification->showNow(NOTIFY_HEADER + WALLPAPER_SUPPORT_ENABLED, 23);
-                        else if (previousSliderMB < 6 && newMB >= 6)
+                        else if (previousSliderMB < 4 && newMB >= 4)
                             tsl::notification->showNow(NOTIFY_HEADER + SOUND_SUPPORT_ENABLED, 23);
                     }
                 }
@@ -1588,10 +1502,8 @@ public:
             };
 
             addHeader(list, NOTIFICATION_SETTINGS);
-            if (!ult::limitedMemory) {
-                silenceNotifications = getBoolValue("silence_notifications", false); // FALSE_STR default
-                createToggleListItem(list, SILENCE_NOTIFICATIONS, silenceNotifications, "silence_notifications");
-            }
+            silenceNotifications = getBoolValue("silence_notifications", false); // FALSE_STR default
+            createToggleListItem(list, SILENCE_NOTIFICATIONS, silenceNotifications, "silence_notifications");
             useStartupNotification = getBoolValue("startup_notification", true); // TRUE_STR default
             createToggleListItem(list, STARTUP_NOTIFICATION, useStartupNotification, "startup_notification");
             useNotifications = getBoolValue("notifications", true); // TRUE_STR default
@@ -1602,9 +1514,9 @@ public:
             // Max Notifications trackbar
             {
                 const std::string maxNotifIniStr = parseValueFromIniSection(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "max_notifications");
-                const int maxNotifCurrent = std::max(1, std::min(ult::stoi(maxNotifIniStr.empty() ? "3" : maxNotifIniStr), (ult::limitedMemory ? 4 : 8)));
+                const int maxNotifCurrent = std::max(1, std::min(ult::stoi(maxNotifIniStr.empty() ? "3" : maxNotifIniStr), 8));
 
-                const int sliderMax = ult::limitedMemory ? 4 : tsl::NotificationPrompt::MAX_VISIBLE;
+                const int sliderMax = tsl::NotificationPrompt::MAX_VISIBLE;
                 std::vector<std::string> notifLabels;
                 for (int i = 1; i <= sliderMax; ++i)
                     notifLabels.push_back(std::to_string(i));
@@ -1620,7 +1532,7 @@ public:
                 // Set callback FIRST so setProgress uses the correct value range
                 notifTrackbar->setSimpleCallback([](s16 /*value*/, s16 index) {
                     const int newVal = static_cast<int>(index) + 1;
-                    const int maxAllowed = ult::limitedMemory ? 4 : tsl::NotificationPrompt::MAX_VISIBLE;
+                    const int maxAllowed = tsl::NotificationPrompt::MAX_VISIBLE;
                     const int clamped = std::max(1, std::min(newVal, maxAllowed));
                     setUltrahandConfig("max_notifications", std::to_string(clamped));
                     tsl::maxNotifications = clamped;
@@ -1797,7 +1709,7 @@ public:
                 triggerRumbleDoubleClick.store(true, std::memory_order_release);
             }
 
-            if (!limitedMemory && useSoundEffects) {
+            if (useSoundEffects) {
                 reloadSoundCacheNow.store(true, std::memory_order_release);
             }
             signalFeedback();
@@ -2808,7 +2720,7 @@ public:
             if (!commandSuccess.load()) {
                 triggerRumbleDoubleClick.store(true, std::memory_order_release);
             }
-            if (!limitedMemory && useSoundEffects) {
+            if (useSoundEffects) {
                 reloadSoundCacheNow.store(true, std::memory_order_release);
             }
             signalFeedback();
@@ -3872,7 +3784,7 @@ public:
                 triggerRumbleDoubleClick.store(true, std::memory_order_release);
             }
 
-            if (!limitedMemory && useSoundEffects) {
+            if (useSoundEffects) {
                 reloadSoundCacheNow.store(true, std::memory_order_release);
             }
             signalFeedback();
@@ -5737,15 +5649,17 @@ public:
                 unlockedSlide.store(false, release);
             };
     
-            if (currentPage == LEFT_STR) {
-                if (!isTouching && slideCondition && (keysDown & KEY_RIGHT) && (!onTrack ? !(keysHeld & ~KEY_RIGHT & ALL_KEYS_MASK) : !(keysHeld & ~KEY_R & ~KEY_RIGHT & ALL_KEYS_MASK))) {
+            if (currentPage == LEFT_STR || currentPage == RIGHT_STR) {
+                const bool onLeftPage = (currentPage == LEFT_STR);
+                const u64 navKey = onLeftPage ? KEY_RIGHT : KEY_LEFT;
+                const std::string& destPage = onLeftPage ? RIGHT_STR : LEFT_STR;
+                if (!isTouching && slideCondition && (keysDown & navKey) &&
+                    (!onTrack ? !(keysHeld & ~navKey & ALL_KEYS_MASK) : !(keysHeld & ~KEY_R & ~navKey & ALL_KEYS_MASK))) {
                     {
                         std::lock_guard<std::mutex> lock(tsl::elm::s_safeToSwapMutex);
                         if (tsl::elm::s_safeToSwap.load(acquire)) {
-
-                            tsl::swapTo<PackageMenu>(packagePath, dropdownSection, RIGHT_STR, packageName, nestedLayer, pageHeader);
+                            tsl::swapTo<PackageMenu>(packagePath, dropdownSection, destPage, packageName, nestedLayer, pageHeader);
                             resetSlideState();
-
                             if (!wasSimulated)
                                 triggerNavigationFeedback();
                             else {
@@ -5755,29 +5669,8 @@ public:
                         }
                         return true;
                     }
-                    
                 }
-            } else if (currentPage == RIGHT_STR) {
-                if (!isTouching && slideCondition && (keysDown & KEY_LEFT) && (!onTrack ? !(keysHeld & ~KEY_LEFT & ALL_KEYS_MASK) : !(keysHeld & ~KEY_R & ~KEY_LEFT & ALL_KEYS_MASK))) {
-                    {
-                        std::lock_guard<std::mutex> lock(tsl::elm::s_safeToSwapMutex);
-                        if (tsl::elm::s_safeToSwap.load(acquire)) {
-
-                            tsl::swapTo<PackageMenu>(packagePath, dropdownSection, LEFT_STR, packageName, nestedLayer, pageHeader);
-                            resetSlideState();
-
-                            if (!wasSimulated)
-                                triggerNavigationFeedback();
-                            else {
-                                triggerRumbleClick.store(true, release);
-                                signalHaptics();
-                            }
-                        }
-                        return true;
-                    }
-                    
-                }
-            } 
+            }
         }
         
         // Common back key condition
@@ -5897,14 +5790,8 @@ public:
             simulatedNextPage.exchange(false, std::memory_order_acq_rel);
             simulatedMenu.exchange(false, std::memory_order_acq_rel);
             
-            if (!usingPages || (usingPages && currentPage == LEFT_STR)) {
-                if (backKeyPressed) {
-                    return handleNormalBack();
-                }
-            } else if (usingPages && currentPage == RIGHT_STR) {
-                if (backKeyPressed) {
-                    return handleNormalBack();
-                }
+            if (backKeyPressed) {
+                return handleNormalBack();
             }
         }
         
@@ -5913,34 +5800,18 @@ public:
             simulatedNextPage.exchange(false, std::memory_order_acq_rel);
             simulatedMenu.exchange(false, std::memory_order_acq_rel);
             
-            if (!usingPages || (usingPages && currentPage == LEFT_STR)) {
-                if (backKeyPressed) {
-                    allowSlide.exchange(false, std::memory_order_acq_rel);
-                    unlockedSlide.exchange(false, std::memory_order_acq_rel);
-                    
-                    // Try return context first, fallback to normal navigation
-                    if (tryReturnContext()) return true;
-                    
-                    inSubPackageMenu = false;
-                    returningToPackage = true;
-                    lastMenu = "packageMenu";
-                    tsl::goBack();
-                    return true;
-                }
-            } else if (usingPages && currentPage == RIGHT_STR) {
-                if (backKeyPressed) {
-                    allowSlide.exchange(false, std::memory_order_acq_rel);
-                    unlockedSlide.exchange(false, std::memory_order_acq_rel);
-                    
-                    // Try return context first, fallback to normal navigation
-                    if (tryReturnContext()) return true;
-                    
-                    inSubPackageMenu = false;
-                    returningToPackage = true;
-                    lastMenu = "packageMenu";
-                    tsl::goBack();
-                    return true;
-                }
+            if (backKeyPressed) {
+                allowSlide.exchange(false, std::memory_order_acq_rel);
+                unlockedSlide.exchange(false, std::memory_order_acq_rel);
+                
+                // Try return context first, fallback to normal navigation
+                if (tryReturnContext()) return true;
+                
+                inSubPackageMenu = false;
+                returningToPackage = true;
+                lastMenu = "packageMenu";
+                tsl::goBack();
+                return true;
             }
         }
         
@@ -6635,24 +6506,23 @@ public:
                 packageVersion.clear();
                 newPackageName.clear();
                 const bool packageStarred = (taintedPackageName.compare(0, 3, "-1:") == 0);
-                const std::string& tempPackageName = packageStarred ? taintedPackageName : taintedPackageName;
                 const size_t offset = packageStarred ? 3 : 0;
                 
                 // Parse from the end more efficiently
-                size_t pos = tempPackageName.size();
+                size_t pos = taintedPackageName.size();
                 size_t count = 0;
                 size_t positions[3];
                 
                 while (pos > offset && count < 3) {
-                    pos = tempPackageName.rfind(':', pos - 1);
+                    pos = taintedPackageName.rfind(':', pos - 1);
                     if (pos == std::string::npos || pos < offset) break;
                     positions[count++] = pos;
                 }
                 
                 if (count == 3) {
-                    packageName = tempPackageName.substr(positions[0] + 1);
-                    packageVersion = tempPackageName.substr(positions[1] + 1, positions[0] - positions[1] - 1);
-                    newPackageName = tempPackageName.substr(positions[2] + 1, positions[1] - positions[2] - 1);
+                    packageName = taintedPackageName.substr(positions[0] + 1);
+                    packageVersion = taintedPackageName.substr(positions[1] + 1, positions[0] - positions[1] - 1);
+                    newPackageName = taintedPackageName.substr(positions[2] + 1, positions[1] - positions[2] - 1);
                 }
                 
                 const std::string packageFilePath = PACKAGE_PATH + packageName + "/";
@@ -6984,42 +6854,30 @@ public:
                     unlockedSlide.store(false, release);
                 };
                 
-                if (!hidePackages && onLeftPage && !isTouching && slideCondition && (keysDown & KEY_RIGHT) && (!onTrack ? !(keysHeld & ~KEY_RIGHT & ALL_KEYS_MASK) : !(keysHeld & ~KEY_RIGHT & ~KEY_R & ALL_KEYS_MASK))) {
-                    {
-                        std::lock_guard<std::mutex> lock(tsl::elm::s_safeToSwapMutex);
+                {
+                    const bool wantRight = onLeftPage && (keysDown & KEY_RIGHT) &&
+                        (!onTrack ? !(keysHeld & ~KEY_RIGHT & ALL_KEYS_MASK) : !(keysHeld & ~KEY_RIGHT & ~KEY_R & ALL_KEYS_MASK));
+                    const bool wantLeft  = !onLeftPage && (keysDown & KEY_LEFT) &&
+                        (!onTrack ? !(keysHeld & ~KEY_LEFT & ALL_KEYS_MASK) : !(keysHeld & ~KEY_LEFT & ~KEY_R & ALL_KEYS_MASK));
+                    if (!hidePackages && !isTouching && slideCondition && (wantRight || wantLeft)) {
+                        {
+                            std::lock_guard<std::mutex> lock(tsl::elm::s_safeToSwapMutex);
 
-                        if (tsl::elm::s_safeToSwap.load(acquire)) {
-                            currentMenu = usePageSwap ? OVERLAYS_STR : PACKAGES_STR;
-                            resetNavState();
-                            tsl::swapTo<MainMenu>();
+                            if (tsl::elm::s_safeToSwap.load(acquire)) {
+                                currentMenu = onLeftPage ? (usePageSwap ? OVERLAYS_STR : PACKAGES_STR)
+                                                         : (usePageSwap ? PACKAGES_STR : OVERLAYS_STR);
+                                resetNavState();
+                                tsl::swapTo<MainMenu>();
 
-                            if (!wasSimulated)
-                                triggerNavigationFeedback();
-                            else {
-                                triggerRumbleClick.store(true, release);
-                                signalHaptics();
+                                if (!wasSimulated)
+                                    triggerNavigationFeedback();
+                                else {
+                                    triggerRumbleClick.store(true, release);
+                                    signalHaptics();
+                                }
                             }
+                            return true;
                         }
-                        return true;
-                    }
-                }
-                
-                if (!hidePackages && !onLeftPage && !isTouching && slideCondition && (keysDown & KEY_LEFT) && (!onTrack ? !(keysHeld & ~KEY_LEFT & ALL_KEYS_MASK): !(keysHeld & ~KEY_LEFT & ~KEY_R  & ALL_KEYS_MASK))) {
-                    {
-                        std::lock_guard<std::mutex> lock(tsl::elm::s_safeToSwapMutex);
-
-                        if (tsl::elm::s_safeToSwap.load(acquire)) {
-                            currentMenu = usePageSwap ? PACKAGES_STR : OVERLAYS_STR;
-                            resetNavState();
-                            tsl::swapTo<MainMenu>();
-                            if (!wasSimulated)
-                                triggerNavigationFeedback();
-                            else {
-                                triggerRumbleClick.store(true, release);
-                                signalHaptics();
-                            }
-                        }
-                        return true;
                     }
                 }
     

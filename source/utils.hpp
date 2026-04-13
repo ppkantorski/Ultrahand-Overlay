@@ -954,37 +954,11 @@ std::tuple<Result, std::string, std::string, bool, bool> getOverlayInfo(const st
         return {ResultParseError, "", "", false, false};
     }
 
-    // --- Detect MOD0 LNY2 from front buffer ---
-    bool usesNewLibNX = false;
-
-    const uint32_t mod0_rel = *reinterpret_cast<const uint32_t*>(frontBuf + 0x4);
+    // --- Detect MOD0 LNY2 via shared helper (also used by usingLNY2 in tesla.cpp) ---
+    const uint32_t mod0_rel    = *reinterpret_cast<const uint32_t*>(frontBuf + 0x4);
     const uint32_t text_offset = *reinterpret_cast<const uint32_t*>(frontBuf + 0x20);
-    
-    if (text_offset < fileSz && mod0_rel != 0 && text_offset <= fileSz - mod0_rel) {
-        const uint32_t mod0_offset = text_offset + mod0_rel;
-        
-        // Check if MOD0 is in our front buffer (must check both offset and end are in buffer)
-        if (mod0_offset < frontReadSize && mod0_offset <= frontReadSize - 60) {
-            const uint8_t* mod0_ptr = frontBuf + mod0_offset;
-            
-            if (std::memcmp(mod0_ptr, "MOD0", 4) == 0 &&
-                std::memcmp(mod0_ptr + 52, "LNY2", 4) == 0) {
-                const uint32_t libnxVersion = *reinterpret_cast<const uint32_t*>(mod0_ptr + 56);
-                usesNewLibNX = (libnxVersion >= 1);
-            }
-        } else if (mod0_offset < fileSz && mod0_offset <= fileSz - 60) {
-            // MOD0 is beyond our buffer - need separate read
-            uint8_t mod0Buf[60];
-            fseek(file, mod0_offset, SEEK_SET);
-            if (fread(mod0Buf, 1, 60, file) == 60) {
-                if (std::memcmp(mod0Buf, "MOD0", 4) == 0 &&
-                    std::memcmp(mod0Buf + 52, "LNY2", 4) == 0) {
-                    const uint32_t libnxVersion = *reinterpret_cast<const uint32_t*>(mod0Buf + 56);
-                    usesNewLibNX = (libnxVersion >= 1);
-                }
-            }
-        }
-    }
+    bool usesNewLibNX = detectLNY2FromBuffers(frontBuf, frontReadSize,
+                                              text_offset, mod0_rel, fileSz, file);
 
     free(frontBuf);
 
@@ -2866,6 +2840,19 @@ void updateGeneralPlaceholders() {
     };
 }
 
+// Extracts the argument string from inside a "name(...)" placeholder token.
+// Returns true and sets `out` on success; returns false and sets `out` to
+// NULL_STR when either paren is absent.  Used by the lambdas below to
+// eliminate the repeated find/bounds-check/substr boilerplate.
+static bool getPlaceholderContent(const std::string& placeholder, std::string& out) {
+    const size_t open = placeholder.find('(');
+    if (open == std::string::npos) { out = NULL_STR; return false; }
+    const size_t close = placeholder.find(')', open + 1);
+    if (close == std::string::npos) { out = NULL_STR; return false; }
+    out = placeholder.substr(open + 1, close - open - 1);
+    return true;
+}
+
 bool applyPlaceholderReplacements(std::vector<std::string>& cmd, const std::string& hexPath, 
                                  const std::string& iniPath, const std::string& listString, 
                                  const std::string& listPath, const std::string& jsonString, 
@@ -2883,32 +2870,18 @@ bool applyPlaceholderReplacements(std::vector<std::string>& cmd, const std::stri
             return result;
         }},
         {"{list(", [&](const std::string& placeholder) {
-            const size_t openParen = placeholder.find('(');
-            const size_t closeParen = placeholder.find(')', openParen + 1);
-            if (openParen == std::string::npos || closeParen == std::string::npos) {
+            std::string indexStr;
+            if (!getPlaceholderContent(placeholder, indexStr) || !isValidNumber(indexStr))
                 return NULL_STR;
-            }
-            const std::string indexStr = placeholder.substr(openParen + 1, closeParen - openParen - 1);
-            if (!isValidNumber(indexStr)) {
-                return NULL_STR;
-            }
             const auto& items = stringToList(listString);
             const size_t idx = ult::stoi(indexStr);
-            if (idx >= items.size()) {
-                return NULL_STR;
-            }
+            if (idx >= items.size()) return NULL_STR;
             return returnOrNull(items[idx]);
         }},
         {"{list_file(", [&](const std::string& placeholder) {
-            const size_t openParen = placeholder.find('(');
-            const size_t closeParen = placeholder.find(')', openParen + 1);
-            if (openParen == std::string::npos || closeParen == std::string::npos) {
+            std::string indexStr;
+            if (!getPlaceholderContent(placeholder, indexStr) || !isValidNumber(indexStr))
                 return NULL_STR;
-            }
-            const std::string indexStr = placeholder.substr(openParen + 1, closeParen - openParen - 1);
-            if (!isValidNumber(indexStr)) {
-                return NULL_STR;
-            }
             return returnOrNull(getEntryFromListFile(listPath, ult::stoi(indexStr)));
         }},
         {"{json(", [&](const std::string& placeholder) { 
@@ -2918,28 +2891,18 @@ bool applyPlaceholderReplacements(std::vector<std::string>& cmd, const std::stri
             return replaceJsonPlaceholder(placeholder, JSON_FILE_STR, jsonPath);
         }},
         {"{timestamp(", [&](const std::string& placeholder) {
-            const size_t openParen = placeholder.find("(");
-            const size_t closeParen = placeholder.find(")", openParen + 1);
-            if (openParen == std::string::npos || closeParen == std::string::npos) {
-                return NULL_STR;
-            }
-            std::string format = (closeParen > openParen + 1) ? 
-                placeholder.substr(openParen + 1, closeParen - openParen - 1) : "%Y-%m-%d %H:%M:%S";
+            std::string format;
+            if (!getPlaceholderContent(placeholder, format)) return NULL_STR;
+            if (format.empty()) format = "%Y-%m-%d %H:%M:%S";
             removeQuotes(format);
             return returnOrNull(getCurrentTimestamp(format));
         }},
         {"{decimal_to_hex(", [&](const std::string& placeholder) {
-            const size_t openParen = placeholder.find("(");
-            const size_t closeParen = placeholder.find(")", openParen + 1);
-            if (openParen == std::string::npos || closeParen == std::string::npos) {
-                return NULL_STR;
-            }
-            const std::string params = placeholder.substr(openParen + 1, closeParen - openParen - 1);
-            
+            std::string params;
+            if (!getPlaceholderContent(placeholder, params)) return NULL_STR;
+
             const size_t commaPos = params.find(",");
-            std::string decimalValue;
-            std::string order;
-            
+            std::string decimalValue, order;
             if (commaPos != std::string::npos) {
                 decimalValue = params.substr(0, commaPos);
                 order = params.substr(commaPos + 1);
@@ -2947,74 +2910,47 @@ bool applyPlaceholderReplacements(std::vector<std::string>& cmd, const std::stri
                 order.erase(order.find_last_not_of(" \t\n\r") + 1);
             } else {
                 decimalValue = params;
-                order = "";
             }
-            
+
             if (order.empty()) {
                 return returnOrNull(decimalToHex(decimalValue));
             } else {
-                if (!isValidNumber(order)) {
-                    return NULL_STR;
-                }
+                if (!isValidNumber(order)) return NULL_STR;
                 return returnOrNull(decimalToHex(decimalValue, ult::stoi(order)));
             }
         }},
         {"{ascii_to_hex(", [&](const std::string& placeholder) {
-            const size_t openParen = placeholder.find("(");
-            const size_t closeParen = placeholder.find(")", openParen + 1);
-            if (openParen == std::string::npos || closeParen == std::string::npos) {
-                return NULL_STR;
-            }
-            return returnOrNull(asciiToHex(placeholder.substr(openParen + 1, closeParen - openParen - 1)));
+            std::string inner;
+            if (!getPlaceholderContent(placeholder, inner)) return NULL_STR;
+            return returnOrNull(asciiToHex(inner));
         }},
         {"{hex_to_rhex(", [&](const std::string& placeholder) {
-            const size_t openParen = placeholder.find("(");
-            const size_t closeParen = placeholder.find(")", openParen + 1);
-            if (openParen == std::string::npos || closeParen == std::string::npos) {
-                return NULL_STR;
-            }
-            return returnOrNull(hexToReversedHex(placeholder.substr(openParen + 1, closeParen - openParen - 1)));
+            std::string inner;
+            if (!getPlaceholderContent(placeholder, inner)) return NULL_STR;
+            return returnOrNull(hexToReversedHex(inner));
         }},
         {"{hex_to_decimal(", [&](const std::string& placeholder) {
-            const size_t openParen = placeholder.find("(");
-            const size_t closeParen = placeholder.find(")", openParen + 1);
-            if (openParen == std::string::npos || closeParen == std::string::npos) {
-                return NULL_STR;
-            }
-            return returnOrNull(hexToDecimal(placeholder.substr(openParen + 1, closeParen - openParen - 1)));
+            std::string inner;
+            if (!getPlaceholderContent(placeholder, inner)) return NULL_STR;
+            return returnOrNull(hexToDecimal(inner));
         }},
         {"{base64_decode(", [&](const std::string& placeholder) {
-            const size_t openParen = placeholder.find("(");
-            const size_t closeParen = placeholder.find(")", openParen + 1);
-            if (openParen == std::string::npos || closeParen == std::string::npos) {
-                return NULL_STR;
-            }
-            return returnOrNull(decodeBase64ToString(placeholder.substr(openParen + 1, closeParen - openParen - 1)));
+            std::string inner;
+            if (!getPlaceholderContent(placeholder, inner)) return NULL_STR;
+            return returnOrNull(decodeBase64ToString(inner));
         }},
         {"{random(", [&](const std::string& placeholder) {
             std::srand(std::time(0));
-            
-            const size_t openParen = placeholder.find('(');
-            const size_t closeParen = placeholder.find(')', openParen + 1);
-            if (openParen == std::string::npos || closeParen == std::string::npos) {
-                return NULL_STR;
-            }
-            const std::string parameters = placeholder.substr(openParen + 1, closeParen - openParen - 1);
+            std::string parameters;
+            if (!getPlaceholderContent(placeholder, parameters)) return NULL_STR;
             const size_t commaPos = parameters.find(',');
-            
-            if (commaPos != std::string::npos) {
-                std::string lowStr = parameters.substr(0, commaPos);
-                std::string highStr = parameters.substr(commaPos + 1);
-                
-                if (!isValidNumber(lowStr) || !isValidNumber(highStr)) {
-                    return NULL_STR;
-                }
-                
-                const int lowValue = ult::stoi(lowStr);
-                const int highValue = ult::stoi(highStr);
-                return returnOrNull(ult::to_string(lowValue + rand() % (highValue - lowValue + 1)));
-            }
-            return returnOrNull(placeholder);
+            if (commaPos == std::string::npos) return returnOrNull(placeholder);
+            std::string lowStr  = parameters.substr(0, commaPos);
+            std::string highStr = parameters.substr(commaPos + 1);
+            if (!isValidNumber(lowStr) || !isValidNumber(highStr)) return NULL_STR;
+            const int lowValue  = ult::stoi(lowStr);
+            const int highValue = ult::stoi(highStr);
+            return returnOrNull(ult::to_string(lowValue + rand() % (highValue - lowValue + 1)));
         }},
         {"{slice(", [&](const std::string& placeholder) {
             const size_t startPos = placeholder.find('(');
@@ -3998,29 +3934,17 @@ void handleHexEdit(const std::string& sourcePath, const std::string& secondArg, 
         }
         occurrenceArgIndex = 4;
         
-    } else if (commandName == "hex-by-decimal") {
+    } else if (commandName == "hex-by-decimal" || commandName == "hex-by-rdecimal") {
+        const bool isReversed = (commandName == "hex-by-rdecimal");
         if (fourthArg.empty()) {
-            hexDataToReplace = decimalToHex(secondArg);
-            hexDataReplacement = decimalToHex(thirdArg);
+            hexDataToReplace   = isReversed ? decimalToReversedHex(secondArg) : decimalToHex(secondArg);
+            hexDataReplacement = isReversed ? decimalToReversedHex(thirdArg)  : decimalToHex(thirdArg);
         } else {
             if (!isValidNumber(fourthArg))
                 return;
             const size_t byteSize = ult::stoi(fourthArg);
-            hexDataToReplace = decimalToHex(secondArg, byteSize);
-            hexDataReplacement = decimalToHex(thirdArg, byteSize);
-        }
-        occurrenceArgIndex = 5;
-        
-    } else if (commandName == "hex-by-rdecimal") {
-        if (fourthArg.empty()) {
-            hexDataToReplace = decimalToReversedHex(secondArg);
-            hexDataReplacement = decimalToReversedHex(thirdArg);
-        } else {
-            if (!isValidNumber(fourthArg))
-                return;
-            const size_t byteSize = ult::stoi(fourthArg);
-            hexDataToReplace = decimalToReversedHex(secondArg, byteSize);
-            hexDataReplacement = decimalToReversedHex(thirdArg, byteSize);
+            hexDataToReplace   = isReversed ? decimalToReversedHex(secondArg, byteSize) : decimalToHex(secondArg, byteSize);
+            hexDataReplacement = isReversed ? decimalToReversedHex(thirdArg,  byteSize) : decimalToHex(thirdArg,  byteSize);
         }
         occurrenceArgIndex = 5;
         
@@ -4043,23 +3967,18 @@ void handleHexEdit(const std::string& sourcePath, const std::string& secondArg, 
 
 void handleHexByCustom(const std::string& sourcePath, const std::string& customPattern, const std::string& offset, std::string hexDataReplacement, const std::string& commandName, std::string byteGroupSize) {
     if (hexDataReplacement != NULL_STR) {
-        if (commandName == "hex-by-custom-decimal-offset") {
+        if (commandName == "hex-by-custom-decimal-offset" || commandName == "hex-by-custom-rdecimal-offset") {
+            const bool isReversed = (commandName == "hex-by-custom-rdecimal-offset");
             if (!byteGroupSize.empty()) {
-                if (!isValidNumber(byteGroupSize)) {
+                if (!isValidNumber(byteGroupSize))
                     return;
-                }
-                hexDataReplacement = decimalToHex(hexDataReplacement, ult::stoi(byteGroupSize));
+                hexDataReplacement = isReversed
+                    ? decimalToReversedHex(hexDataReplacement, ult::stoi(byteGroupSize))
+                    : decimalToHex(hexDataReplacement, ult::stoi(byteGroupSize));
             } else {
-                hexDataReplacement = decimalToHex(hexDataReplacement);
-            }
-        } else if (commandName == "hex-by-custom-rdecimal-offset") {
-            if (!byteGroupSize.empty()) {
-                if (!isValidNumber(byteGroupSize)) {
-                    return;
-                }
-                hexDataReplacement = decimalToReversedHex(hexDataReplacement, ult::stoi(byteGroupSize));
-            } else {
-                hexDataReplacement = decimalToReversedHex(hexDataReplacement);
+                hexDataReplacement = isReversed
+                    ? decimalToReversedHex(hexDataReplacement)
+                    : decimalToHex(hexDataReplacement);
             }
         }
         hexEditByCustomOffset(sourcePath, customPattern, offset, hexDataReplacement);
@@ -4923,7 +4842,7 @@ void executeInterpreterCommands(std::vector<std::vector<std::string>>&& commands
         return;
     }
 
-    if (!ult::limitedMemory && ult::useSoundEffects) {
+    if (ult::useSoundEffects) {
         if (triggerEnterSound.exchange(false)) {
             ult::Audio::playEnterSound();
         } else if (triggerOnSound.exchange(false)) {
