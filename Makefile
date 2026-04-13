@@ -85,23 +85,29 @@ CFLAGS += $(INCLUDE) -D__SWITCH__ -DAPP_VERSION="\"$(APP_VERSION)\"" -D_FORTIFY_
 # options for libultrahand
 #---------------------------------------------------------------------------------
 # For compiling Ultrahand Overlay only
-IS_LAUNCHER_DIRECTIVE := 1
-CFLAGS += -DIS_LAUNCHER_DIRECTIVE=$(IS_LAUNCHER_DIRECTIVE)
+CFLAGS += -DIS_LAUNCHER_DIRECTIVE=1
 
 # Enable Widget
-USING_WIDGET_DIRECTIVE := 1  # or true
-CFLAGS += -DUSING_WIDGET_DIRECTIVE=$(USING_WIDGET_DIRECTIVE)
+CFLAGS += -DUSING_WIDGET_DIRECTIVE=1
 
 # Enable Logging
-USING_LOGGING_DIRECTIVE := 1  # or true
-CFLAGS += -DUSING_LOGGING_DIRECTIVE=$(USING_LOGGING_DIRECTIVE)
+CFLAGS += -DUSING_LOGGING_DIRECTIVE=1
 
 # FPS Indicator (for debugging)
 USING_FPS_INDICATOR_DIRECTIVE ?= 1
-CFLAGS += -DUSING_FPS_INDICATOR_DIRECTIVE=$(USING_FPS_INDICATOR_DIRECTIVE)
+CFLAGS += -DUSING_FPS_INDICATOR_DIRECTIVE=1
 
 # Targeted speed optimizations
 #CFLAGS += -DTESLA_TARGETED_SPEED
+
+# Exception wrap utilization (for smaller compilation size)
+CFLAGS += -DUSE_EXCEPTION_WRAP=1
+
+# Requires USE_EXCEPTION_WRAP and inclusion of exception_wrap.hpp in main
+LDFLAGS += -Wl,-wrap,__cxa_throw \
+           -Wl,-wrap,_Unwind_Resume \
+           -Wl,-wrap,__gxx_personality_v0
+
 
 #---------------------------------------------------------------------------------
 
@@ -117,10 +123,7 @@ LIBS := -lcurl -lz -lminizip -lmbedtls -lmbedx509 -lmbedcrypto -lnx
 CXXFLAGS += -fno-exceptions -ffunction-sections -fdata-sections -fno-rtti
 LDFLAGS += -Wl,--as-needed -Wl,--gc-sections
 
-# Requires inclusion of exception_wrap.hpp in main
-LDFLAGS += -Wl,-wrap,__cxa_throw \
-           -Wl,-wrap,_Unwind_Resume \
-           -Wl,-wrap,__gxx_personality_v0
+
 
 # For Ensuring Parallel LTRANS Jobs w/ GCC, make -j N (for convenience)
 # ------------------------------------------------------------
