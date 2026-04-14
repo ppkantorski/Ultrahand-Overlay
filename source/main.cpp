@@ -5469,6 +5469,7 @@ public:
         //std::lock_guard<std::mutex> lock(transitionMutex);
 
         if (returningToMain || returningToHiddenMain) {
+            lastOpenPackagePath.clear();  // no longer in a package
             tsl::clearGlyphCacheNow.store(true, release);
             clearMemory();
 
@@ -5520,6 +5521,7 @@ public:
         if (dropdownSection.empty()){
             inPackageMenu = true;
             lastMenu = "packageMenu";
+            lastOpenPackagePath = packagePath;  // track for combo redirect detection
         } else {
             inSubPackageMenu = true;
             lastMenu = "subPackageMenu";
