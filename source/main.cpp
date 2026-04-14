@@ -5657,7 +5657,7 @@ public:
         if (usingPages) {
             simulatedMenu.exchange(false, std::memory_order_acq_rel);
             
-            bool wasSimulated = false;
+            //bool wasSimulated = false;
             {
                 if (simulatedNextPage.exchange(false, std::memory_order_acq_rel)) {
                     if (currentPage == LEFT_STR) {
@@ -5666,7 +5666,7 @@ public:
                     else if (currentPage == RIGHT_STR) {
                         keysDown |= KEY_DLEFT;
                     }
-                    wasSimulated = true;
+                    //wasSimulated = true;
                 }
             }
     
@@ -5690,17 +5690,23 @@ public:
                 if (!isTouching && slideCondition && (keysDown & navKey) &&
                     (!onTrack ? !(keysHeld & ~navKey & ALL_KEYS_MASK) : !(keysHeld & ~KEY_R & ~navKey & ALL_KEYS_MASK))) {
                     {
-                        std::lock_guard<std::mutex> lock(tsl::elm::s_safeToSwapMutex);
-                        if (tsl::elm::s_safeToSwap.load(acquire)) {
-                            tsl::swapTo<PackageMenu>(packagePath, dropdownSection, destPage, packageName, nestedLayer, pageHeader);
-                            resetSlideState();
-                            if (!wasSimulated)
-                                triggerNavigationFeedback();
-                            else {
-                                triggerRumbleClick.store(true, release);
-                                signalHaptics();
-                            }
-                        }
+                        //bool expected = false;
+                        //if (tsl::elm::s_swapPending.compare_exchange_strong(
+                        //        expected, true, std::memory_order_acq_rel)) {
+                        //    tsl::swapTo<PackageMenu>(packagePath, dropdownSection, destPage, packageName, nestedLayer, pageHeader);
+                        //    resetSlideState();
+                        //    //if (!wasSimulated)
+                        //    //    triggerNavigationFeedback();
+                        //    //else {
+                        //    //    triggerRumbleClick.store(true, release);
+                        //    //    signalHaptics();
+                        //    //}
+                        //    triggerNavigationFeedback();
+                        //}
+                        tsl::swapTo<PackageMenu>(packagePath, dropdownSection, destPage, packageName, nestedLayer, pageHeader);
+                        resetSlideState();
+                        triggerNavigationFeedback();
+
                         return true;
                     }
                 }
@@ -6808,7 +6814,7 @@ public:
 
                 const bool onLeftPage = (!usePageSwap && menuMode != PACKAGES_STR) || (usePageSwap && menuMode != OVERLAYS_STR);
                 
-                bool wasSimulated = false;
+                //bool wasSimulated = false;
                 {
                     if (simulatedNextPage.exchange(false, std::memory_order_acq_rel)) {
                         if (onLeftPage) {
@@ -6817,7 +6823,7 @@ public:
                         else {
                             keysDown |= KEY_DLEFT;
                         }
-                        wasSimulated = true;
+                        //wasSimulated = true;
                     }
                 }
                 
@@ -6848,21 +6854,28 @@ public:
                         (!onTrack ? !(keysHeld & ~KEY_LEFT & ALL_KEYS_MASK) : !(keysHeld & ~KEY_LEFT & ~KEY_R & ALL_KEYS_MASK));
                     if (!hidePackages && !isTouching && slideCondition && (wantRight || wantLeft)) {
                         {
-                            std::lock_guard<std::mutex> lock(tsl::elm::s_safeToSwapMutex);
-
-                            if (tsl::elm::s_safeToSwap.load(acquire)) {
-                                currentMenu = onLeftPage ? (usePageSwap ? OVERLAYS_STR : PACKAGES_STR)
-                                                         : (usePageSwap ? PACKAGES_STR : OVERLAYS_STR);
-                                resetNavState();
-                                tsl::swapTo<MainMenu>();
-
-                                if (!wasSimulated)
-                                    triggerNavigationFeedback();
-                                else {
-                                    triggerRumbleClick.store(true, release);
-                                    signalHaptics();
-                                }
-                            }
+                            //bool expected = false;
+                            //if (tsl::elm::s_swapPending.compare_exchange_strong(
+                            //        expected, true, std::memory_order_acq_rel)) {
+                            //    currentMenu = onLeftPage ? (usePageSwap ? OVERLAYS_STR : PACKAGES_STR)
+                            //                             : (usePageSwap ? PACKAGES_STR : OVERLAYS_STR);
+                            //    resetNavState();
+                            //    tsl::swapTo<MainMenu>();
+                            //    
+                            //    //if (!wasSimulated)
+                            //    //    triggerNavigationFeedback();
+                            //    //else {
+                            //    //    triggerRumbleClick.store(true, release);
+                            //    //    signalHaptics();
+                            //    //}
+                            //    triggerNavigationFeedback();
+                            //}
+                            currentMenu = onLeftPage ? (usePageSwap ? OVERLAYS_STR : PACKAGES_STR)
+                                                     : (usePageSwap ? PACKAGES_STR : OVERLAYS_STR);
+                            
+                            tsl::swapTo<MainMenu>();
+                            resetNavState();
+                            triggerNavigationFeedback();
                             return true;
                         }
                     }
