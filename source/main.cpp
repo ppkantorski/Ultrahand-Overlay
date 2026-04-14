@@ -6260,6 +6260,17 @@ public:
                     jumpItemName = newOverlayName;
                     jumpItemValue = hideOverlayVersions ? "" : displayVersion;
                     jumpItemExactMatch.store(true, std::memory_order_release);
+                } else if (!comboReturnOverlayFilename.empty() &&
+                           overlayFileName == comboReturnOverlayFilename) {
+                    // Combo return: user hit the combo while inside this overlay (any mode).
+                    // Position the cursor on this overlay's list item so they land back on
+                    // it when the overlay menu opens.  Consumed here so it cannot misfire
+                    // on subsequent menu builds.
+                    comboReturnOverlayFilename.clear();
+                    comboReturnOverlayMode.clear();
+                    jumpItemName = newOverlayName;
+                    jumpItemValue = hideOverlayVersions ? "" : displayVersion;
+                    jumpItemExactMatch.store(true, std::memory_order_release);
                 }
                                 
                 listItem->setClickListener([listItem, overlayFile, newStarred, overlayFileName, overlayName, overlayVersion, displayVersion, requiresAMS110Handling, supportsAMS110, buildOverlayReturnName](s64 keys) {
@@ -7326,7 +7337,12 @@ int main(int argc, char* argv[]) {
                 selectedPackage += argv[nextArg];
                 arg = nextArg;
             }
-            break;
+        } else if (strcmp(argv[arg], "--comboReturnFrom") == 0 && arg + 1 < argc) {
+            // Overlay that triggered the combo return — populate the inline var so
+            // createOverlaysMenu can position the cursor on the correct list item.
+            // The value is a bare filename (e.g. "Status-Monitor-Overlay.ovl") written
+            // by tesla.hpp's combo-detection branch into the launch args.
+            comboReturnOverlayFilename = argv[++arg];
         }
     }
     return tsl::loop<Overlay, tsl::impl::LaunchFlags::None>(argc, argv);
