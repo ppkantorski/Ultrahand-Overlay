@@ -6593,6 +6593,17 @@ public:
                 }
                 listItem->setTextColor(usePackageTitles ? tsl::ultPackageTextColor : tsl::packageTextColor);
                 listItem->disableClickAnimation();
+
+                // Combo return: position the cursor on the package the user was browsing.
+                // Uses contains-match (exactMatch=false) — same as the B-button return path —
+                // to stay robust against any subtle m_text transformations (translations,
+                // unicode conversion) that could break a byte-exact comparison.
+                if (!comboReturnPackageName.empty() && packageName == comboReturnPackageName) {
+                    comboReturnPackageName.clear();
+                    jumpItemName = displayName;
+                    jumpItemValue = hidePackageVersions ? "" : displayVersion;
+                    jumpItemExactMatch.store(false, std::memory_order_release);
+                }
                 
                 listItem->setClickListener([listItem, packageFilePath, newStarred, packageName, newPackageName, packageVersion, displayVersion, packageStarred, buildReturnName](s64 keys) {
                     if (runningInterpreter.load(acquire)) return false;
@@ -7330,7 +7341,7 @@ int main(int argc, char* argv[]) {
         
         if (strcmp(argv[arg], "--package") == 0 && arg + 1 < argc) {
             selectedPackage.clear();
-            selectedPackage.reserve(64); // Reserve reasonable amount
+            selectedPackage.reserve(64);
             
             for (u8 nextArg = arg + 1; nextArg < argc && argv[nextArg][0] != '-'; nextArg++) {
                 if (!selectedPackage.empty()) selectedPackage += ' ';
@@ -7338,11 +7349,28 @@ int main(int argc, char* argv[]) {
                 arg = nextArg;
             }
         } else if (strcmp(argv[arg], "--comboReturnFrom") == 0 && arg + 1 < argc) {
-            // Overlay that triggered the combo return — populate the inline var so
-            // createOverlaysMenu can position the cursor on the correct list item.
-            // The value is a bare filename (e.g. "Status-Monitor-Overlay.ovl") written
-            // by tesla.hpp's combo-detection branch into the launch args.
+            // Overlay filename that triggered the combo return — populate the inline var
+            // so createOverlaysMenu can position the cursor on the correct list item.
             comboReturnOverlayFilename = argv[++arg];
+        } else if (strcmp(argv[arg], "--comboReturnPackage") == 0 && arg + 1 < argc) {
+            // Package folder that triggered the combo return.
+            // Package names may contain spaces (e.g. "My Package"), so collect all
+            // subsequent non-flag words — exactly like the --package handler above.
+            // Write to_packages=true into the INI here, in the NEW process, so that
+            // initializeSettingsAndDirectories() sees it reliably regardless of
+            // anything the old process wrote before exiting.
+            comboReturnPackageName.clear();
+            for (u8 nextArg = arg + 1; nextArg < argc && argv[nextArg][0] != '-'; nextArg++) {
+                if (!comboReturnPackageName.empty()) comboReturnPackageName += ' ';
+                comboReturnPackageName += argv[nextArg];
+                arg = nextArg;
+            }
+            setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "to_packages", TRUE_STR);
+            // If the target package is marked hidden in packages.ini, tell the new
+            // process to open the hidden-packages list — same flag the normal B-button
+            // return path (handleMainMenuReturn) writes at line 5766.
+            if (parseValueFromIniSection(PACKAGES_INI_FILEPATH, comboReturnPackageName, HIDE_STR) == TRUE_STR)
+                setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, IN_HIDDEN_PACKAGE_STR, TRUE_STR);
         }
     }
     return tsl::loop<Overlay, tsl::impl::LaunchFlags::None>(argc, argv);
