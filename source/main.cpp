@@ -1667,6 +1667,9 @@ public:
             useLaunchCombos = getBoolValue("launch_combos", true); // TRUE_STR default
             createToggleListItem(list, LAUNCH_COMBOS, useLaunchCombos, "launch_combos");
 
+            useLaunchRecall = getBoolValue("launch_recall", true); // TRUE_STR default
+            createToggleListItem(list, LAUNCH_RECALL, useLaunchRecall, "launch_recall");
+
             useHapticFeedback = getBoolValue("haptic_feedback", false); // FALSE_STR default
             createToggleListItem(list, HAPTIC_FEEDBACK, useHapticFeedback, "haptic_feedback");
 
@@ -5912,6 +5915,8 @@ public:
 bool triggerBootCommands = true;
 bool toPackages = false;
 bool inOverlay = false;
+bool isComboReturnFrom = false;    // set when --comboReturnFrom was passed; gated on useLaunchRecall in loadInitialGui
+bool isComboReturnPackage = false; // set when --comboReturnPackage was passed; gated on useLaunchRecall in loadInitialGui
 
 /**
  * @brief The `MainMenu` class handles the main menu overlay functionality.
@@ -7067,6 +7072,7 @@ void initializeSettingsAndDirectories() {
     ensureDefault("selection_text",           FALSE_STR);
     ensureDefault("selection_value",          FALSE_STR);
     ensureDefault("launch_combos",            TRUE_STR);
+    ensureDefault("launch_recall",            TRUE_STR);
     ensureDefault("sound_effects",            TRUE_STR);
     ensureDefault("haptic_feedback",          FALSE_STR);
     ensureDefault("swipe_to_open",            TRUE_STR);
@@ -7169,6 +7175,28 @@ public:
     virtual std::unique_ptr<tsl::Gui> loadInitialGui() override {
 
         initializeSettingsAndDirectories();
+
+        // Combo-return handling, gated on useLaunchRecall.
+        // All side-effect work was intentionally deferred from main() to here so it
+        // only runs when the feature is actually enabled.  initializeSettingsAndDirectories()
+        // has already run, so we drive toPackages directly instead of going through the INI.
+        if (isComboReturnFrom && !ult::useLaunchRecall) {
+            comboReturnOverlayFilename.clear();
+            comboReturnOverlayMode.clear();
+            setUltrahandConfig(IN_HIDDEN_OVERLAY_STR, FALSE_STR);
+        }
+        if (isComboReturnPackage) {
+            if (ult::useLaunchRecall) {
+                // Apply the tab-switch and hidden-mode effects that main() used to write
+                // into the INI.  toPackages is set directly since initializeSettingsAndDirectories()
+                // already ran.  The hidden-package INI flag is still written so createUI() sees it.
+                toPackages = true;
+                if (parseValueFromIniSection(PACKAGES_INI_FILEPATH, comboReturnPackageName, HIDE_STR) == TRUE_STR)
+                    setUltrahandConfig(IN_HIDDEN_PACKAGE_STR, TRUE_STR);
+            } else {
+                comboReturnPackageName.clear();
+            }
+        }
 
         // Check if a package was specified via command line
         if (!selectedPackage.empty()) {
@@ -7358,28 +7386,16 @@ int main(int argc, char* argv[]) {
                 arg = nextArg;
             }
         } else if (strcmp(argv[arg], "--comboReturnFrom") == 0 && arg + 1 < argc) {
-            // Overlay filename that triggered the combo return — populate the inline var
-            // so createOverlaysMenu can position the cursor on the correct list item.
+            isComboReturnFrom = true;
             comboReturnOverlayFilename = argv[++arg];
         } else if (strcmp(argv[arg], "--comboReturnPackage") == 0 && arg + 1 < argc) {
-            // Package folder that triggered the combo return.
-            // Package names may contain spaces (e.g. "My Package"), so collect all
-            // subsequent non-flag words — exactly like the --package handler above.
-            // Write to_packages=true into the INI here, in the NEW process, so that
-            // initializeSettingsAndDirectories() sees it reliably regardless of
-            // anything the old process wrote before exiting.
+            isComboReturnPackage = true;
             comboReturnPackageName.clear();
             for (u8 nextArg = arg + 1; nextArg < argc && argv[nextArg][0] != '-'; nextArg++) {
                 if (!comboReturnPackageName.empty()) comboReturnPackageName += ' ';
                 comboReturnPackageName += argv[nextArg];
                 arg = nextArg;
             }
-            setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "to_packages", TRUE_STR);
-            // If the target package is marked hidden in packages.ini, tell the new
-            // process to open the hidden-packages list — same flag the normal B-button
-            // return path (handleMainMenuReturn) writes at line 5766.
-            if (parseValueFromIniSection(PACKAGES_INI_FILEPATH, comboReturnPackageName, HIDE_STR) == TRUE_STR)
-                setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, IN_HIDDEN_PACKAGE_STR, TRUE_STR);
         }
     }
     return tsl::loop<Overlay, tsl::impl::LaunchFlags::None>(argc, argv);
