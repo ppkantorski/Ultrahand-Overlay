@@ -124,6 +124,11 @@ def main():
             folder_path.mkdir(parents=True, exist_ok=True)
             print(f"Created {folder_path}")
         
+        # Create NTP_SYNC_PENDING.flag in flags folder
+        flag_file = sdout_dir / "config/ultrahand/flags/NTP_SYNC_PENDING.flag"
+        flag_file.touch()
+        print(f"Created {flag_file}")
+
         # Step 2: Download and extract nx-ovlloader.zip
         ovlloader_zip = Path(temp_dir) / "nx-ovlloader.zip"
         download_file(
