@@ -1764,6 +1764,7 @@ public:
         // Handle delete item continuous hold behavior
         if (isHolding) {
             processHold(keysDown, keysHeld, holdStartTick, isHolding, [this]() {
+                triggerExitFeedback();
                 if (requestOverlayExit()) {
                     ult::launchingOverlay.store(true, std::memory_order_release);
                     tsl::Overlay::get()->close();
@@ -7296,6 +7297,14 @@ public:
                     deleteFileOrDirectory(FUSE_DATA_INI_PATH);
             } else {
                 reloadingBoot = true;
+            }
+
+            // For syncing ntp once per download
+            if (!ult::isFile(NTP_SYNC_PENDING_FLAG_FILEPATH)) {
+                FILE* file = std::fopen(NTP_SYNC_PENDING_FLAG_FILEPATH.c_str(), "w");
+                if (file) {
+                    std::fclose(file);
+                }
             }
         }
 
