@@ -2984,9 +2984,10 @@ public:
         lastSelectedListItem = nullptr;
         tsl::clearGlyphCacheNow.store(true, release);
     }
-        
+    
     void processSelectionCommands() {
         if (ult::expandedMemory) maxItemsLimit = 0; // uncapped for loader+
+        else if (!ult::limitedMemory) maxItemsLimit = 400; // raise cap for 6MB heap
     
         removeEmptyCommands(selectionCommands);
     
