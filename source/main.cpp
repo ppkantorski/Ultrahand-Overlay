@@ -353,6 +353,7 @@ bool handleRunningInterpreter(uint64_t& keysDown, uint64_t& keysHeld) {
 static u64 holdStartTick = 0;
 static std::string lastSelectedListItemFooter;
 static std::vector<std::vector<std::string>> storedCommands;
+static bool holdRumbleFired[3] = {false, false, false}; // guards for the ~33%, ~66%, ~100% rumble pulses
 
 bool processHold(uint64_t keysDown, uint64_t keysHeld, u64& holdStartTick, bool& isHolding,
                 std::function<void()> onComplete,
@@ -373,6 +374,7 @@ bool processHold(uint64_t keysDown, uint64_t keysHeld, u64& holdStartTick, bool&
         isHolding = false;
         displayPercentage.store(0, std::memory_order_release);
         runningInterpreter.store(false, std::memory_order_release);
+        holdRumbleFired[0] = holdRumbleFired[1] = holdRumbleFired[2] = false;
         
         if (lastSelectedListItem) {
             // Reset touch hold state
@@ -413,7 +415,17 @@ bool processHold(uint64_t keysDown, uint64_t keysHeld, u64& holdStartTick, bool&
     const int percentage = std::min(100, static_cast<int>((elapsedMs * 100) / 3000));
     displayPercentage.store(percentage, std::memory_order_release);
     
-    if (percentage > 20 && (percentage % 30) == 0) {
+    // Threshold-crossing rumble pulses — fired at ~33%, ~66%, ~100% of the hold.
+    // Using >= + a consumed flag guarantees exactly one pulse per threshold
+    // regardless of frame timing, fixing the frame-skip inconsistency of % 30 == 0.
+    if (!holdRumbleFired[0] && percentage >= 30) {
+        holdRumbleFired[0] = true;
+        triggerRumbleDoubleClickFeedback();
+    } else if (!holdRumbleFired[1] && percentage >= 60) {
+        holdRumbleFired[1] = true;
+        triggerRumbleDoubleClickFeedback();
+    } else if (!holdRumbleFired[2] && percentage >= 90) {
+        holdRumbleFired[2] = true;
         triggerRumbleDoubleClickFeedback();
     }
     
@@ -421,6 +433,7 @@ bool processHold(uint64_t keysDown, uint64_t keysHeld, u64& holdStartTick, bool&
     if (percentage >= 100) {
         isHolding = false;
         displayPercentage.store(-1, std::memory_order_release);
+        holdRumbleFired[0] = holdRumbleFired[1] = holdRumbleFired[2] = false;
         
         if (lastSelectedListItem) {
             lastSelectedListItem->resetTouchHold();
