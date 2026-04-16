@@ -53,6 +53,12 @@ constexpr size_t indexPlaceholderLength = indexPlaceholder.size();
 static std::string selectedPackage; // for package forwarders
 static std::string nextToggleState;
 
+// Page cursor memory: remembers where the user was on each page/tab
+static std::string mainMenuLeftItem;  // cursor for the left tab (overlays or packages)
+static std::string mainMenuRightItem; // cursor for the right tab
+// Per-nesting-level page cursors for PackageMenu: .first = left page, .second = right page
+static std::vector<std::pair<std::string,std::string>> pkgPageCursors;
+
 // Overlay booleans
 static bool returningToMain = false;
 static bool returningToHiddenMain = false;
@@ -1702,9 +1708,6 @@ public:
             useLaunchCombos = getBoolValue("launch_combos", true); // TRUE_STR default
             createToggleListItem(list, LAUNCH_COMBOS, useLaunchCombos, "launch_combos");
 
-            useLaunchRecall = getBoolValue("launch_recall", true); // TRUE_STR default
-            createToggleListItem(list, LAUNCH_RECALL, useLaunchRecall, "launch_recall");
-
             useHapticFeedback = getBoolValue("haptic_feedback", false); // FALSE_STR default
             createToggleListItem(list, HAPTIC_FEEDBACK, useHapticFeedback, "haptic_feedback");
 
@@ -1730,8 +1733,13 @@ public:
                 hideUnsupported = getBoolValue("hide_unsupported", false); // FALSE_STR default
                 createToggleListItem(list, SHOW_UNSUPPORTED, hideUnsupported, "hide_unsupported", true, true, true);
             }
+
             usePageSwap = getBoolValue("page_swap", false); // FALSE_STR default
             createToggleListItem(list, PAGE_SWAP, usePageSwap, "page_swap", false, true);
+            usePageRecall = getBoolValue("page_recall", true); // TRUE_STR default
+            createToggleListItem(list, PAGE_RECALL, usePageRecall, "page_recall");
+            useLaunchRecall = getBoolValue("launch_recall", true); // TRUE_STR default
+            createToggleListItem(list, LAUNCH_RECALL, useLaunchRecall, "launch_recall");
 
             hideOverlayVersions = getBoolValue("hide_overlay_versions", false); // FALSE_STR default
             createToggleListItem(list, OVERLAY_VERSIONS, hideOverlayVersions, "hide_overlay_versions", true, true);
@@ -5745,6 +5753,22 @@ public:
                         //    //}
                         //    triggerNavigationFeedback();
                         //}
+                        // Ensure pkgPageCursors has an entry for this nesting level
+                        if (usePageRecall) {
+                            while (pkgPageCursors.size() <= static_cast<size_t>(nestedLayer))
+                                pkgPageCursors.emplace_back("", "");
+                            // Save cursor for the page we're leaving; restore cursor for the page we're entering
+                            if (onLeftPage) {
+                                pkgPageCursors[nestedLayer].first  = s_lastFocusedItemText;
+                                jumpItemName = pkgPageCursors[nestedLayer].second;
+                            } else {
+                                pkgPageCursors[nestedLayer].second = s_lastFocusedItemText;
+                                jumpItemName = pkgPageCursors[nestedLayer].first;
+                            }
+                            jumpItemValue = "";
+                            jumpItemExactMatch.store(false, release);
+                            skipJumpReset.store(true, release);
+                        }
                         tsl::swapTo<PackageMenu>(packagePath, dropdownSection, destPage, packageName, nestedLayer, pageHeader);
                         resetSlideState();
                         triggerNavigationFeedback();
@@ -5772,6 +5796,7 @@ public:
 
             if (nestedMenuCount == 0) {
                 inPackageMenu = false;
+                pkgPageCursors.clear(); // returning to main menu: discard all package page cursors
                 if (!inHiddenMode.load(std::memory_order_acquire))
                     returningToMain = true;
                 else
@@ -5790,6 +5815,9 @@ public:
             }
             if (nestedMenuCount > 0) {
                 nestedMenuCount--;
+                // Discard page cursors for the level we just left
+                if (usePageRecall && (pkgPageCursors.size() > static_cast<size_t>(nestedMenuCount + 1)))
+                    pkgPageCursors.resize(nestedMenuCount + 1);
                 if (lastPackageMenu == "subPackageMenu") {
                     returningToSubPackage = true;
                 } else {
@@ -5825,6 +5853,9 @@ public:
                 // Decrement nestedMenuCount when returning via context
                 if (nestedMenuCount > 0)
                     nestedMenuCount--;
+                // Discard page cursors for the level we just left
+                if (usePageRecall && pkgPageCursors.size() > static_cast<size_t>(nestedMenuCount + 1))
+                    pkgPageCursors.resize(nestedMenuCount + 1);
                 
                 jumpItemName = returnTo.option;
                 jumpItemValue = "";
@@ -6939,6 +6970,19 @@ public:
                             currentMenu = onLeftPage ? (usePageSwap ? OVERLAYS_STR : PACKAGES_STR)
                                                      : (usePageSwap ? PACKAGES_STR : OVERLAYS_STR);
                             
+                            // Save cursor for the page we're leaving; restore cursor for the page we're entering
+                            if (usePageRecall) {
+                                if (onLeftPage) {
+                                    mainMenuLeftItem  = s_lastFocusedItemText;
+                                    jumpItemName      = mainMenuRightItem;
+                                } else {
+                                    mainMenuRightItem = s_lastFocusedItemText;
+                                    jumpItemName      = mainMenuLeftItem;
+                                }
+                                jumpItemValue = "";
+                                jumpItemExactMatch.store(false, release);
+                                skipJumpReset.store(true, release);
+                            }
                             tsl::swapTo<MainMenu>();
                             resetNavState();
                             triggerNavigationFeedback();
@@ -7108,7 +7152,6 @@ void initializeSettingsAndDirectories() {
     ensureDefault("selection_text",           FALSE_STR);
     ensureDefault("selection_value",          FALSE_STR);
     ensureDefault("launch_combos",            TRUE_STR);
-    ensureDefault("launch_recall",            TRUE_STR);
     ensureDefault("sound_effects",            TRUE_STR);
     ensureDefault("haptic_feedback",          FALSE_STR);
     ensureDefault("swipe_to_open",            TRUE_STR);
@@ -7149,6 +7192,8 @@ void initializeSettingsAndDirectories() {
     setDefaultValue("package_titles",         FALSE_STR, usePackageTitles);
     setDefaultValue("package_versions",       TRUE_STR,  usePackageVersions);
     setDefaultValue("page_swap",              FALSE_STR, usePageSwap);        // also set by parseOverlaySettings
+    setDefaultValue("page_recall",            TRUE_STR,  usePageRecall);
+    setDefaultValue("launch_recall",          TRUE_STR,  useLaunchRecall);
     setDefaultValue("right_alignment",        FALSE_STR, useRightAlignment);  // also set by parseOverlaySettings
     setDefaultValue("startup_notification",   TRUE_STR,  useStartupNotification);
 
