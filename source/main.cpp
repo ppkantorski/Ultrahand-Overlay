@@ -917,6 +917,8 @@ public:
         if (dropdownSelection == "softwareUpdateMenu") {
             devImageData.clear();
             devImageData.shrink_to_fit();
+            devImageDismissTick = 0;
+            devImageDismissing  = false;
         }
     }
 
@@ -1103,7 +1105,27 @@ public:
             if (loadDevImages()) {
                 creatorStartTick = nextBlinkTick = blinkEndTick = 0;
                 creatorAnimDone = false;
-                list->addItem(new tsl::elm::CustomDrawer([](tsl::gfx::Renderer* renderer, u16, u16, u16, u16){drawDevImage(renderer);}));
+
+                struct DevImageElement : public tsl::elm::Element {
+                    void draw(tsl::gfx::Renderer* r) override { drawDevImage(r); }
+                    void layout(u16, u16, u16, u16) override {}
+                    bool onTouch(tsl::elm::TouchEvent ev, s32 cx, s32 cy,
+                                 s32, s32, s32, s32) override {
+                        if (ev == tsl::elm::TouchEvent::Touch
+                            && devImageDismissTick == 0 && creatorAnimDone
+                            && cx >= static_cast<s32>(258 + ult::layerEdge)
+                            && cx <  static_cast<s32>(258 + devImageWidth + ult::layerEdge)
+                            && cy >= 557 && cy < 557 + devImageHeight) {
+                            devImageDismissTick = armGetSystemTick();
+                            devImageDismissing  = true;
+                        }
+                        return false; // non-consuming so scroll still works
+                    }
+                };
+                auto* imgElem = new DevImageElement();
+                imgElem->m_isItem  = false;
+                imgElem->m_isTable = true;
+                list->addItem(imgElem);
             }
         } else if (dropdownSelection == "systemMenu") {
             

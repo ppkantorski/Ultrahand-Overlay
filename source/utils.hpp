@@ -1658,6 +1658,8 @@ bool loadDevImages() {
 
 static u64  creatorStartTick = 0, nextBlinkTick = 0, blinkEndTick = 0;
 static bool creatorAnimDone  = false;
+static u64  devImageDismissTick = 0;   // non-zero once a tap triggers dismiss
+static bool devImageDismissing  = false; // true = sliding down, false = waiting
 
 void drawDevImage(tsl::gfx::Renderer* renderer) {
     if (devImageData.size() < devImageFrameSize * 2) return;
@@ -1679,6 +1681,28 @@ void drawDevImage(tsl::gfx::Renderer* renderer) {
                 drawY = static_cast<s32>(targetY);
                 const float firstBlink = 1.0f + (rand() % 300) / 100.0f;
                 nextBlinkTick = armGetSystemTick() + armNsToTicks(static_cast<u64>(firstBlink * 1e9f));
+            }
+        }
+    } else if (devImageDismissTick != 0) {
+        const float elapsed = armTicksToNs(armGetSystemTick() - devImageDismissTick) / 1e9f;
+        if (devImageDismissing) {
+            // Slide down using the same cubic ease-out curve, reversed direction
+            const float t = std::min(elapsed / duration, 1.0f);
+            const float ease = 1.0f - (1.0f - t) * (1.0f - t) * (1.0f - t);
+            drawY = static_cast<s32>(targetY + (startY - targetY) * ease);
+            if (t >= 1.0f) {
+                drawY = static_cast<s32>(startY);
+                devImageDismissing  = false;
+                devImageDismissTick = armGetSystemTick(); // restart timer for wait phase
+            }
+        } else {
+            // Hold off-screen for 0.5 s, then restart the slide-up
+            drawY = static_cast<s32>(startY);
+            if (elapsed >= 0.5f) {
+                devImageDismissTick = 0;
+                creatorStartTick    = armGetSystemTick();
+                creatorAnimDone     = false;
+                nextBlinkTick = blinkEndTick = 0;
             }
         }
     } else {
