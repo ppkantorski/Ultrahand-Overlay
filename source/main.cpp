@@ -1126,13 +1126,30 @@ public:
                     void layout(u16, u16, u16, u16) override {}
                     bool onTouch(tsl::elm::TouchEvent ev, s32 cx, s32 cy,
                                  s32, s32, s32, s32) override {
+                        const bool inLandingZone =
+                            cx >= static_cast<s32>(258 + ult::layerEdge)
+                         && cx <  static_cast<s32>(258 + devImageWidth + ult::layerEdge)
+                         && cy >= 557 && cy < 557 + devImageHeight;
+
+                        // Hold-to-delay: pause slide-in timer while finger rests in landing zone
+                        if (ev == tsl::elm::TouchEvent::Touch || ev == tsl::elm::TouchEvent::Hold)
+                            devImageTouchHeld = inLandingZone;
+                        else if (ev == tsl::elm::TouchEvent::Release)
+                            devImageTouchHeld = false;
+
+                        // Tap-to-dismiss: works at any point once the image is at least partially visible
+                        constexpr s32 startY = static_cast<s32>(557.0f + devImageHeight);
                         if (ev == tsl::elm::TouchEvent::Touch
-                            && devImageDismissTick == 0 && creatorAnimDone
+                            && devImageDismissTick == 0
+                            && devImageCurrentDrawY < startY
                             && cx >= static_cast<s32>(258 + ult::layerEdge)
                             && cx <  static_cast<s32>(258 + devImageWidth + ult::layerEdge)
-                            && cy >= 557 && cy < 557 + devImageHeight) {
-                            devImageDismissTick = armGetSystemTick();
-                            devImageDismissing  = true;
+                            && cy >= devImageCurrentDrawY
+                            && cy <  devImageCurrentDrawY + devImageHeight) {
+                            devImageDismissStartY = devImageCurrentDrawY;
+                            devImageDismissTick   = armGetSystemTick();
+                            devImageDismissing    = true;
+                            creatorAnimDone       = true; // ensure draw state machine skips slide-in branch
                         }
                         return false; // non-consuming so scroll still works
                     }

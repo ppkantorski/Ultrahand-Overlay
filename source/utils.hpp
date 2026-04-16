@@ -1660,16 +1660,57 @@ static u64  creatorStartTick = 0, nextBlinkTick = 0, blinkEndTick = 0;
 static bool creatorAnimDone  = false;
 static u64  devImageDismissTick = 0;   // non-zero once a tap triggers dismiss
 static bool devImageDismissing  = false; // true = sliding down, false = waiting
+static bool devImageTouchHeld   = false; // finger held in landing zone → pause slide-in timer
+static s32  devImageDismissStartY = static_cast<s32>(557.0f + devImageHeight); // Y where dismiss was triggered
+static s32  devImageCurrentDrawY  = static_cast<s32>(557.0f + devImageHeight); // updated every frame
+static u64  devImageLastTick    = 0;     // previous frame tick for hold-pause delta
 
 void drawDevImage(tsl::gfx::Renderer* renderer) {
     if (devImageData.size() < devImageFrameSize * 2) return;
-    if (creatorStartTick == 0)
-        creatorStartTick = armGetSystemTick();
-    s32 drawY;
+
+    const u64 now = armGetSystemTick();
+    if (creatorStartTick == 0) {
+        creatorStartTick = now;
+        devImageLastTick = now;
+    }
+    // Per-frame delta used to freeze the slide-in timer while a touch is held
+    const u64 delta = now - devImageLastTick;
+    devImageLastTick = now;
+
     constexpr float targetY = 557.0f, startY = targetY + devImageHeight;
     constexpr float duration = 0.5f, delay = 0.2f;
-    if (!creatorAnimDone) {
-        const float elapsed = armTicksToNs(armGetSystemTick() - creatorStartTick) / 1e9f;
+    s32 drawY;
+
+    // Dismiss branch is checked first so a mid-slide-in tap is handled correctly
+    if (devImageDismissTick != 0) {
+        const float elapsed = armTicksToNs(now - devImageDismissTick) / 1e9f;
+        if (devImageDismissing) {
+            // Slide down from wherever dismiss was triggered (not necessarily targetY)
+            const float t = std::min(elapsed / duration, 1.0f);
+            const float ease = 1.0f - (1.0f - t) * (1.0f - t) * (1.0f - t);
+            drawY = static_cast<s32>(devImageDismissStartY + (startY - devImageDismissStartY) * ease);
+            if (t >= 1.0f) {
+                drawY = static_cast<s32>(startY);
+                devImageDismissing  = false;
+                devImageDismissTick = now; // restart timer for wait phase
+            }
+        } else {
+            // Hold off-screen for 0.5 s, then restart the slide-up
+            drawY = static_cast<s32>(startY);
+            if (elapsed >= 0.5f) {
+                devImageDismissTick = 0;
+                creatorStartTick    = now;
+                devImageLastTick    = now;
+                creatorAnimDone     = false;
+                nextBlinkTick = blinkEndTick = 0;
+            }
+        }
+    } else if (!creatorAnimDone) {
+        // Freeze the slide-in timer while the user's finger is held in the landing zone
+        if (devImageTouchHeld)
+            creatorStartTick += delta;
+
+        const float elapsed = armTicksToNs(now - creatorStartTick) / 1e9f;
         if (elapsed < delay) {
             drawY = static_cast<s32>(startY);
         } else {
@@ -1680,37 +1721,18 @@ void drawDevImage(tsl::gfx::Renderer* renderer) {
                 creatorAnimDone = true;
                 drawY = static_cast<s32>(targetY);
                 const float firstBlink = 1.0f + (rand() % 300) / 100.0f;
-                nextBlinkTick = armGetSystemTick() + armNsToTicks(static_cast<u64>(firstBlink * 1e9f));
-            }
-        }
-    } else if (devImageDismissTick != 0) {
-        const float elapsed = armTicksToNs(armGetSystemTick() - devImageDismissTick) / 1e9f;
-        if (devImageDismissing) {
-            // Slide down using the same cubic ease-out curve, reversed direction
-            const float t = std::min(elapsed / duration, 1.0f);
-            const float ease = 1.0f - (1.0f - t) * (1.0f - t) * (1.0f - t);
-            drawY = static_cast<s32>(targetY + (startY - targetY) * ease);
-            if (t >= 1.0f) {
-                drawY = static_cast<s32>(startY);
-                devImageDismissing  = false;
-                devImageDismissTick = armGetSystemTick(); // restart timer for wait phase
-            }
-        } else {
-            // Hold off-screen for 0.5 s, then restart the slide-up
-            drawY = static_cast<s32>(startY);
-            if (elapsed >= 0.5f) {
-                devImageDismissTick = 0;
-                creatorStartTick    = armGetSystemTick();
-                creatorAnimDone     = false;
-                nextBlinkTick = blinkEndTick = 0;
+                nextBlinkTick = now + armNsToTicks(static_cast<u64>(firstBlink * 1e9f));
             }
         }
     } else {
         drawY = static_cast<s32>(targetY);
     }
+
+    // Expose current position so the touch handler can use it for hit-testing
+    devImageCurrentDrawY = drawY;
+
     bool useFrame2 = devImageDismissing; // use 2nd image while sliding down
     if (creatorAnimDone && !devImageDismissing) {
-        const u64 now = armGetSystemTick();
         if (blinkEndTick > 0 && now < blinkEndTick) {
             useFrame2 = true;
         } else if (blinkEndTick > 0 && now >= blinkEndTick) {
