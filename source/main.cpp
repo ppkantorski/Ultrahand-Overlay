@@ -900,6 +900,15 @@ private:
                 returnJumpItemValue = cleanVersionLabel(returnJumpItemValue);
             } else if (iniKey == "hide_overlay_versions" || iniKey == "hide_package_versions") {
                 returnJumpItemValue = "";
+            } else if (iniKey == "auto_ntp_sync") {
+                if (!state) {
+                    if (!ult::isFile(NTP_SYNC_PENDING_FLAG_FILEPATH)) {
+                        FILE* file = std::fopen((NTP_SYNC_PENDING_FLAG_FILEPATH).c_str(), "w");
+                        if (file) {
+                            std::fclose(file);
+                        }
+                    }
+                }
             }
 
             state = !state;
@@ -1711,6 +1720,8 @@ public:
             useHapticFeedback = getBoolValue("haptic_feedback", false); // FALSE_STR default
             createToggleListItem(list, HAPTIC_FEEDBACK, useHapticFeedback, "haptic_feedback");
 
+            useAutoNTPSync = getBoolValue("auto_ntp_sync", true); // FALSE_STR default
+            createToggleListItem(list, AUTO_NTP_SYNC, useAutoNTPSync, "auto_ntp_sync");
 
             useOpaqueScreenshots = getBoolValue("opaque_screenshots", true); // TRUE_STR default
             createToggleListItem(list, OPAQUE_SCREENSHOTS, useOpaqueScreenshots, "opaque_screenshots");
@@ -7154,6 +7165,7 @@ void initializeSettingsAndDirectories() {
     ensureDefault("launch_combos",            TRUE_STR);
     ensureDefault("sound_effects",            TRUE_STR);
     ensureDefault("haptic_feedback",          FALSE_STR);
+    ensureDefault("auto_ntp_sync",            TRUE_STR);
     ensureDefault("swipe_to_open",            TRUE_STR);
     ensureDefault("opaque_screenshots",       TRUE_STR);
     ensureDefault("silence_notifications",    FALSE_STR);
