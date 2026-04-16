@@ -655,7 +655,7 @@ private:
     std::string entryName, entryMode, overlayName, dropdownSelection, settingsIniPath;
     bool isInSection = false, inQuotes = false, isFromMainMenu = false;
     std::string languagesVersion = APP_VERSION;
-    int MAX_PRIORITY = 20;
+    //int MAX_PRIORITY = 20;
     std::string comboLabel;
 
     bool exitOnBack = false;
@@ -1918,7 +1918,7 @@ private:
     bool requiresAMS110Handling = false;
 
     bool isInSection, inQuotes, isFromMainMenu;
-    int MAX_PRIORITY = 20;
+    int MAX_PRIORITY = 25;
 
     std::string modeTitle;
 
