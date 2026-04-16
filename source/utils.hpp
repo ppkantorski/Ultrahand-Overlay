@@ -1708,8 +1708,8 @@ void drawDevImage(tsl::gfx::Renderer* renderer) {
     } else {
         drawY = static_cast<s32>(targetY);
     }
-    bool useFrame2 = false;
-    if (creatorAnimDone) {
+    bool useFrame2 = devImageDismissing; // use 2nd image while sliding down
+    if (creatorAnimDone && !devImageDismissing) {
         const u64 now = armGetSystemTick();
         if (blinkEndTick > 0 && now < blinkEndTick) {
             useFrame2 = true;
