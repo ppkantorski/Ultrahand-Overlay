@@ -5824,7 +5824,7 @@ public:
 
             if (nestedMenuCount == 0) {
                 inPackageMenu = false;
-                pkgPageCursors.clear(); // returning to main menu: discard all package page cursors
+                if (usePageRecall) pkgPageCursors.clear(); // returning to main menu: discard all package page cursors
                 if (!inHiddenMode.load(std::memory_order_acquire))
                     returningToMain = true;
                 else
@@ -6384,7 +6384,7 @@ public:
                     // Check for single key press (no other keys)
                     const s64 cleanKeys = keys & ALL_KEYS_MASK;
                     
-                    if ((keys & KEY_A && cleanKeys == KEY_A)) {
+                    if (keys & KEY_A && cleanKeys == KEY_A && !(keys & ~KEY_A & ALL_KEYS_MASK)) {
                         if (!requiresAMS110Handling) {
                             disableSound.store(true, std::memory_order_release);
                             disableHaptics.store(true, std::memory_order_release);
@@ -6427,7 +6427,7 @@ public:
                         }
                     }
                     
-                    if (keys & STAR_KEY && cleanKeys == STAR_KEY) {
+                    if (keys & STAR_KEY && cleanKeys == STAR_KEY && !(keys & ~STAR_KEY & ALL_KEYS_MASK)) {
                         if (!overlayFile.empty()) {
                             setIniFileValue(OVERLAYS_INI_FILEPATH, overlayFileName, STAR_STR, newStarred ? TRUE_STR : FALSE_STR);
                         }
@@ -6442,7 +6442,7 @@ public:
                         return true;
                     }
                     
-                    if (keys & SETTINGS_KEY && cleanKeys == SETTINGS_KEY) {
+                    if (keys & SETTINGS_KEY && cleanKeys == SETTINGS_KEY && !(keys & ~SETTINGS_KEY & ALL_KEYS_MASK)) {
                         prepareSettingsNavigation();
                         returnJumpItemName = buildOverlayReturnName(newStarred, overlayFileName, overlayName);
                         returnJumpItemValue = hideOverlayVersions ? "" : displayVersion;
@@ -6452,7 +6452,7 @@ public:
                         return true;
                     }
                     
-                    if (keys & SYSTEM_SETTINGS_KEY && cleanKeys == SYSTEM_SETTINGS_KEY) {
+                    if (keys & SYSTEM_SETTINGS_KEY && cleanKeys == SYSTEM_SETTINGS_KEY && !(keys & ~SYSTEM_SETTINGS_KEY & ALL_KEYS_MASK)) {
                         returnJumpItemName = buildOverlayReturnName(newStarred, overlayFileName, overlayName);
                         returnJumpItemValue = hideOverlayVersions ? "" : displayVersion;
                         return true;
@@ -6716,7 +6716,7 @@ public:
                     // Check for single key press (no other keys)
                     const s64 cleanKeys = keys & ALL_KEYS_MASK;
                     
-                    if (keys & KEY_A && cleanKeys == KEY_A) {
+                    if (keys & KEY_A && cleanKeys == KEY_A && !(keys & ~KEY_A & ALL_KEYS_MASK)) {
                         inMainMenu.store(false, std::memory_order_release);
                         
                         // Check for boot package
@@ -6768,7 +6768,7 @@ public:
                         return true;
                     }
                     
-                    if (keys & STAR_KEY && cleanKeys == STAR_KEY) {
+                    if (keys & STAR_KEY && cleanKeys == STAR_KEY && !(keys & ~STAR_KEY & ALL_KEYS_MASK)) {
                         if (!packageName.empty()) {
                             setIniFileValue(PACKAGES_INI_FILEPATH, packageName, STAR_STR, newStarred ? TRUE_STR : FALSE_STR);
                         }
@@ -6782,7 +6782,7 @@ public:
                         return true;
                     }
                     
-                    if (keys & SETTINGS_KEY && cleanKeys == SETTINGS_KEY) {
+                    if (keys & SETTINGS_KEY && cleanKeys == SETTINGS_KEY && !(keys & ~SETTINGS_KEY & ALL_KEYS_MASK)) {
                         prepareSettingsNavigation();
                         returnJumpItemName = buildReturnName(newStarred, packageName, newPackageName);
                         returnJumpItemValue = displayVersion;
@@ -6792,7 +6792,7 @@ public:
                         return true;
                     }
                     
-                    if (keys & SYSTEM_SETTINGS_KEY && cleanKeys == SYSTEM_SETTINGS_KEY) {
+                    if (keys & SYSTEM_SETTINGS_KEY && cleanKeys == SYSTEM_SETTINGS_KEY && !(keys & ~SYSTEM_SETTINGS_KEY & ALL_KEYS_MASK)) {
                         returnJumpItemName = buildReturnName(newStarred, packageName, newPackageName);
                         returnJumpItemValue = displayVersion;
                         return true;
