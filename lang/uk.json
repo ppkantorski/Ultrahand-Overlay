@@ -43,6 +43,7 @@
     "SOC_TEMPERATURE": "Темп. SOC",
     "PCB_TEMPERATURE": "Темп. PCB",
     "BACKDROP": "Фон",
+    "BORDER": "Рамка",
     "DYNAMIC_COLORS": "Динамічні кольори",
     "CENTER_ALIGNMENT": "По центру",
     "EXTENDED_BACKDROP": "Розширений фон",
