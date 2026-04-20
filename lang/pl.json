@@ -43,6 +43,7 @@
     "SOC_TEMPERATURE": "Temp. SOC",
     "PCB_TEMPERATURE": "Temp. PCB",
     "BACKDROP": "Tło",
+    "BORDER": "Obramowanie",
     "DYNAMIC_COLORS": "Dynamiczne kolory",
     "CENTER_ALIGNMENT": "Wyśrodkowanie",
     "EXTENDED_BACKDROP": "Rozszerzone tło",
