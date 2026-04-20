@@ -1635,6 +1635,7 @@ public:
             createToggleListItem(list, PCB_TEMPERATURE, hidePCBTemp, "hide_pcb_temp", true);
             createToggleListItem(list, BATTERY, hideBattery, "hide_battery", true);
             createToggleListItem(list, BACKDROP, hideWidgetBackdrop, "hide_widget_backdrop", true);
+            createToggleListItem(list, BORDER, hideWidgetBorder, "hide_widget_border", true);
 
             addHeader(list, WIDGET_SETTINGS);
             createToggleListItem(list, DYNAMIC_COLORS, dynamicWidgetColors, "dynamic_widget_colors");
@@ -7195,6 +7196,7 @@ void initializeSettingsAndDirectories() {
     ensureDefault("hide_soc_temp",            TRUE_STR);
     ensureDefault("dynamic_widget_colors",    TRUE_STR);
     ensureDefault("hide_widget_backdrop",     FALSE_STR);
+    ensureDefault("hide_widget_border",       FALSE_STR);
     ensureDefault("center_widget_alignment",  TRUE_STR);
     ensureDefault("extended_widget_backdrop", FALSE_STR);
     ensureDefault("datetime_format",          DEFAULT_DT_FORMAT);
