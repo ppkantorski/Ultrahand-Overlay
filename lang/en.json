@@ -43,6 +43,7 @@
     "SOC_TEMPERATURE": "SOC Temperature",
     "PCB_TEMPERATURE": "PCB Temperature",
     "BACKDROP": "Backdrop",
+    "BORDER": "Border",
     "DYNAMIC_COLORS": "Dynamic Colors",
     "CENTER_ALIGNMENT": "Center Alignment",
     "EXTENDED_BACKDROP": "Extended Backdrop",
