@@ -43,6 +43,7 @@
     "SOC_TEMPERATURE": "SOC 온도",
     "PCB_TEMPERATURE": "PCB 온도",
     "BACKDROP": "배경",
+    "BORDER": "테두리",
     "DYNAMIC_COLORS": "동적 색상",
     "CENTER_ALIGNMENT": "가운데 정렬",
     "EXTENDED_BACKDROP": "확장 배경",
