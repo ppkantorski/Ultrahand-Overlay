@@ -43,6 +43,7 @@
     "SOC_TEMPERATURE": "SOC温度",
     "PCB_TEMPERATURE": "PCB温度",
     "BACKDROP": "背景",
+    "BORDER": "枠線",
     "DYNAMIC_COLORS": "ダイナミックカラー",
     "CENTER_ALIGNMENT": "中央揃え",
     "EXTENDED_BACKDROP": "拡張背景",
