@@ -43,6 +43,7 @@
     "SOC_TEMPERATURE": "Temp. SOC",
     "PCB_TEMPERATURE": "Temp. PCB",
     "BACKDROP": "Fundo",
+    "BORDER": "Borda",
     "DYNAMIC_COLORS": "Cores dinâmicas",
     "CENTER_ALIGNMENT": "Alinhamento central",
     "EXTENDED_BACKDROP": "Fundo estendido",
