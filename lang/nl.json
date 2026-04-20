@@ -43,6 +43,7 @@
     "SOC_TEMPERATURE": "SOC-temperatuur",
     "PCB_TEMPERATURE": "PCB-temperatuur",
     "BACKDROP": "Achtergrond",
+    "BORDER": "Rand",
     "DYNAMIC_COLORS": "Dynamische kleuren",
     "CENTER_ALIGNMENT": "Centrale uitlijning",
     "EXTENDED_BACKDROP": "Uitgebreide achtergrond",
