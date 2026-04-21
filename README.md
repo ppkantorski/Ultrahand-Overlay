@@ -61,24 +61,46 @@ Ultrahand's interpretive language supports a rich set of command modes, giving p
 
 Commands also support **grouping** options (`split`, `split2` through `split5`) for multi-column layouts within a single command row.
 
+Command argument strings support `{value}` and `{index}` placeholders, which are substituted at runtime with the current footer/selection value and its list index respectively.
+
+For a full reference of all available commands, see the [Command Reference wiki](https://github.com/ppkantorski/Ultrahand-Overlay/wiki/Command-Reference).
+
 ### Conditional Execution
 
-Package commands can be gated by system context at parse time using inline annotations:
+Package commands support several mechanisms for conditional and hardware-specific execution:
 
+**Inline annotations** (apply to the single command they accompany):
 - `;system=erista` / `;system=mariko` — restrict a command to a specific hardware revision
 - `;hos_version=>=16.0.0` — version operator conditions on HOS (supports `==`, `>=`, `<=`, `>`, `<`)
 - `;ams_version=` — same operators applied to the Atmosphère version
 - `;state=on` / `;state=off` — conditional on a toggle's current state
 
+**Block labels** (flip all following commands in the section to that hardware variant):
+- `Erista:` — all commands after this label run only on Erista hardware
+- `Mariko:` — all commands after this label run only on Mariko hardware
+
+**Runtime conditionals** (gate subsequent execution on file system state):
+- `path_exists <path>` — proceeds only if the file or directory exists
+- `!path_exists <path>` — proceeds only if the file or directory does not exist
+
+**Error handling**:
+- `try:` — marks the next command as non-fatal; execution continues even if it fails
+
 ### System Commands
 
 A variety of system-level operations are available from within packages:
 
-- Shutdown and reboot (including direct boot into Hekate entries and modes)
-- Screen backlight control
-- System volume adjustment
-- Disconnect all Bluetooth controllers
-- NTP time synchronization
+- **Shutdown** — `shutdown` performs a clean system shutdown. `shutdown controllers` disconnects all Bluetooth controllers without shutting down.
+- **Reboot** — `reboot` reboots the system. On supported hardware, additional targets are available:
+  - `reboot HEKATE` — reboot directly into the Hekate bootloader menu
+  - `reboot UMS` — reboot into Hekate UMS (SD card USB mass storage) mode
+  - `reboot boot <name or index>` — reboot to a named or indexed Hekate boot config entry
+  - `reboot ini <name or index>` — reboot to a named or indexed Hekate INI config entry
+  - `reboot <payload_path>` — reboot directly to a specific payload file on the SD card
+- **Backlight** — `backlight <0–100>` sets the screen brightness as a percentage.
+- **Volume** — `volume <0–150>` sets the system master volume as a percentage. Values above 100 amplify beyond the normal maximum.
+- **Open Overlay** — `open <overlay_path> [args]` launches another overlay programmatically from within a package command, with optional launch arguments.
+- **Notify** — `notify <text>` and `notify-now <text>` display an in-overlay toast notification from within a package command. `notify-now` shows the toast immediately, bypassing the normal queue.
 
 #### Safe Atmosphere Updates via Reboot
 
