@@ -165,7 +165,7 @@ The Ultrahand Settings menu (accessible via `PLUS` on the main screen) exposes t
 - **Software Update** — Check for and install the latest Ultrahand release directly from within the overlay.
 
 ### UI Settings
-- **Theme** — Select a UI theme from `.ini` files in `/config/ultrahand/themes/`. The built-in `ultra` and `ultra-blue` themes are downloadable from within the menu.
+- **Theme** — Select a UI theme from `.ini` files in `/config/ultrahand/themes/`.
 - **Sounds** — Select a sound-effect pack from `/config/ultrahand/.sounds/`.
 - **Wallpaper** — Select a background wallpaper from `/config/ultrahand/wallpapers/` (requires 6 MB+ heap). Wallpapers must be in raw `.rgba` format.
 - **Widget** — Toggle individual status bar elements (clock, SoC temperature, PCB temperature, battery indicator, backdrop, border) and adjust widget display settings (dynamic colors, center alignment, extended backdrop).
