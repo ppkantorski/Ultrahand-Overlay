@@ -97,7 +97,7 @@ Package commands support a rich set of runtime placeholder variables enclosed in
 - `{cpu_speedo}`, `{cpu_iddq}`, `{gpu_speedo}`, `{gpu_iddq}`, `{soc_speedo}`, `{soc_iddq}` — CPU/GPU/SoC fuse data values
 
 **Time**
-- `{timestamp(<strftime_format>)}` — current date/time formatted with a `strftime`-style string, e.g. `{timestamp(%Y-%m-%d)}`. Can also be called as `{timestamp}` with no arguments for a default format.
+- `{timestamp(<STRFTIME_FORMAT>)}` — current date/time formatted with a `strftime`-style string, e.g. `{timestamp(%Y-%m-%d)}`. Can also be called as `{timestamp}` with no arguments for a default format.
 
 **Math & string functions**
 - `{math(<EXPRESSION>)}` — evaluates a mathematical expression (`+`, `-`, `*`, `/`, `%`, parentheses). Append `, true` to force integer output: `{math(5/2, true)}` → `2`.
