@@ -13,7 +13,7 @@
 
 [![Ultrahand Logo](.pics/banner.gif)](https://gbatemp.net/threads/ultrahand-overlay-the-fully-craft-able-overlay-executor.633560/)
 
-Built on [libultrahand](https://github.com/ppkantorski/libultrahand) (an expanded fork of [libtesla](https://github.com/WerWolv/libtesla)), Ultrahand is a full drop-in replacement for Tesla Menu. Every existing Tesla overlay (`.ovl`) works without modification.
+Built on [libultrahand](https://github.com/ppkantorski/libultrahand) (an optimized + expanded fork of [libtesla](https://github.com/WerWolv/libtesla)), Ultrahand is a full drop-in replacement for Tesla Menu. Every existing Tesla overlay (`.ovl`) works without modification.
 
 ---
 
