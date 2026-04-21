@@ -33,7 +33,7 @@ Ultrahand Overlay is a fully scriptable overlay menu ecosystem for the Nintendo 
 
 - **Move Files or Directories** — Seamlessly move files or directories between locations on your SD card.
 
-- **Mirror Copy / Mirror Delete** — `mirror_copy <source> <dest>` mirrors the structure of a source directory into a destination; `mirror_delete <source> <dest>` removes from the destination any files that exist in the source. Both commands support wildcard patterns.
+- **Mirror Copy / Mirror Delete** — `mirror_copy <SOURCE> <DESTINATION>` mirrors the structure of a source directory into a destination; `mirror_delete <SOURCE> <DESTINATION>` removes from the destination any files that exist in the source. Both commands support wildcard patterns.
 
 - **Download Files** — Efficiently retrieve files from repositories or URLs directly to your SD card. Supports both standard (3-retry) and no-retry download modes, with live progress feedback in the UI. Download commands automatically perform a one-time NTP sync to `pool.ntp.org` on first use to prevent SSL handshake failures caused by clock desynchronization (can be disabled via `Auto NTP Sync` in Settings).
 
@@ -43,7 +43,7 @@ Ultrahand Overlay is a fully scriptable overlay menu ecosystem for the Nintendo 
 
 - **Hex Edit Files** — Perform binary-level hexadecimal editing of files for precise data manipulation.
 
-- **Convert Mods** — `pchtxt2ips <file.pchtxt> <output_folder>` converts `.pchtxt` patch files into `.ips` binaries. `pchtxt2cheat <file.pchtxt> [cheat_name]` converts `.pchtxt` files into cheat format, automatically placing them in the correct directory for the running game (the game's title ID must be present in the pchtxt).
+- **Convert Mods** — `pchtxt2ips <PATH_TO_PCHTXT_FILE> <OUTPUT_FOLDER>` converts `.pchtxt` patch files into `.ips` binaries. `pchtxt2cheat <PATH_TO_PCHTXT_FILE> [CHEAT_NAME]` converts `.pchtxt` files into cheat format, automatically placing them in the correct directory for the running game (the game's title ID must be present in the pchtxt).
 
 - **Touch File** — `touch <PATH>` creates an empty file at the specified path if it does not already exist.
 
