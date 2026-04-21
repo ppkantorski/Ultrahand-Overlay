@@ -29,10 +29,11 @@ Built on [libultrahand](https://github.com/ppkantorski/libultrahand) (an expande
 - Instantly accessible from any game via hotkey or swipe gesture — no game suspension required
 - Launch and manage other overlays with per-overlay key combos
 - Install and run community packages from [Ultrahand Packages](https://github.com/ppkantorski/Ultrahand-Packages)
-- Control volume, backlight, and system settings on the fly
+- Control volume (up to 150% via bundled audio patch), backlight, and system settings on the fly
 - Real-time progress feedback for downloads, copies, and installs
 - Full touch support alongside controller input
 - Customizable themes, wallpapers, sound packs, and UI layout
+- Toast notification system — packages and external sysmodules/apps can push notifications to the overlay via JSON `.notify` files
 
 A growing ecosystem of [libultrahand](https://github.com/ppkantorski/libultrahand)-based overlays is available, all launchable and manageable directly from Ultrahand:
 
@@ -57,11 +58,11 @@ A rich INI-based scripting environment with:
 - **Download & extraction** — download with retry, unzip
 - **INI editing** — get/set values and keys, add/rename/remove sections and keys, pattern-matched bulk edits
 - **JSON editing** — get/set values and keys
-- **Hex editing** — edit by offset, swap, string, decimal, reversed decimal, and custom pattern offset
+- **Hex editing** — edit by offset, swap, string, decimal, reversed decimal, custom pattern offset, and hex pattern replacement
 - **Mod conversion** — `.pchtxt` to `.ips` or Atmosphere cheat format
 - **System control** — reboot (Hekate boot/ini/UMS/payload targets), shutdown, volume, backlight, region
 - **Overlay control** — launch overlays, execute package sections, navigate back, exit to menu
-- **Dynamic UI** — toggles, sliders, dropdowns, tables, notifications with layout options
+- **Dynamic UI** — toggles, sliders, dropdowns, tables, rich toast notifications (title, duration, alignment, icon), `set-footer`, and page/theme/wallpaper `refresh`
 - **Placeholders** — INI, JSON, hex, list, file, and timestamp sources; hardware info (`{ams_version}`, `{hos_version}`, `{title_id}`, `{build_id}`, `{ram_vendor}`, `{local_ip}`, `{volume}`, `{backlight}`, fuse data, and more); math and string transforms
 - **Conditional logic** — `try:` blocks, `path_exists`, `erista:`/`mariko:` hardware guards, version comparisons
 
@@ -131,14 +132,14 @@ Access the Settings menu by pressing `PLUS` from the main screen.
 
 - **Key Combo** — Configure the hotkey used to open Ultrahand
 - **Language** — Select UI language (loaded from `/config/ultrahand/lang/`)
-- **Notifications** — Configure toast notification behavior and slot limits
+- **Notifications** — Configure toast behavior, max slots, and API notification settings. External sysmodules and apps can push notifications by writing `.notify` JSON files to `/config/ultrahand/notifications/`; per-app filtering and 50×50 RGBA icons are supported
 - **System** — View device info and adjust overlay memory heap size (4 / 6 / 8 MB)
 - **Software Update** — Check for and install updates from within the overlay
 - **Theme** — Select a theme from `/config/ultrahand/themes/`
 - **Sounds** — Select a sound-effect pack from `/config/ultrahand/.sounds/`
 - **Wallpaper** — Set a background wallpaper (requires 6 MB+ heap; `.rgba` format, 448×720 px)
 - **Widget** — Toggle status bar elements (clock, temps, battery, backdrop, border)
-- **Miscellaneous** — Granular toggles for swipe-to-open, haptics, NTP sync, page layout, and more
+- **Miscellaneous** — Granular toggles for swipe-to-open, haptics, NTP sync, page recall, launch recall, packages menu visibility, page layout, and more
 
 Per-overlay and per-package launch combos can be assigned independently via the overlay/package settings menu (`Y`).
 
