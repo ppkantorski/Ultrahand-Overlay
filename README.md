@@ -80,9 +80,13 @@ A variety of system-level operations are available from within packages:
 - Disconnect all Bluetooth controllers
 - NTP time synchronization
 
+#### Safe Atmosphere Updates via Reboot
+
+When a `reboot` command is issued and Ultrahand detects that protected Atmosphere files (`atmosphere/package3`, `atmosphere/stratosphere.romfs`) have been staged for an update (marked with a `.ultra` extension by a package), Ultrahand will boot into `ultrahand_updater.bin` instead of performing a plain reboot. This payload safely applies the pending update before the system comes back up. The payload is stored at `/config/ultrahand/payloads/ultrahand_updater.bin` and is automatically downloaded if not already present.
+
 ### Boot and Exit Hooks
 
-- **On-boot commands**: Place a `boot_package.ini` file in `/switch/.packages/` with a `[on-boot]` section to run commands once on each device boot. Individual packages support their own `boot_package.ini` with a `[boot]` section that runs when the package is first launched.
+- **On-boot commands**: Place a `boot_package.ini` file in `/switch/.packages/` with a `[on-boot]` section to run commands once on each device boot. Individual packages support their own `boot_package.ini` with a `[boot]` section that runs each time the package is launched (this can be suppressed per-package by enabling *Quick Launch* in that package's settings).
 - **On-exit commands**: An `exit_package.ini` in `/switch/.packages/` with an `[exit]` section runs when Ultrahand is closed cleanly.
 
 ---
@@ -90,6 +94,10 @@ A variety of system-level operations are available from within packages:
 ## Getting Started
 
 ### Usage
+
+**Quick Start (recommended):** Download the latest [`sdout.zip`](https://github.com/ppkantorski/Ultrahand-Overlay/releases/latest/download/sdout.zip) and extract it directly to the root of your SD card. It contains everything you need: nx-ovlloader, `ovlmenu.ovl`, language files, themes, sound packs, assets, audio mastervolume patches, and the full required folder structure — ready to use immediately. Then skip to step 3 below.
+
+**Manual Installation:**
 
 1. Download and install the latest [nx-ovlloader](https://github.com/ppkantorski/nx-ovlloader).
     - **Note:** Two variants are available. The standard `nx-ovlloader` has a 4MB overlay heap. You can switch between overlay heap sizes from within the Ultrahand Settings menu for expanded features.
@@ -130,7 +138,7 @@ The Ultrahand Settings menu (accessible via `PLUS` on the main screen) exposes t
 ### UI Settings
 - **Theme** — Select a UI theme from `.ini` files in `/config/ultrahand/themes/`. The built-in `ultra` and `ultra-blue` themes are downloadable from within the menu.
 - **Sounds** — Select a sound-effect pack from `/config/ultrahand/.sounds/`.
-- **Wallpaper** — Select a background wallpaper from `/config/ultrahand/wallpapers/` (requires 6 MB+ heap).
+- **Wallpaper** — Select a background wallpaper from `/config/ultrahand/wallpapers/` (requires 6 MB+ heap). Wallpapers must be in raw `.rgba` format.
 - **Widget** — Toggle individual status bar elements (clock, SoC temperature, PCB temperature, battery indicator, backdrop, border) and adjust widget display settings (dynamic colors, center alignment, extended backdrop).
 - **Miscellaneous** — Granular feature toggles including:
   - Launch combos, haptic feedback, auto NTP sync, opaque screenshots
@@ -156,14 +164,15 @@ To compile and run the software, you need:
 - [libultrahand](https://github.com/ppkantorski/libultrahand)
 - `switch-curl`
 - `switch-zlib`
+- `switch-minizip`
 - `switch-mbedtls`
 
 ```sh
 export DEVKITPRO=/opt/devkitpro
-make -j6
+make
 ```
 
-The build targets C++26 and ARMv8-A. Output is `ovlmenu.ovl`.
+The Makefile auto-detects available CPU cores for parallel LTO compilation. The build targets C++26 and ARMv8-A. Output is `ovlmenu.ovl`.
 
 ---
 
