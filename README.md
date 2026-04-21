@@ -197,6 +197,8 @@ sdmc:/
 │   │       ├── package.ini
 │   │       ├── boot_package.ini        ← optional
 │   │       └── exit_package.ini        ← optional
+│   ├── Ultrahand-Reload/
+│   │   └── Ultrahand-Reload.nro        ← respawn nx-ovlloader on-demand from the hbmenu
 │   └── appstore/
 │       └── .get/packages/
 │           └── UltrahandOverlay/
