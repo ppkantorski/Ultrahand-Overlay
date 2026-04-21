@@ -134,14 +134,23 @@ Access the Settings menu by pressing `PLUS` from the main screen.
 
 - **Key Combo** — Configure the hotkey used to open Ultrahand
 - **Language** — Select UI language (loaded from `/config/ultrahand/lang/`)
-- **Notifications** — Configure toast behavior, max slots, silence notifications, startup notification, and API notification settings. External sysmodules and apps can push notifications by writing `.notify` JSON files to `/config/ultrahand/notifications/`; per-app filtering and 50×50 RGBA icons are supported. The **API Toggle Hotkey** (hold `MINUS` ~4s) can enable/disable API notifications on the fly
+- **Notifications** — Toast behavior and API notification settings
+  - Silence notifications, set max slots, toggle startup notification
+  - External sysmodules/apps can push notifications via `.notify` JSON files in `/config/ultrahand/notifications/`; per-app filtering and 50×50 RGBA icons supported
+  - **API Toggle Hotkey** — hold `MINUS` ~4s to enable/disable API notifications on the fly
 - **System** — View device info and adjust overlay memory heap size (4 / 6 / 8 MB)
 - **Software Update** — Check for and install updates from within the overlay
 - **Theme** — Select a theme from `/config/ultrahand/themes/`
 - **Sounds** — Select a sound-effect pack from `/config/ultrahand/.sounds/`
 - **Wallpaper** — Set a background wallpaper (requires 6 MB+ heap; `.rgba` format, 448×720 px)
-- **Widget** — Toggle individual status bar elements: clock, SOC temperature, PCB temperature, battery, backdrop, extended backdrop, and border
-- **Miscellaneous** — Granular toggles for swipe-to-open, haptics, auto NTP sync, page recall, launch recall, packages menu visibility, user guide visibility, show/hide delete, show/hide unsupported overlays, overlay and package version display, and more
+- **Widget** — Toggle individual status bar elements:
+  - Clock, SOC temperature, PCB temperature, battery
+  - Backdrop, extended backdrop, border
+- **Miscellaneous** — Granular toggles including:
+  - Swipe-to-open, haptic feedback, auto NTP sync
+  - Page recall, launch recall
+  - Packages menu, user guide, show/hide delete, show/hide unsupported overlays
+  - Overlay and package version display
 
 Per-overlay and per-package launch combos can be assigned independently via the overlay/package settings menu (`Y`).
 
