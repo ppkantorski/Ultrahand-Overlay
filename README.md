@@ -50,7 +50,7 @@ A growing ecosystem of [libultrahand](https://github.com/ppkantorski/libultrahan
 | [QuickNTP](https://github.com/ppkantorski/QuickNTP) | One-tap NTP time sync | [WerWolv](https://github.com/WerWolv) & [nedex](https://github.com/nedex)
 | [NX-FanControl](https://github.com/ppkantorski/NX-FanControl) | Custom fan curve control | [Zathawo](https://github.com/Zathawo)
 
-For the developer's full list, see [Ultrahand Overlays](https://github.com/ppkantorski#ultrahand-overlays).
+For a fuller list, see [Ultrahand Overlays](https://github.com/ppkantorski#ultrahand-overlays).
 
 ### For Package Devs
 A rich INI-based scripting environment with:
