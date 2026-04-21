@@ -46,8 +46,8 @@ A growing ecosystem of [libultrahand](https://github.com/ppkantorski/libultrahan
 | [FPSLocker](https://github.com/ppkantorski/FPSLocker) | Custom FPS targets and display refresh rates for retail games | [masagrator](https://github.com/masagrator)
 | [sys-clk](https://github.com/ppkantorski/sys-clk) | Per-game CPU/GPU/memory overclocking and underclocking | [retronx-team](https://github.com/retronx-team)
 | [ovl-sysmodules](https://github.com/ppkantorski/ovl-sysmodules) | Toggle system modules and monitor memory usage on the fly | [WerWolv](https://github.com/WerWolv)
-| [Fizeau](https://github.com/ppkantorski/Fizeau) | Color temperature, saturation, gamma, and contrast adjustment | [averne](https://github.com/averne)
 | [QuickNTP](https://github.com/ppkantorski/QuickNTP) | One-tap NTP time sync | [WerWolv](https://github.com/WerWolv) & [nedex](https://github.com/nedex)
+| [Fizeau](https://github.com/ppkantorski/Fizeau) | Color temperature, saturation, gamma, and contrast adjustment | [averne](https://github.com/averne)
 | [NX-FanControl](https://github.com/ppkantorski/NX-FanControl) | Custom fan curve control | [Zathawo](https://github.com/Zathawo)
 
 For a fuller list, see [Ultrahand Overlays](https://github.com/ppkantorski#ultrahand-overlays).
