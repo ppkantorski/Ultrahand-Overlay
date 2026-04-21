@@ -45,9 +45,9 @@ Ultrahand Overlay is a fully scriptable overlay menu ecosystem for the Nintendo 
 
 - **Convert Mods** — `pchtxt2ips <file.pchtxt> <output_folder>` converts `.pchtxt` patch files into `.ips` binaries. `pchtxt2cheat <file.pchtxt> [cheat_name]` converts `.pchtxt` files into cheat format, automatically placing them in the correct directory for the running game (the game's title ID must be present in the pchtxt).
 
-- **Touch File** — `touch <path>` creates an empty file at the specified path if it does not already exist.
+- **Touch File** — `touch <PATH>` creates an empty file at the specified path if it does not already exist.
 
-- **Dot-Clear** — `dot-clear <path>` recursively removes all macOS metadata files (those beginning with `._`) from the specified directory and all its subdirectories. Useful for SD cards populated on macOS where these files can interfere with mods.
+- **Dot-Clear** — `dot-clear <PATH>` recursively removes all macOS metadata files (those beginning with `._`) from the specified directory and all its subdirectories. Useful for SD cards populated on macOS where these files can interfere with mods.
 
 - **Logging** — `logging` writes commands and errors to `log.txt` within the package's folder, bypassing the per-package `Error Logging` toggle. Useful for debugging during development.
 
@@ -100,10 +100,10 @@ Package commands support a rich set of runtime placeholder variables enclosed in
 - `{timestamp(<strftime_format>)}` — current date/time formatted with a `strftime`-style string, e.g. `{timestamp(%Y-%m-%d)}`. Can also be called as `{timestamp}` with no arguments for a default format.
 
 **Math & string functions**
-- `{math(<expression>)}` — evaluates a mathematical expression (`+`, `-`, `*`, `/`, `%`, parentheses). Append `, true` to force integer output: `{math(5/2, true)}` → `2`.
-- `{random(<start>, <end>)}` — generates a random integer in the given inclusive range
-- `{length(<string>)}` — returns the character count of the given string (leading/trailing whitespace trimmed)
-- `{slice(<string>, <start>, <end>)}` — returns a substring by start and end index
+- `{math(<EXPRESSION>)}` — evaluates a mathematical expression (`+`, `-`, `*`, `/`, `%`, parentheses). Append `, true` to force integer output: `{math(5/2, true)}` → `2`.
+- `{random(<START>, <END>)}` — generates a random integer in the given inclusive range
+- `{length(<STRING>)}` — returns the character count of the given string (leading/trailing whitespace trimmed)
+- `{slice(<STRING>, <START>, <END>)}` — returns a substring by start and end index
 
 **Hex conversion**
 - `{decimal_to_hex(<n>)}` — converts a decimal string to hex
@@ -138,8 +138,8 @@ All of the above annotations can be combined on a single command.
 - `mariko:` — all commands after this label run only on Mariko hardware
 
 **Runtime conditionals** (gate subsequent execution on file system state):
-- `path_exists <path>` — marks success only if the file or directory exists; subsequent commands in a `try:` block are skipped if this fails
-- `!path_exists <path>` — marks success only if the file or directory does not exist
+- `path_exists <PATH>` — marks success only if the file or directory exists; subsequent commands in a `try:` block are skipped if this fails
+- `!path_exists <PATH>` — marks success only if the file or directory does not exist
 
 **Error handling**:
 - `try:` — begins a conditional block. `commandSuccess` is reset to `true` at the `try:` label, and any command in the block that fails causes all remaining commands in that block to be skipped. A new `try:` label starts a fresh block. The overall command sequence continues regardless of whether the block succeeded or failed.
@@ -152,20 +152,20 @@ A variety of system-level operations are available from within packages:
 - **Reboot** — On Erista and supported Mariko hardware, a bare `reboot` with no arguments reboots to the Hekate bootloader. On unsupported hardware it performs a plain firmware reboot. Additional reboot targets:
   - `reboot HEKATE` — reboot directly into the Hekate bootloader menu
   - `reboot UMS` — reboot into Hekate UMS (SD card USB mass storage) mode
-  - `reboot boot <name or index>` — reboot to a named or indexed Hekate boot config entry
-  - `reboot ini <name or index>` — reboot to a named or indexed Hekate INI config entry
-  - `reboot <payload_path>` — reboot directly to a specific payload file on the SD card
+  - `reboot boot <NAME or INDEX>` — reboot to a named or indexed Hekate boot config entry
+  - `reboot ini <NAME or INDEX>` — reboot to a named or indexed Hekate INI config entry
+  - `reboot <PAYLOAD_PATH>` — reboot directly to a specific payload file on the SD card
 - **Backlight** — Controls the screen backlight:
   - `backlight <0–100>` — sets brightness as a percentage
   - `backlight on` / `backlight off` — turns the backlight fully on or off
   - `backlight auto on` / `backlight auto off` — enables or disables automatic brightness control
 - **Volume** — `volume <0–150>` sets the system master volume as a percentage. Values above 100 amplify beyond the normal maximum (requires the bundled `audio_mastervolume` Atmosphere patch, included in `sdout.zip`).
-- **Open Overlay** — `open <overlay_path> [args]` launches another overlay programmatically from within a package command, with optional launch arguments.
+- **Open Overlay** — `open <OVERLAY_PATH> [ARGS]` launches another overlay programmatically from within a package command, with optional launch arguments.
 - **Notify** — Displays an in-overlay toast notification from within a package command:
-  - `notify <message> [font_size] [alignment] [split_type] [duration_ms] [title] [show_time] [app_name]`
+  - `notify <MESSAGE> [FONT_SIZE] [ALIGNMENT] [SPLIT_TYPE] [DURATION_MS] [TITLE] [SHOW_TIME] [APP_NAME]`
   - `notify-now` follows the same signature but always displays in slot 0 with immediate priority, bypassing the queue.
-  - Parameters in `[…]` are optional and positional. `alignment` is `left`, `center`, or `right`; `split_type` is `word` or `char`; `duration_ms` of `0` keeps the notification visible until dismissed.
-- **Exec** — `exec <section>` runs the named section from the current package's `boot_package.ini`. `exec <section> <path.ini>` runs the named section from an explicitly specified INI file. Useful for reusing shared command blocks across multiple package entries.
+  - Parameters in `[…]` are optional and positional. `ALIGNMENT` is `left`, `center`, or `right`; `SPLIT_TYPE` is `word` or `char`; `DURATION_MS` of `0` keeps the notification visible until dismissed.
+- **Exec** — `exec <SECTION>` runs the named section from the current package's `boot_package.ini`. `exec <SECTION> <PACKAGE_INI_FILE_PATH>` runs the named section from an explicitly specified INI file. Useful for reusing shared command blocks across multiple package entries.
 - **Exit** — `exit` closes the overlay cleanly. `exit overlays` closes the overlay and navigates back to the overlays tab when next opened; `exit packages` does the same for the packages tab.
 
 #### Safe Atmosphere Updates via Reboot
