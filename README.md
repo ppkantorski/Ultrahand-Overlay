@@ -34,6 +34,23 @@ Built on [libultrahand](https://github.com/ppkantorski/libultrahand) (an expande
 - Full touch support alongside controller input
 - Customizable themes, wallpapers, sound packs, and UI layout
 
+A growing ecosystem of [libultrahand](https://github.com/ppkantorski/libultrahand)-based overlays is available, all launchable and manageable directly from Ultrahand:
+
+| Overlay | Description |
+|---|---|
+| [UltraGB](https://github.com/ppkantorski/UltraGB-Overlay) | Game Boy / GBC emulator running on top of any game |
+| [Status Monitor](https://github.com/ppkantorski/Status-Monitor-Overlay) | Real-time CPU/GPU/RAM, temps, battery, and frequency stats |
+| [sys-clk](https://github.com/ppkantorski/sys-clk) | Per-game CPU/GPU/memory overclocking and underclocking |
+| [FPSLocker](https://github.com/ppkantorski/FPSLocker) | Custom FPS targets and display refresh rates for retail games |
+| [Fizeau](https://github.com/ppkantorski/Fizeau) | Color temperature, saturation, gamma, and contrast adjustment |
+| [sys-tune](https://github.com/ppkantorski/sys-tune) | Background music player |
+| [ovl-sysmodules](https://github.com/ppkantorski/ovl-sysmodules) | Toggle system modules and monitor memory usage on the fly |
+| [QuickNTP](https://github.com/ppkantorski/QuickNTP) | One-tap NTP time sync |
+| [NX-FanControl](https://github.com/ppkantorski/NX-FanControl) | Custom fan curve control |
+| [Tetris](https://github.com/ppkantorski/Tetris-Overlay) | Fully playable Tetris running as an overlay |
+
+For a full list, see [ppkantorski's Ultrahand Overlays](https://github.com/ppkantorski#ultrahand-overlays).
+
 ### For Package Devs
 A rich INI-based scripting environment with:
 - **File operations** — copy, move, delete, download, unzip, mirror, touch
@@ -45,6 +62,47 @@ A rich INI-based scripting environment with:
 - **Conditional logic** — `try:` blocks, `path_exists`, hardware/version guards
 
 See the [Wiki](https://github.com/ppkantorski/Ultrahand-Overlay/wiki) for full documentation.
+
+### For Overlay Devs
+Overlays built on [libultrahand](https://github.com/ppkantorski/libultrahand) get first-class Ultrahand integration out of the box. Key features available to overlay authors:
+
+- **Per-overlay themes** — place a `theme.ini` in `/config/<OVERLAY_NAME>/` and it overrides the global Ultrahand theme for your overlay automatically. Enable via the `UI_OVERRIDE_PATH` Makefile directive:
+  ```makefile
+  UI_OVERRIDE_PATH := /config/<OVERLAY_NAME>/
+  CFLAGS  += -DUI_OVERRIDE_PATH="\"$(UI_OVERRIDE_PATH)\""
+  CXXFLAGS += -DUI_OVERRIDE_PATH="\"$(UI_OVERRIDE_PATH)\""
+  ```
+
+- **Per-overlay wallpapers** — place a `wallpaper.rgba` (448×720 px) in the same `UI_OVERRIDE_PATH` directory. Loaded automatically alongside the theme. If heap is insufficient, Ultrahand falls back gracefully.
+
+- **Language translations** — with `UI_OVERRIDE_PATH` defined, place ISO 639-1-named JSON files (e.g. `en.json`, `de.json`) in `/config/<OVERLAY_NAME>/lang/`. All `drawString` calls are translated automatically at render time according to the active Ultrahand language setting. Format:
+  ```json
+  {
+    "English String": "Translated String",
+    "Another String": "Another Translation"
+  }
+  ```
+
+- **Status bar widget** — opt into the Ultrahand clock/temperature/battery widget by adding the directive:
+  ```makefile
+  USING_WIDGET_DIRECTIVE := 1
+  CFLAGS += -DUSING_WIDGET_DIRECTIVE=$(USING_WIDGET_DIRECTIVE)
+  ```
+  Note: this activates `i2cInitialize()`, so remove it from your own service init if present.
+
+- **Download / network utilities** — access `libultra`'s curl-based download helpers by calling `initializeCurl()` in `initServices()` and `cleanupCurl()` in `exitServices()`.
+
+- **Theme variable init** — themes are loaded automatically inside `OverlayFrame` and `HeaderOverlayFrame`. If you initialize UI elements outside of those classes, call `tsl::initializeThemeVars()` manually, or add the `INITIALIZE_IN_GUI_DIRECTIVE` if themes still fail to apply:
+  ```makefile
+  INITIALIZE_IN_GUI_DIRECTIVE := 1
+  CFLAGS += -DINITIALIZE_IN_GUI_DIRECTIVE=$(INITIALIZE_IN_GUI_DIRECTIVE)
+  ```
+
+- **Launch integration** — registered overlays appear in the Ultrahand main menu with their own assignable launch combos, hide/star state, and optional `boot_package.ini` / `exit_package.ini` hooks (when launched as a package forwarder).
+
+- **Tesla compatibility** — libultrahand is a full drop-in for libtesla. Existing Tesla overlays work without modification; the library extends rather than replaces the Tesla API.
+
+See [libultrahand](https://github.com/ppkantorski/libultrahand) for build instructions, full directive reference, and example projects.
 
 ---
 
