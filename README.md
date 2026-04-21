@@ -259,7 +259,7 @@ sdmc:/
 
 ```sh
 export DEVKITPRO=/opt/devkitpro
-make
+make clean; make -j 6
 ```
 
 The Makefile auto-detects available CPU cores for parallel LTO compilation. Targets C++26 and ARMv8-A. Output is `ovlmenu.ovl`.
