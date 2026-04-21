@@ -250,7 +250,7 @@ sdmc:/
         ├── notifications/
         │   └── *.notify                ← pending toast notification payloads (transient)
         ├── payloads/
-        │   └── ultrahand_updater.bin   ← payload reboot target used for self-update
+        │   └── ultrahand_updater.bin   ← payload reboot target used for AMS updates
         ├── sounds/                     ← active extracted sound pack (WAV files loaded at runtime)
         │   └── *.wav
         ├── .sounds/                    ← available sound packs to select from
