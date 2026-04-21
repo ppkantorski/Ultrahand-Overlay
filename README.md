@@ -263,18 +263,39 @@ sdmc:/
 
 ## Building from Source
 
-**Prerequisites:**
+### Prerequisites
 
 - [devkitPro](https://devkitpro.org) with `devkitA64` and `libnx`
-- [libultrahand](https://github.com/ppkantorski/libultrahand)
 - `switch-curl`, `switch-zlib`, `switch-minizip`, `switch-mbedtls`
+- Python 3.6+ with the `requests` library (`pip install requests`) — for building `sdout.zip`
+
+### 1. Clone
+
+`libultrahand` is bundled as a submodule, so use `--recurse-submodules`:
+
+```sh
+git clone --recurse-submodules https://github.com/ppkantorski/Ultrahand-Overlay
+cd Ultrahand-Overlay
+```
+
+### 2. Build
 
 ```sh
 export DEVKITPRO=/opt/devkitpro
-make clean; make -j 6
+make
 ```
 
-The Makefile auto-detects available CPU cores for parallel LTO compilation. Targets C++26 and ARMv8-A. Output is `ovlmenu.ovl`.
+The Makefile auto-detects available CPU cores and sets `-j` automatically, so you don't need to pass it manually. Targets C++26 and ARMv8-A. Output is `ovlmenu.ovl`.
+
+### 3. Package (optional)
+
+To build a complete, SD-card-ready `sdout.zip` (includes `ovlmenu.ovl`, nx-ovlloader, themes, sounds, lang files, and the full folder structure):
+
+```sh
+python3 sdout.py
+```
+
+This requires `ovlmenu.ovl` to already exist in the repo root from the previous `make` step. The resulting `sdout.zip` can be extracted directly to the root of your SD card.
 
 ---
 
