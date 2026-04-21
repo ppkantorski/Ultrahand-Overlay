@@ -64,45 +64,18 @@ A rich INI-based scripting environment with:
 See the [Wiki](https://github.com/ppkantorski/Ultrahand-Overlay/wiki) for full documentation.
 
 ### For Overlay Devs
-Overlays built on [libultrahand](https://github.com/ppkantorski/libultrahand) get first-class Ultrahand integration out of the box. Key features available to overlay authors:
+Overlays built on [libultrahand](https://github.com/ppkantorski/libultrahand) get first-class Ultrahand integration out of the box:
 
-- **Per-overlay themes** — place a `theme.ini` in `/config/<OVERLAY_NAME>/` and it overrides the global Ultrahand theme for your overlay automatically. Enable via the `UI_OVERRIDE_PATH` Makefile directive:
-  ```makefile
-  UI_OVERRIDE_PATH := /config/<OVERLAY_NAME>/
-  CFLAGS  += -DUI_OVERRIDE_PATH="\"$(UI_OVERRIDE_PATH)\""
-  CXXFLAGS += -DUI_OVERRIDE_PATH="\"$(UI_OVERRIDE_PATH)\""
-  ```
+- **Per-overlay themes** — independent theme overrides scoped to your overlay
+- **Per-overlay wallpapers** — custom wallpaper support with automatic heap-aware fallback
+- **Language translations** — automatic string translation at render time based on the active language
+- **Status bar widget** — opt-in clock, temperature, and battery overlay widget
+- **Download / network utilities** — built-in curl-based download and network helpers
+- **Theme variable init** — automatic theme application with manual and directive-based fallbacks
+- **Launch integration** — assignable combos, hide/star state, and boot/exit package hooks
+- **Tesla compatibility** — full drop-in replacement for libtesla; existing overlays work without modification
 
-- **Per-overlay wallpapers** — place a `wallpaper.rgba` (448×720 px) in the same `UI_OVERRIDE_PATH` directory. Loaded automatically alongside the theme. If heap is insufficient, Ultrahand falls back gracefully.
-
-- **Language translations** — with `UI_OVERRIDE_PATH` defined, place ISO 639-1-named JSON files (e.g. `en.json`, `de.json`) in `/config/<OVERLAY_NAME>/lang/`. All `drawString` calls are translated automatically at render time according to the active Ultrahand language setting. Format:
-  ```json
-  {
-    "English String": "Translated String",
-    "Another String": "Another Translation"
-  }
-  ```
-
-- **Status bar widget** — opt into the Ultrahand clock/temperature/battery widget by adding the directive:
-  ```makefile
-  USING_WIDGET_DIRECTIVE := 1
-  CFLAGS += -DUSING_WIDGET_DIRECTIVE=$(USING_WIDGET_DIRECTIVE)
-  ```
-  Note: this activates `i2cInitialize()`, so remove it from your own service init if present.
-
-- **Download / network utilities** — access `libultra`'s curl-based download helpers by calling `initializeCurl()` in `initServices()` and `cleanupCurl()` in `exitServices()`.
-
-- **Theme variable init** — themes are loaded automatically inside `OverlayFrame` and `HeaderOverlayFrame`. If you initialize UI elements outside of those classes, call `tsl::initializeThemeVars()` manually, or add the `INITIALIZE_IN_GUI_DIRECTIVE` if themes still fail to apply:
-  ```makefile
-  INITIALIZE_IN_GUI_DIRECTIVE := 1
-  CFLAGS += -DINITIALIZE_IN_GUI_DIRECTIVE=$(INITIALIZE_IN_GUI_DIRECTIVE)
-  ```
-
-- **Launch integration** — registered overlays appear in the Ultrahand main menu with their own assignable launch combos, hide/star state, and optional `boot_package.ini` / `exit_package.ini` hooks (when launched as a package forwarder).
-
-- **Tesla compatibility** — libultrahand is a full drop-in for libtesla. Existing Tesla overlays work without modification; the library extends rather than replaces the Tesla API.
-
-See [libultrahand](https://github.com/ppkantorski/libultrahand) for build instructions, full directive reference, and example projects.
+See [libultrahand](https://github.com/ppkantorski/libultrahand) for build instructions, the full directive reference, and example projects.
 
 ---
 
