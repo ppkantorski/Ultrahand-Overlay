@@ -83,7 +83,7 @@ Overlays built on [libultrahand](https://github.com/ppkantorski/libultrahand) ge
 - **String utilities** — trim, split, format, version parsing, placeholder resolution
 - **Audio & haptics** — WAV sound playback with volume control and rumble feedback
 
-See [libultrahand](https://github.com/ppkantorski/libultrahand) for build instructions, the full directive reference, and example projects.
+See [libultrahand](https://github.com/ppkantorski/libultrahand) for full documentation.
 
 ---
 
