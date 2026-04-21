@@ -37,18 +37,18 @@ Built on [libultrahand](https://github.com/ppkantorski/libultrahand) (an expande
 
 A growing ecosystem of [libultrahand](https://github.com/ppkantorski/libultrahand)-based overlays is available, all launchable and manageable directly from Ultrahand:
 
-| Overlay | Description |
-|---|---|
-| [UltraGB](https://github.com/ppkantorski/UltraGB-Overlay) | Game Boy / GBC emulator running on top of any game |
-| [Status Monitor](https://github.com/ppkantorski/Status-Monitor-Overlay) | Real-time CPU/GPU/RAM, temps, battery, and frequency stats |
-| [sys-clk](https://github.com/ppkantorski/sys-clk) | Per-game CPU/GPU/memory overclocking and underclocking |
-| [FPSLocker](https://github.com/ppkantorski/FPSLocker) | Custom FPS targets and display refresh rates for retail games |
-| [Fizeau](https://github.com/ppkantorski/Fizeau) | Color temperature, saturation, gamma, and contrast adjustment |
-| [sys-tune](https://github.com/ppkantorski/sys-tune) | Background music player |
-| [ovl-sysmodules](https://github.com/ppkantorski/ovl-sysmodules) | Toggle system modules and monitor memory usage on the fly |
-| [QuickNTP](https://github.com/ppkantorski/QuickNTP) | One-tap NTP time sync |
-| [NX-FanControl](https://github.com/ppkantorski/NX-FanControl) | Custom fan curve control |
-| [Tetris](https://github.com/ppkantorski/Tetris-Overlay) | Fully playable Tetris running as an overlay |
+| Overlay | Description | Original Dev(s) |
+|---|---|---|
+| [UltraGB](https://github.com/ppkantorski/UltraGB-Overlay) | Game Boy / GBC emulator running on top of any game | [ppkantorski](https://github.com/ppkantorski) |
+| [Tetris](https://github.com/ppkantorski/Tetris-Overlay) | Fully playable Tetris running as an overlay | [ppkantorski](https://github.com/ppkantorski)
+| [sys-tune](https://github.com/ppkantorski/sys-tune) | Background music player | [HookedBehemoth](https://github.com/HookedBehemoth)
+| [Status Monitor](https://github.com/ppkantorski/Status-Monitor-Overlay) | Real-time CPU/GPU/RAM, temps, battery, and frequency stats | [masagrator](https://github.com/masagrator)
+| [FPSLocker](https://github.com/ppkantorski/FPSLocker) | Custom FPS targets and display refresh rates for retail games | [masagrator](https://github.com/masagrator)
+| [sys-clk](https://github.com/ppkantorski/sys-clk) | Per-game CPU/GPU/memory overclocking and underclocking | [retronx-team](https://github.com/retronx-team)
+| [ovl-sysmodules](https://github.com/ppkantorski/ovl-sysmodules) | Toggle system modules and monitor memory usage on the fly | [WerWolv](https://github.com/WerWolv)
+| [Fizeau](https://github.com/ppkantorski/Fizeau) | Color temperature, saturation, gamma, and contrast adjustment | [averne](https://github.com/averne)
+| [QuickNTP](https://github.com/ppkantorski/QuickNTP) | One-tap NTP time sync | [WerWolv](https://github.com/WerWolv) & [nedex](https://github.com/nedex)
+| [NX-FanControl](https://github.com/ppkantorski/NX-FanControl) | Custom fan curve control | [Zathawo](https://github.com/Zathawo)
 
 For the developer's full list, see [Ultrahand Overlays](https://github.com/ppkantorski#ultrahand-overlays).
 
