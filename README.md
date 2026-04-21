@@ -12,9 +12,11 @@ Create directories, manage files, and customize configurations effortlessly usin
 
 [![Ultrahand Logo](.pics/banner.gif)](https://gbatemp.net/threads/ultrahand-overlay-the-fully-craft-able-overlay-executor.633560/)
 
-Ultrahand Overlay is an overlay menu ecosystem built from the ground up on [libultrahand](https://github.com/ppkantorski/libultrahand) (an expanded fork of [libtesla](https://github.com/WerWolv/libtesla)) that provides powerful C/C++ commands through its own custom interpretive [programming language](https://github.com/ppkantorski/Ultrahand-Overlay/wiki/Command-Reference) (similar to Shell/BASH). It is a versatile tool that enables users to create and share custom command-based packages, providing enhanced functionality for managing settings, files and directories on your Nintendo Switch.
+Ultrahand Overlay is a fully scriptable overlay menu ecosystem for the Nintendo Switch, built from the ground up on [libultrahand](https://github.com/ppkantorski/libultrahand) (an expanded fork of [libtesla](https://github.com/WerWolv/libtesla)). It runs as a system overlay — accessible instantly via hotkey from **any game or application without closing it** — and provides a powerful custom interpretive [command language](https://github.com/ppkantorski/Ultrahand-Overlay/wiki/Command-Reference) (similar to Shell/BASH) for managing files, configurations, and system settings directly on your Nintendo Switch.
 
-With Ultrahand, you have the flexibility to customize and shape your file management system according to your needs, empowering you with greater control over your system configurations.
+**For users**, Ultrahand is a feature-rich overlay hub: launch and manage other overlays, install and run community packages, control volume and backlight, trigger reboots, and get real-time feedback on downloads and file operations — all without leaving your game. It is a full drop-in replacement for Tesla Menu, so every existing Tesla overlay (`.ovl`) works without modification.
+
+**For package authors**, Ultrahand exposes a rich scripting environment: copy, move, delete, download, and unzip files; patch INI, JSON, and binary files; convert mods; trigger notifications; run hardware-conditional commands; and control virtually every aspect of the UI with a simple INI-based syntax. Packages can be shared and installed from the community library at [Ultrahand Packages](https://github.com/ppkantorski/Ultrahand-Packages).
 
 ## Screenshots
 ![Slideshow](.pics/slideshow.gif)
@@ -31,7 +33,7 @@ With Ultrahand, you have the flexibility to customize and shape your file manage
 
 - **Move Files or Directories** — Seamlessly move files or directories between locations on your SD card.
 
-- **Download Files** — Efficiently retrieve files from repositories or URLs directly to your SD card. Supports both standard and no-retry download modes, with live progress feedback in the UI.
+- **Download Files** — Efficiently retrieve files from repositories or URLs directly to your SD card. Supports both standard (3-retry) and no-retry download modes, with live progress feedback in the UI.
 
 - **Unzip Files** — Extract compressed zip archives on your SD card, preserving their original directory structure.
 
@@ -76,31 +78,36 @@ Package commands support several mechanisms for conditional and hardware-specifi
 - `;state=on` / `;state=off` — conditional on a toggle's current state
 
 **Block labels** (flip all following commands in the section to that hardware variant):
-- `Erista:` — all commands after this label run only on Erista hardware
-- `Mariko:` — all commands after this label run only on Mariko hardware
+- `erista:` — all commands after this label run only on Erista hardware
+- `mariko:` — all commands after this label run only on Mariko hardware
 
 **Runtime conditionals** (gate subsequent execution on file system state):
-- `path_exists <path>` — proceeds only if the file or directory exists
-- `!path_exists <path>` — proceeds only if the file or directory does not exist
+- `path_exists <path>` — marks success only if the file or directory exists; subsequent commands in a `try:` block are skipped if this fails
+- `!path_exists <path>` — marks success only if the file or directory does not exist
 
 **Error handling**:
-- `try:` — marks the next command as non-fatal; execution continues even if it fails
+- `try:` — begins a conditional block. `commandSuccess` is reset to `true` at the `try:` label, and any command in the block that fails causes all remaining commands in that block to be skipped. A new `try:` label starts a fresh block. The overall command sequence continues regardless of whether the block succeeded or failed.
 
 ### System Commands
 
 A variety of system-level operations are available from within packages:
 
 - **Shutdown** — `shutdown` performs a clean system shutdown. `shutdown controllers` disconnects all Bluetooth controllers without shutting down.
-- **Reboot** — `reboot` reboots the system. On supported hardware, additional targets are available:
+- **Reboot** — On Erista and supported Mariko hardware, a bare `reboot` with no arguments reboots to the Hekate bootloader. On unsupported hardware it performs a plain firmware reboot. Additional reboot targets:
   - `reboot HEKATE` — reboot directly into the Hekate bootloader menu
   - `reboot UMS` — reboot into Hekate UMS (SD card USB mass storage) mode
   - `reboot boot <name or index>` — reboot to a named or indexed Hekate boot config entry
   - `reboot ini <name or index>` — reboot to a named or indexed Hekate INI config entry
   - `reboot <payload_path>` — reboot directly to a specific payload file on the SD card
-- **Backlight** — `backlight <0–100>` sets the screen brightness as a percentage.
+- **Backlight** — Controls the screen backlight:
+  - `backlight <0–100>` — sets brightness as a percentage
+  - `backlight on` / `backlight off` — turns the backlight fully on or off
+  - `backlight auto on` / `backlight auto off` — enables or disables automatic brightness control
 - **Volume** — `volume <0–150>` sets the system master volume as a percentage. Values above 100 amplify beyond the normal maximum.
 - **Open Overlay** — `open <overlay_path> [args]` launches another overlay programmatically from within a package command, with optional launch arguments.
 - **Notify** — `notify <text>` and `notify-now <text>` display an in-overlay toast notification from within a package command. `notify-now` shows the toast immediately, bypassing the normal queue.
+- **Exec** — `exec <section>` runs the named section from the current package's `boot_package.ini`. `exec <section> <path.ini>` runs the named section from an explicitly specified INI file. Useful for reusing shared command blocks across multiple package entries.
+- **Exit** — `exit` closes the overlay cleanly. `exit overlays` closes the overlay and navigates back to the overlays tab when next opened; `exit packages` does the same for the packages tab.
 
 #### Safe Atmosphere Updates via Reboot
 
