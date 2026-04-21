@@ -34,7 +34,7 @@ Built on [libultrahand](https://github.com/ppkantorski/libultrahand) (an expande
 - Full touch support alongside controller input
 - Customizable themes, wallpapers, sound packs, and UI layout
 
-### For Package Authors
+### For Package Devs
 A rich INI-based scripting environment with:
 - **File operations** — copy, move, delete, download, unzip, mirror, touch
 - **Config patching** — INI, JSON, and binary hex editing
