@@ -113,7 +113,8 @@ For available community packages, see [Ultrahand Packages](https://github.com/pp
 | Input | Action |
 |---|---|
 | `A` | Execute the selected command |
-| `MINUS` | View and run individual command lines (Script Overlay) |
+| `MINUS` | View and run individual command lines (Script Overlay); tap to dismiss the frontmost notification |
+| Hold `MINUS` (~4s) | Toggle API Notifications on/off (when API Toggle Hotkey is enabled in Notification Settings) |
 | Long-tap (touch) | Open command line view or overlay/package settings |
 | `X` | Star/favorite an overlay or package |
 | `Y` | Open overlay/package settings |
@@ -123,6 +124,7 @@ For available community packages, see [Ultrahand Packages](https://github.com/pp
 | `R` during command | Abort the running operation |
 | `B` during command | Dismiss the overlay without canceling |
 | Swipe inward from edge | Open Ultrahand (alternative to key combo) |
+| Tap notification (touch) | Dismiss that notification directly |
 
 ---
 
@@ -132,14 +134,14 @@ Access the Settings menu by pressing `PLUS` from the main screen.
 
 - **Key Combo** — Configure the hotkey used to open Ultrahand
 - **Language** — Select UI language (loaded from `/config/ultrahand/lang/`)
-- **Notifications** — Configure toast behavior, max slots, and API notification settings. External sysmodules and apps can push notifications by writing `.notify` JSON files to `/config/ultrahand/notifications/`; per-app filtering and 50×50 RGBA icons are supported
+- **Notifications** — Configure toast behavior, max slots, silence notifications, startup notification, and API notification settings. External sysmodules and apps can push notifications by writing `.notify` JSON files to `/config/ultrahand/notifications/`; per-app filtering and 50×50 RGBA icons are supported. The **API Toggle Hotkey** (hold `MINUS` ~4s) can enable/disable API notifications on the fly
 - **System** — View device info and adjust overlay memory heap size (4 / 6 / 8 MB)
 - **Software Update** — Check for and install updates from within the overlay
 - **Theme** — Select a theme from `/config/ultrahand/themes/`
 - **Sounds** — Select a sound-effect pack from `/config/ultrahand/.sounds/`
 - **Wallpaper** — Set a background wallpaper (requires 6 MB+ heap; `.rgba` format, 448×720 px)
-- **Widget** — Toggle status bar elements (clock, temps, battery, backdrop, border)
-- **Miscellaneous** — Granular toggles for swipe-to-open, haptics, NTP sync, page recall, launch recall, packages menu visibility, page layout, and more
+- **Widget** — Toggle individual status bar elements: clock, SOC temperature, PCB temperature, battery, backdrop, extended backdrop, and border
+- **Miscellaneous** — Granular toggles for swipe-to-open, haptics, auto NTP sync, page recall, launch recall, packages menu visibility, user guide visibility, show/hide delete, show/hide unsupported overlays, overlay and package version display, and more
 
 Per-overlay and per-package launch combos can be assigned independently via the overlay/package settings menu (`Y`).
 
