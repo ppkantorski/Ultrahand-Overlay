@@ -77,8 +77,8 @@ For a full reference of all available commands, see the [Command Reference wiki]
 
 #### Refresh and Navigation Commands
 
-- `refresh` — re-renders the current page. Called as `refresh <item_name> [item_value]` to also jump the cursor to the matching item after redraw.
-- `refresh-to <item_name> [item_value] [exact_match]` — like `refresh` with cursor jump, but with an optional `true`/`false` exact-match flag (defaults to `true`; set to `false` for substring matching).
+- `refresh` — re-renders the current page. Called as `refresh <ITEM_NAME> [ITEM_VALUE]` to also jump the cursor to the matching item after redraw.
+- `refresh-to <ITEM_NAME> [ITEM_VALUE] [EXACT_MATCH]` — like `refresh` with cursor jump, but with an optional `true`/`false` exact-match flag (defaults to `true`; set to `false` for substring matching).
 
 ### Placeholder Variables
 
