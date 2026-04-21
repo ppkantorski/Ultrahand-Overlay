@@ -181,7 +181,7 @@ sdmc:/
 │   │   │   ├── toolbox.json
 │   │   │   └── flags/
 │   │   │       └── boot2.flag
-│   │   └── 420000000007E51B/           ← nx-ovlreloader sysmodule
+│   │   └── 420000000007E51B/           ← nx-ovlreloader sysmodule (for on-demand reloads)
 │   │       └── exefs.nsp
 │   └── exefs_patches/
 │       └── audio_mastervolume/         ← system audio master volume patches
