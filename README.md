@@ -12,7 +12,7 @@ Create directories, manage files, and customize configurations effortlessly usin
 
 [![Ultrahand Logo](.pics/banner.gif)](https://gbatemp.net/threads/ultrahand-overlay-the-fully-craft-able-overlay-executor.633560/)
 
-Ultrahand Overlay is an overlay menu ecosystem built from the ground up off of [libultrahand](https://github.com/ppkantorski/libultrahand) (an expanded fork of [libtesla](https://github.com/WerWolv/libtesla)) that provides powerful C/C++ commands through the usage of its own custom interpretive [programming language](https://github.com/ppkantorski/Ultrahand-Overlay/wiki/Command-Reference) (similar to Shell/BASH).  It is a versatile tool that enables users to create and share custom command-based packages, providing enhanced functionality for managing settings, files and directories on your Nintendo Switch.
+Ultrahand Overlay is an overlay menu ecosystem built from the ground up on [libultrahand](https://github.com/ppkantorski/libultrahand) (an expanded fork of [libtesla](https://github.com/WerWolv/libtesla)) that provides powerful C/C++ commands through its own custom interpretive [programming language](https://github.com/ppkantorski/Ultrahand-Overlay/wiki/Command-Reference) (similar to Shell/BASH). It is a versatile tool that enables users to create and share custom command-based packages, providing enhanced functionality for managing settings, files and directories on your Nintendo Switch.
 
 With Ultrahand, you have the flexibility to customize and shape your file management system according to your needs, empowering you with greater control over your system configurations.
 
@@ -21,82 +21,151 @@ With Ultrahand, you have the flexibility to customize and shape your file manage
 
 ## Features
 
-Ultrahand Overlay currently offers the following features:
+### File and Directory Management
 
-- Create Directories:
-  - Effortlessly create directories on your SD card by specifying the directory path. Ultrahand will handle the creation process for you.
+- **Create Directories** — Effortlessly create directories on your SD card by specifying the directory path.
 
-- Copy Files or Directories:
-  - Easily copy files or directories from one location to another on your SD card. Just provide the source and destination paths, and Ultrahand will seamlessly handle the copying process.
+- **Copy Files or Directories** — Easily copy files or directories from one location to another on your SD card.
 
-- Delete Files or Directories:
-  - Simplify file and directory deletion on your SD card. By specifying the path of the file or directory you want to delete, Ultrahand promptly removes it, making the deletion process hassle-free.
+- **Delete Files or Directories** — Simplify file and directory deletion. Specify the path of the file or directory you want to remove and Ultrahand handles it cleanly.
 
-- Move Files or Directories:
-  - Seamlessly move files or directories between locations on your SD card. Provide the source path and the destination directory path, and Ultrahand takes care of the moving process, ensuring smooth relocation.
+- **Move Files or Directories** — Seamlessly move files or directories between locations on your SD card.
 
-- Download Files:
-  - Download files to your SD card with ease. Efficiently retrieve files from repositories or URLs to your desired location. Whether you need to download/update homebrew or transfer files between locations, this feature simplifies the process, making repository management a breeze.
+- **Download Files** — Efficiently retrieve files from repositories or URLs directly to your SD card. Supports both standard and no-retry download modes, with live progress feedback in the UI.
 
-- Unzip Files:
-  - Extract compressed zip files on your SD card by unzipping archived files, preserving their original structure. Whether you have downloaded zip archives or received compressed files, this command simplifies the process of extracting them, making it effortless to access the contents within.
+- **Unzip Files** — Extract compressed zip archives on your SD card, preserving their original directory structure.
 
-- Modify INI Files:
-  - Edit INI files on your SD card with ease. Take full control over your configurations by updating existing key-value pairs, adding new entries, or creating new sections within the INI file using Ultrahand.
+- **Modify INI Files** — Edit INI files with full control: update existing key-value pairs, add new entries, or create new sections.
 
-- Hex Edit Files:
-  - Perform hexadecimal editing of files on your SD card. Edit the binary data directly, allowing for precise control over your data. Ultrahand's Hex Edit Files feature enables you to analyze, modify, and customize files in their raw form.
+- **Hex Edit Files** — Perform binary-level hexadecimal editing of files for precise data manipulation.
 
-- Convert Mods:
-  - Convert `pchtxt` mods into `ips` or `cheats` format.
+- **Convert Mods** — Convert `pchtxt` mods into `ips` or `cheats` format.
 
-- System Commands:
-  - There are a variety of system commands that users can utilize.  These include functions to shutdown, reboot, reboot directly into Hekate entries/modes, manipulate the screen's backlight, volume settings, and turn off all bluetooth controllers.
+### Command System
 
-- Run Commmands On Boot:
-  - Users can also utilize their own `/switch/.packages/boot_package.ini` file (with a command section `boot`) to run a series of commands once upon device boot-up.
+Ultrahand's interpretive language supports a rich set of command modes, giving package authors fine-grained control over how each item behaves in the UI:
+
+| Mode | Description |
+|---|---|
+| `default` | Standard one-shot command execution |
+| `toggle` | Two-state ON/OFF toggle, state persisted to config |
+| `hold` | Requires a button hold before executing (3-second progress bar with haptic pulses) |
+| `slot` | Option picker backed by a config footer value |
+| `option` | Selection list that updates a config footer value on confirm |
+| `forwarder` | Launches another overlay or package directly |
+| `text` | Displays static or dynamic text content |
+| `table` | Renders a scrollable, pollable data table with configurable alignment and colors |
+| `trackbar` | Continuous numeric slider with configurable min/max/units |
+| `step_trackbar` | Stepped discrete slider |
+| `named_step_trackbar` | Stepped slider with a named label for each step |
+
+Commands also support **grouping** options (`split`, `split2` through `split5`) for multi-column layouts within a single command row.
+
+### Conditional Execution
+
+Package commands can be gated by system context at parse time using inline annotations:
+
+- `;system=erista` / `;system=mariko` — restrict a command to a specific hardware revision
+- `;hos_version=>=16.0.0` — version operator conditions on HOS (supports `==`, `>=`, `<=`, `>`, `<`)
+- `;ams_version=` — same operators applied to the Atmosphère version
+- `;state=on` / `;state=off` — conditional on a toggle's current state
+
+### System Commands
+
+A variety of system-level operations are available from within packages:
+
+- Shutdown and reboot (including direct boot into Hekate entries and modes)
+- Screen backlight control
+- System volume adjustment
+- Disconnect all Bluetooth controllers
+- NTP time synchronization
+
+### Boot and Exit Hooks
+
+- **On-boot commands**: Place a `boot_package.ini` file in `/switch/.packages/` with a `[on-boot]` section to run commands once on each device boot. Individual packages support their own `boot_package.ini` with a `[boot]` section that runs when the package is first launched.
+- **On-exit commands**: An `exit_package.ini` in `/switch/.packages/` with an `[exit]` section runs when Ultrahand is closed cleanly.
+
+---
 
 ## Getting Started
 
 ### Usage
 
-To use Ultrahand, follow these steps:
-
 1. Download and install the latest [nx-ovlloader](https://github.com/ppkantorski/nx-ovlloader).
-    - **Sidenote:** nx-ovlloader+ consumes 2MB more of system memory than nx-ovlloader and provides expanded features. Users can also switch between the two within the Ultrahand Settings Menu.
-2. Download the latest Ultrahand [ovlmenu.ovl](https://github.com/ppkantorski/Ultrahand-Overlay/releases/latest/download/ovlmenu.ovl) and place it within `/switch/.overlays/`.
-    - **WARNING:** This will overwrite `Tesla Menu` if already installed.
-3. After installing Ultrahand Overlay, a new folder named `ultrahand` will be created within the root config folder on your SD card (`/config/ultrahand/`) along with a `config.ini` file containing various Ultrahand settings.
-4. Launch Ultrahand (similarly to `Tesla Menu`) with Ultrahand's default hotkeys (`ZL+ZR+DDOWN`) or Tesla's.  A new folder will be made (`/switch/.packages/`) with a preset `package.ini` file for your base menu commands.
+    - **Note:** Two variants are available. The standard `nx-ovlloader` has a 4MB overlay heap. You can switch between overlay heap sizes from within the Ultrahand Settings menu for expanded features.
+2. Download the latest [`ovlmenu.ovl`](https://github.com/ppkantorski/Ultrahand-Overlay/releases/latest/download/ovlmenu.ovl) and place it at `/switch/.overlays/ovlmenu.ovl`.
+    - **Warning:** This will overwrite `Tesla Menu` if it is already installed.
+3. After first launch, Ultrahand will create `/config/ultrahand/` on your SD card along with a `config.ini` file containing global settings.
+4. Launch Ultrahand using its default hotkey combo (`ZL+ZR+DDOWN`) or any of the Tesla-compatible combos. A `/switch/.packages/` directory will be created with a preset `package.ini` for your base menu commands.
+5. Place your custom `package.ini` in `/switch/.packages/<PACKAGE_NAME>/`. This file contains the commands for your package.
+    - **Note:** If your package does not appear, you may need to run *Fix Bit Archive* in Hekate.
+    - See [Ultrahand Packages](https://github.com/ppkantorski/Ultrahand-Packages) for a list of known packages.
+6. Your commands will now appear in the packages menu inside Ultrahand.
 
-5. Place your custom `package.ini` package file in your Ultrahand package directory (`/switch/.packages/<PACKAGE_NAME>/`). This file will contains the commands for your custom Ultrahand package.
-    - **Sidenote:** If your Ultrahand package does not show up, you may need to run `Fix Bit Archive` in Hekate.
-    - See [Ultrahand Packages](https://github.com/ppkantorski/Ultrahand-Packages) for a comprehensive list of known packages.
+---
 
-6. Your commands will now show up on the packages menu within Ultrahand.
+## UI and Navigation
 
-## Additional Features
-- You can click `A` to execute any command as well as click `MINUS` to view/execute the individual command lines written in the ini for execution.
-- You can click `PLUS` on the main menu to enter the settings menu.
-- You can click `X` on top of an overlay/package to star them.
-- You can click `Y` on top of an overlay/package to configure additional settings.
+- Press `A` to execute any command.
+- Press `MINUS` on a command to view and execute its individual command lines.
+- Press `X` on an overlay or package to star it (moves it to a hidden favorites section).
+- Press `Y` on an overlay or package to open its configuration settings.
+- Press `PLUS` from the main menu to enter the Ultrahand Settings menu.
+- Press `R` during a running command to abort the operation.
+- Press `B` during a running command to dismiss the overlay without canceling.
 
-For additional assistance with custom packages, feel free to checkout the [Ultrahand Overlay Wiki](https://github.com/ppkantorski/Ultrahand-Overlay/wiki).
+---
 
-### Nintendo Switch Compatibility
-To run Ultrahand Overlay on the Nintendo Switch, you need to have the necessary [homebrew environment](https://github.com/Atmosphere-NX/Atmosphere) set up on your console running HOS 16.0.0+. Once you have the homebrew environment set up, you can transfer the compiled .ovl to your Switch and launch it using your old `Tesla Menu` hotkeys.
+## Settings
 
-Please note that running homebrew software on your Nintendo Switch may void your warranty and can carry certain risks. Ensure that you understand the implications and follow the appropriate guidelines and precautions when using homebrew software.
+The Ultrahand Settings menu (accessible via `PLUS` on the main screen) exposes the following options:
 
-### Compilation Prerequisites
+### General
+- **Key Combo** — Choose the button combination used to open Ultrahand from any of the supported default combos.
+- **Language** — Select the UI language. Languages are loaded from JSON files in `/config/ultrahand/lang/`. English is always available.
+- **Notifications** — Configure notification behavior, including silence, startup notification, API-triggered notifications, API toggle hotkeys, and the maximum number of simultaneous notification toasts.
+- **System** — Displays device info (Erista/Mariko, memory vendor/model, CPU/GPU fuse data) and exposes an **Overlay Memory** slider (4 MB / 6 MB / 8 MB heap) to tune the memory available to the overlay.
+- **Software Update** — Check for and install the latest Ultrahand release directly from within the overlay.
 
-To compile and run the software, you need to have the following C/C++ dependencies installed:
+### UI Settings
+- **Theme** — Select a UI theme from `.ini` files in `/config/ultrahand/themes/`. The built-in `ultra` and `ultra-blue` themes are downloadable from within the menu.
+- **Sounds** — Select a sound-effect pack from `/config/ultrahand/.sounds/`.
+- **Wallpaper** — Select a background wallpaper from `/config/ultrahand/wallpapers/` (requires 6 MB+ heap).
+- **Widget** — Toggle individual status bar elements (clock, SoC temperature, PCB temperature, battery indicator, backdrop, border) and adjust widget display settings (dynamic colors, center alignment, extended backdrop).
+- **Miscellaneous** — Granular feature toggles including:
+  - Launch combos, haptic feedback, auto NTP sync, opaque screenshots
+  - Page swap, page recall, launch recall
+  - User guide visibility, hidden items visibility, delete action visibility
+  - Overlay/package version label display and formatting
+  - Dynamic logo, selection background/text/value highlighting
+  - libultrahand and package title/version display modes
 
+---
+
+## Per-Overlay and Per-Package Key Combos
+
+Each overlay and package can be assigned its own launch combo independently of the global Ultrahand hotkey. Combos are deconflicted automatically: assigning a combo to one overlay or package removes it from any other that was using it. Mode-specific combos (`mode_combos`) are also supported for multi-mode overlays.
+
+---
+
+## Compilation Prerequisites
+
+To compile and run the software, you need:
+
+- [devkitPro](https://devkitpro.org) with `devkitA64` and `libnx`
 - [libultrahand](https://github.com/ppkantorski/libultrahand)
-- libnx
-- switch-curl
-- switch-zlib
-- switch-mbedtls
+- `switch-curl`
+- `switch-zlib`
+- `switch-mbedtls`
+
+```sh
+export DEVKITPRO=/opt/devkitpro
+make -j6
+```
+
+The build targets C++26 and ARMv8-A. Output is `ovlmenu.ovl`.
+
+---
 
 ## Contributing
 
