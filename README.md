@@ -53,27 +53,35 @@ For a full list, see [ppkantorski's Ultrahand Overlays](https://github.com/ppkan
 
 ### For Package Devs
 A rich INI-based scripting environment with:
-- **File operations** — copy, move, delete, download, unzip, mirror, touch
-- **Config patching** — INI, JSON, and binary hex editing
+- **File operations** — copy, move, delete, rename, mkdir, touch, mirror, compare, flag, dot-clean
+- **Download & extraction** — download with retry, unzip
+- **INI editing** — get/set values and keys, add/rename/remove sections and keys, pattern-matched bulk edits
+- **JSON editing** — get/set values and keys
+- **Hex editing** — edit by offset, swap, string, decimal, reversed decimal, and custom pattern offset
 - **Mod conversion** — `.pchtxt` to `.ips` or Atmosphere cheat format
-- **System control** — reboot targets, shutdown, volume, backlight
-- **Dynamic UI** — toggles, sliders, dropdowns, tables, notifications
-- **Placeholders & expressions** — math, string manipulation, timestamps, hardware info
-- **Conditional logic** — `try:` blocks, `path_exists`, hardware/version guards
+- **System control** — reboot (Hekate boot/ini/UMS/payload targets), shutdown, volume, backlight, region
+- **Overlay control** — launch overlays, execute package sections, navigate back, exit to menu
+- **Dynamic UI** — toggles, sliders, dropdowns, tables, notifications with layout options
+- **Placeholders** — INI, JSON, hex, list, file, and timestamp sources; hardware info (`{ams_version}`, `{hos_version}`, `{title_id}`, `{build_id}`, `{ram_vendor}`, `{local_ip}`, `{volume}`, `{backlight}`, fuse data, and more); math and string transforms
+- **Conditional logic** — `try:` blocks, `path_exists`, `erista:`/`mariko:` hardware guards, version comparisons
 
 See the [Wiki](https://github.com/ppkantorski/Ultrahand-Overlay/wiki) for full documentation.
 
 ### For Overlay Devs
-Overlays built on [libultrahand](https://github.com/ppkantorski/libultrahand) get first-class Ultrahand integration out of the box:
+Overlays built on [libultrahand](https://github.com/ppkantorski/libultrahand) get access to the full `libultra` utility suite plus first-class Ultrahand integration:
 
 - **Per-overlay themes** — independent theme overrides scoped to your overlay
 - **Per-overlay wallpapers** — custom wallpaper support with automatic heap-aware fallback
 - **Language translations** — automatic string translation at render time based on the active language
 - **Status bar widget** — opt-in clock, temperature, and battery overlay widget
-- **Download / network utilities** — built-in curl-based download and network helpers
-- **Theme variable init** — automatic theme application with manual and directive-based fallbacks
 - **Launch integration** — assignable combos, hide/star state, and boot/exit package hooks
 - **Tesla compatibility** — full drop-in replacement for libtesla; existing overlays work without modification
+- **File & path utilities** — copy, move, delete, mkdir, wildcard matching, and directory traversal
+- **INI, JSON & hex utilities** — full read/write access to INI files, JSON files, and binary hex data
+- **Download & extraction** — curl-based file downloads and zip extraction
+- **Mod conversion** — `.pchtxt` to `.ips` or Atmosphere cheat format
+- **String utilities** — trim, split, format, version parsing, placeholder resolution
+- **Audio & haptics** — WAV sound playback with volume control and rumble feedback
 
 See [libultrahand](https://github.com/ppkantorski/libultrahand) for build instructions, the full directive reference, and example projects.
 
