@@ -49,7 +49,7 @@ A growing ecosystem of [libultrahand](https://github.com/ppkantorski/libultrahan
 | [NX-FanControl](https://github.com/ppkantorski/NX-FanControl) | Custom fan curve control |
 | [Tetris](https://github.com/ppkantorski/Tetris-Overlay) | Fully playable Tetris running as an overlay |
 
-For a full list, see [ppkantorski's Ultrahand Overlays](https://github.com/ppkantorski#ultrahand-overlays).
+For the developer's full list, see [Ultrahand Overlays](https://github.com/ppkantorski#ultrahand-overlays).
 
 ### For Package Devs
 A rich INI-based scripting environment with:
