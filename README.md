@@ -131,6 +131,81 @@ For real-world package examples, see the [`examples/`](https://github.com/ppkant
 
 ---
 
+## File Layout
+
+```
+sdmc:/
+├── atmosphere/
+│   ├── contents/
+│   │   └── 420000000007E51A/           ← nx-ovlloader sysmodule
+│   │       ├── exefs.nsp
+│   │       ├── toolbox.json
+│   │       └── flags/
+│   │           └── boot2.flag
+│   └── exefs_patches/
+│       └── audio_mastervolume/         ← system audio master volume patches
+├── switch/
+│   ├── .overlays/
+│   │   └── ovlmenu.ovl                 ← Ultrahand Overlay binary
+│   ├── .packages/
+│   │   ├── package.ini                 ← root/starter package (auto-generated on first launch)
+│   │   ├── config.ini                  ← root package runtime state
+│   │   ├── boot_package.ini            ← optional: commands run on every overlay boot
+│   │   ├── exit_package.ini            ← optional: commands run on overlay close
+│   │   └── <YOUR_PACKAGE>/             ← user-installed packages (one folder each)
+│   │       ├── package.ini
+│   │       ├── boot_package.ini        ← optional
+│   │       └── exit_package.ini        ← optional
+│   └── appstore/
+│       └── .get/packages/
+│           └── UltrahandOverlay/
+│               └── info.json           ← HB App Store package metadata (if installed via store)
+└── config/
+    ├── tesla/
+    │   └── config.ini                  ← Tesla-compatible key combo mirror
+    ├── nx-ovlloader/
+    │   ├── heap_size.bin               ← active overlay heap size setting (4 / 6 / 8 MB)
+    │   └── exit_flag.bin               ← runtime exit signal (transient; deleted after use)
+    └── ultrahand/
+        ├── config.ini                  ← global settings (key combo, language, widget, etc.)
+        ├── overlays.ini                ← overlay registry (auto-managed; combos, hide state, priority)
+        ├── packages.ini                ← package registry (auto-managed; combos, hide state)
+        ├── theme.ini                   ← active theme (copied from themes/ on selection)
+        ├── wallpaper.rgba              ← active wallpaper (copied from wallpapers/ on selection; 448×720 px)
+        ├── fuse.ini                    ← cached hardware fuse data (auto-deleted on reload)
+        ├── RELEASE.ini                 ← cached latest release info (fetched on update check)
+        ├── assets/
+        │   ├── ppkantorski-1.rgba      ← UI artwork assets
+        │   ├── ppkantorski-2.rgba
+        │   └── notifications/          ← notification icon assets
+        ├── downloads/                  ← temporary staging area for in-progress downloads
+        ├── flags/
+        │   ├── NOTIFICATIONS.flag      ← notifications enabled/active flag
+        │   ├── RELOADING.flag          ← set during intentional overlay reload (transient)
+        │   ├── NTP_SYNC_PENDING.flag   ← triggers NTP sync on next applicable download
+        │   └── notifications/          ← per-notification dismissed-state flags
+        ├── lang/
+        │   ├── en.json                 ← English (and other bundled languages)
+        │   └── *.json                  ← additional user-provided language files
+        ├── notifications/
+        │   └── *.notify                ← pending toast notification payloads (transient)
+        ├── payloads/
+        │   └── ultrahand_updater.bin   ← payload reboot target used for self-update
+        ├── sounds/                     ← active extracted sound pack (WAV files loaded at runtime)
+        │   └── *.wav
+        ├── .sounds/                    ← available sound packs to select from
+        │   ├── default.zip             ← bundled default sound pack
+        │   └── *.zip                   ← additional user-provided sound packs
+        ├── themes/
+        │   ├── ultra.ini               ← bundled Ultra theme
+        │   ├── ultra-blue.ini          ← bundled Ultra Blue theme
+        │   └── *.ini                   ← additional user-provided themes
+        └── wallpapers/
+            └── *.rgba                  ← user-provided wallpapers (448×720 px)
+```
+
+---
+
 ## Building from Source
 
 **Prerequisites:**
