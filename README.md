@@ -195,11 +195,13 @@ For real-world package examples, see the [`examples/`](https://github.com/ppkant
 sdmc:/
 ├── atmosphere/
 │   ├── contents/
-│   │   └── 420000000007E51A/           ← nx-ovlloader sysmodule
-│   │       ├── exefs.nsp
-│   │       ├── toolbox.json
-│   │       └── flags/
-│   │           └── boot2.flag
+│   │   ├── 420000000007E51A/           ← nx-ovlloader sysmodule
+│   │   │   ├── exefs.nsp
+│   │   │   ├── toolbox.json
+│   │   │   └── flags/
+│   │   │       └── boot2.flag
+│   │   └── 420000000007E51B/           ← nx-ovlreloader sysmodule
+│   │       └── exefs.nsp
 │   └── exefs_patches/
 │       └── audio_mastervolume/         ← system audio master volume patches
 ├── switch/
