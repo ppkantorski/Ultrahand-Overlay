@@ -53,7 +53,7 @@ A growing ecosystem of [libultrahand](https://github.com/ppkantorski/libultrahan
 For a fuller list, see [Ultrahand Overlays](https://github.com/ppkantorski#ultrahand-overlays).
 
 ### For Package Devs
-A rich INI-based scripting environment with:
+A rich INI-based GUI scripting environment with:
 - **File operations** — copy, move, delete, rename, mkdir, touch, mirror, compare, flag, dot-clean
 - **Download & extraction** — download with retry, unzip
 - **INI editing** — get/set values and keys, add/rename/remove sections and keys, pattern-matched bulk edits
