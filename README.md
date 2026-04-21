@@ -47,7 +47,7 @@ Ultrahand Overlay is a fully scriptable overlay menu ecosystem for the Nintendo 
 
 - **Touch File** — `touch <PATH>` creates an empty file at the specified path if it does not already exist.
 
-- **Dot-Clear** — `dot-clear <PATH>` recursively removes all macOS metadata files (those beginning with `._`) from the specified directory and all its subdirectories. Useful for SD cards populated on macOS where these files can interfere with mods.
+- **Dot-Clean** — `dot-clean <PATH>` recursively removes all macOS metadata files (those beginning with `._`) from the specified directory and all its subdirectories. Useful for SD cards populated on macOS where these files can interfere with mods.
 
 - **Logging** — `logging` writes commands and errors to `log.txt` within the package's folder, bypassing the per-package `Error Logging` toggle. Useful for debugging during development.
 
