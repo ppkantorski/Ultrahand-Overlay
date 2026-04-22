@@ -27,7 +27,7 @@ Built on [libultrahand](https://github.com/ppkantorski/libultrahand) (an enhance
 
 ### For Users
 - Instantly accessible from any game via hotkey or swipe gesture — no game suspension required
-- Launch and manage other overlays with per-overlay key combos
+- Launch and manage overlays and packages with assignable per-item key combos
 - Install and run community packages from [Ultrahand Packages](https://github.com/ppkantorski/Ultrahand-Packages)
 - Control volume (up to 150% via bundled audio patch), backlight, and system settings on the fly
 - Real-time progress feedback for downloads, copies, and installs
