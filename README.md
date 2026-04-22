@@ -57,6 +57,7 @@ A rich INI-based GUI scripting environment with:
 - **Launch integration** — assignable hotkey combos per package, hide/star state, and boot/exit package hooks (`boot_package.ini` / `exit_package.ini`)
 - **Overlay control** — launch overlays, execute package sections, navigate back, exit to menu
 - **Dynamic UI** — toggles, sliders, dropdowns, tables, rich toast notifications (title, duration, alignment, icon), `set-footer`, and page/theme/wallpaper `refresh`
+- **Status bar widget** — opt-in clock, temperature, and battery overlay widget
 - **Language translations** — package UI strings are automatically translated at render time based on the active system language
 - **Notifications** — `notify` / `notify-now` commands push inline toast messages from scripts; dropping a `.notify` JSON file to `/config/ultrahand/notifications/` queues a persistent API notification that displays until dismissed
 - **Placeholders** — INI, JSON, hex, list, file, and timestamp sources; hardware info (`{ams_version}`, `{hos_version}`, `{title_id}`, `{build_id}`, `{ram_vendor}`, `{local_ip}`, `{volume}`, `{backlight}`, fuse data, and more); math and string transforms
