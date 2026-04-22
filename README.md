@@ -56,7 +56,7 @@ For a fuller list, see [Ultrahand Overlays](https://github.com/ppkantorski#ultra
 A rich INI-based GUI scripting environment with:
 - **Launch integration** — assignable hotkey combos per package, hide/star state, and boot/exit package hooks (`boot_package.ini` / `exit_package.ini`)
 - **Overlay control** — launch overlays, execute package sections, navigate back, exit to menu
-- **Dynamic UI** — toggles, sliders, dropdowns, tables, rich toast notifications (title, duration, alignment, icon), `set-footer`, and page/theme/wallpaper `refresh`
+- **Dynamic UI** — toggles, sliders, dropdowns, tables (drawn directly or loaded from a text file), rich toast notifications (title, duration, alignment, icon), `set-footer`, and page/theme/wallpaper `refresh`
 - **Status bar widget** — opt-in clock, temperature, and battery overlay widget
 - **Language translations** — package UI strings are automatically translated at render time based on the active system language
 - **Notifications** — `notify` / `notify-now` commands push inline toast messages from scripts; dropping a `.notify` JSON file to `/config/ultrahand/notifications/` queues a persistent API notification that displays until dismissed
