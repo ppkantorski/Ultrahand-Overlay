@@ -64,6 +64,7 @@ A rich INI-based GUI scripting environment with:
 - **Overlay control** — launch overlays, execute package sections, navigate back, exit to menu
 - **Dynamic UI** — toggles, sliders, dropdowns, tables, rich toast notifications (title, duration, alignment, icon), `set-footer`, and page/theme/wallpaper `refresh`
 - **Placeholders** — INI, JSON, hex, list, file, and timestamp sources; hardware info (`{ams_version}`, `{hos_version}`, `{title_id}`, `{build_id}`, `{ram_vendor}`, `{local_ip}`, `{volume}`, `{backlight}`, fuse data, and more); math and string transforms
+- **Notifications** — `notify` / `notify-now` commands push inline toast messages from scripts; dropping a `.notify` JSON file to `/config/ultrahand/notifications/` queues a persistent API notification that displays until dismissed
 - **Conditional logic** — `try:` blocks, `path_exists`, `erista:`/`mariko:` hardware guards, version comparisons
 
 See the [Wiki](https://github.com/ppkantorski/Ultrahand-Overlay/wiki) for full documentation.
@@ -76,6 +77,7 @@ Overlays built on [libultrahand](https://github.com/ppkantorski/libultrahand) ge
 - **Language translations** — automatic string translation at render time based on the active language
 - **Status bar widget** — opt-in clock, temperature, and battery overlay widget
 - **Launch integration** — assignable combos, hide/star state, and boot/exit package hooks
+- **Notifications** — call `tsl::notification->show()` or `tsl::notification->showNow()` to push toast messages from overlay code, with configurable text, font size, priority, duration, alignment, and icon
 - **Tesla compatibility** — full drop-in replacement for libtesla; existing overlays work without modification
 - **File & path utilities** — copy, move, delete, mkdir, wildcard matching, and directory traversal
 - **INI, JSON & hex utilities** — full read/write access to INI files, JSON files, and binary hex data
