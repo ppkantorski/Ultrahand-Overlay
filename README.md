@@ -11,7 +11,7 @@
 
 **Ultrahand Overlay** is a fully scriptable overlay menu ecosystem for the Nintendo Switch. Accessible instantly via hotkey from any game or application, it provides a powerful custom command language for managing files, configurations, and system settings.
 
-[![Ultrahand Logo](.pics/banner.gif)](https://gbatemp.net/threads/ultrahand-overlay-the-fully-craft-able-overlay-executor.633560/)
+[![Ultrahand Logo](.pics/banner.png)](https://gbatemp.net/threads/ultrahand-overlay-the-fully-craft-able-overlay-executor.633560/)
 
 Built on [libultrahand](https://github.com/ppkantorski/libultrahand) (an enhanced fork of [libtesla](https://github.com/WerWolv/libtesla)), Ultrahand is a full drop-in replacement for Tesla Menu. Every existing Tesla overlay (`.ovl`) works without modification.
 
