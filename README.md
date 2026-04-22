@@ -63,7 +63,7 @@ A rich INI-based GUI scripting environment with:
 - **Placeholders** — INI, JSON, hex, list, file, and timestamp sources; hardware info (`{ams_version}`, `{hos_version}`, `{title_id}`, `{build_id}`, `{ram_vendor}`, `{local_ip}`, `{volume}`, `{backlight}`, fuse data, and more); math and string transforms
 - **Conditional logic** — `try:` blocks, `path_exists`, `erista:`/`mariko:` hardware guards, version comparisons
 - **File operations** — copy, move, delete, rename, mkdir, touch, mirror, compare, flag, dot-clean
-- **Download & extraction** — download with retry, unzip
+- **Download & extraction** — download with retry, unzip; performs a one-time NTP sync to `pool.ntp.org` on first download to prevent SSL handshake failures
 - **INI editing** — get/set values and keys, add/rename/remove sections and keys, pattern-matched bulk edits
 - **JSON editing** — get/set values and keys
 - **Hex editing** — edit by offset, swap, string, decimal, reversed decimal, custom pattern offset, and hex pattern replacement
@@ -85,7 +85,7 @@ Overlays built on [libultrahand](https://github.com/ppkantorski/libultrahand) ge
 - **Language translations** — automatic string translation at render time based on the active language
 - **Notifications** — call `tsl::notification->show()` or `tsl::notification->showNow()` to push toast messages from overlay code, with configurable text, font size, priority, duration, alignment, and icon
 - **File & path utilities** — copy, move, delete, mkdir, wildcard matching, and directory traversal
-- **Download & extraction** — curl-based file downloads and zip extraction
+- **Download & extraction** — curl-based file downloads and zip extraction; performs a one-time NTP sync to `pool.ntp.org` on first download to prevent SSL handshake failures
 - **INI, JSON & hex utilities** — full read/write access to INI files, JSON files, and binary hex data
 - **Mod conversion** — `.pchtxt` to `.ips` or Atmosphere cheat format
 - **String utilities** — trim, split, format, version parsing, placeholder resolution
