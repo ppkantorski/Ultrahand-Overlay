@@ -76,6 +76,8 @@ See the [Wiki](https://github.com/ppkantorski/Ultrahand-Overlay/wiki) for full d
 Overlays built on [libultrahand](https://github.com/ppkantorski/libultrahand) get access to the full `libultra` utility suite plus first-class Ultrahand integration:
 
 - **Tesla compatibility** — full drop-in replacement for libtesla; existing overlays work without modification
+- **Improved rendering** — enhanced rendering performance and expanded shape primitives compared to libtesla
+- **Bug fixes** — title ID change foreground bug, underscan bug, and screenshot transparency bug all resolved versus stock libtesla
 - **Launch integration** — assignable combos, hide/star state, and boot/exit package hooks
 - **Per-overlay themes** — independent theme overrides scoped to your overlay
 - **Per-overlay wallpapers** — custom wallpaper support with automatic heap-aware fallback
