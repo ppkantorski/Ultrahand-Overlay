@@ -54,6 +54,13 @@ For a fuller list, see [Ultrahand Overlays](https://github.com/ppkantorski#ultra
 
 ### For Package Devs
 A rich INI-based GUI scripting environment with:
+- **Launch integration** — assignable hotkey combos per package, hide/star state, and boot/exit package hooks (`boot_package.ini` / `exit_package.ini`)
+- **Overlay control** — launch overlays, execute package sections, navigate back, exit to menu
+- **Dynamic UI** — toggles, sliders, dropdowns, tables, rich toast notifications (title, duration, alignment, icon), `set-footer`, and page/theme/wallpaper `refresh`
+- **Language translations** — package UI strings are automatically translated at render time based on the active system language
+- **Notifications** — `notify` / `notify-now` commands push inline toast messages from scripts; dropping a `.notify` JSON file to `/config/ultrahand/notifications/` queues a persistent API notification that displays until dismissed
+- **Placeholders** — INI, JSON, hex, list, file, and timestamp sources; hardware info (`{ams_version}`, `{hos_version}`, `{title_id}`, `{build_id}`, `{ram_vendor}`, `{local_ip}`, `{volume}`, `{backlight}`, fuse data, and more); math and string transforms
+- **Conditional logic** — `try:` blocks, `path_exists`, `erista:`/`mariko:` hardware guards, version comparisons
 - **File operations** — copy, move, delete, rename, mkdir, touch, mirror, compare, flag, dot-clean
 - **Download & extraction** — download with retry, unzip
 - **INI editing** — get/set values and keys, add/rename/remove sections and keys, pattern-matched bulk edits
@@ -61,29 +68,22 @@ A rich INI-based GUI scripting environment with:
 - **Hex editing** — edit by offset, swap, string, decimal, reversed decimal, custom pattern offset, and hex pattern replacement
 - **Mod conversion** — `.pchtxt` to `.ips` or Atmosphere cheat format
 - **System control** — reboot (Hekate boot/ini/UMS/payload targets), shutdown, volume, backlight, region
-- **Overlay control** — launch overlays, execute package sections, navigate back, exit to menu
-- **Dynamic UI** — toggles, sliders, dropdowns, tables, rich toast notifications (title, duration, alignment, icon), `set-footer`, and page/theme/wallpaper `refresh`
-- **Placeholders** — INI, JSON, hex, list, file, and timestamp sources; hardware info (`{ams_version}`, `{hos_version}`, `{title_id}`, `{build_id}`, `{ram_vendor}`, `{local_ip}`, `{volume}`, `{backlight}`, fuse data, and more); math and string transforms
-- **Language translations** — package UI strings are automatically translated at render time based on the active system language
-- **Launch integration** — assignable hotkey combos per package, hide/star state, and boot/exit package hooks (`boot_package.ini` / `exit_package.ini`)
-- **Notifications** — `notify` / `notify-now` commands push inline toast messages from scripts; dropping a `.notify` JSON file to `/config/ultrahand/notifications/` queues a persistent API notification that displays until dismissed
-- **Conditional logic** — `try:` blocks, `path_exists`, `erista:`/`mariko:` hardware guards, version comparisons
 
 See the [Wiki](https://github.com/ppkantorski/Ultrahand-Overlay/wiki) for full documentation.
 
 ### For Overlay Devs
 Overlays built on [libultrahand](https://github.com/ppkantorski/libultrahand) get access to the full `libultra` utility suite plus first-class Ultrahand integration:
 
+- **Tesla compatibility** — full drop-in replacement for libtesla; existing overlays work without modification
+- **Launch integration** — assignable combos, hide/star state, and boot/exit package hooks
 - **Per-overlay themes** — independent theme overrides scoped to your overlay
 - **Per-overlay wallpapers** — custom wallpaper support with automatic heap-aware fallback
-- **Language translations** — automatic string translation at render time based on the active language
 - **Status bar widget** — opt-in clock, temperature, and battery overlay widget
-- **Launch integration** — assignable combos, hide/star state, and boot/exit package hooks
+- **Language translations** — automatic string translation at render time based on the active language
 - **Notifications** — call `tsl::notification->show()` or `tsl::notification->showNow()` to push toast messages from overlay code, with configurable text, font size, priority, duration, alignment, and icon
-- **Tesla compatibility** — full drop-in replacement for libtesla; existing overlays work without modification
 - **File & path utilities** — copy, move, delete, mkdir, wildcard matching, and directory traversal
-- **INI, JSON & hex utilities** — full read/write access to INI files, JSON files, and binary hex data
 - **Download & extraction** — curl-based file downloads and zip extraction
+- **INI, JSON & hex utilities** — full read/write access to INI files, JSON files, and binary hex data
 - **Mod conversion** — `.pchtxt` to `.ips` or Atmosphere cheat format
 - **String utilities** — trim, split, format, version parsing, placeholder resolution
 - **Audio & haptics** — WAV sound playback with volume control and rumble feedback
