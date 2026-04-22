@@ -37,7 +37,7 @@ Built on [libultrahand](https://github.com/ppkantorski/libultrahand) (an enhance
 
 A growing ecosystem of [libultrahand](https://github.com/ppkantorski/libultrahand)-based overlays is available, all launchable and manageable directly from Ultrahand:
 
-| Overlay | Description | Original Dev(s) |
+| Overlay | Description | Creator(s) |
 |---|---|---|
 | [UltraGB](https://github.com/ppkantorski/UltraGB-Overlay) | Game Boy / GBC emulator running on top of any game | [ppkantorski](https://github.com/ppkantorski) |
 | [Tetris](https://github.com/ppkantorski/Tetris-Overlay) | Fully playable Tetris running as an overlay | [ppkantorski](https://github.com/ppkantorski)
