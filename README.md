@@ -223,11 +223,11 @@ sdmc:/
 │           └── UltrahandOverlay/
 │               └── info.json           ← HB App Store package metadata (if installed via store)
 └── config/
-    ├── tesla/
-    │   └── config.ini                  ← Tesla-compatible key combo mirror
     ├── nx-ovlloader/
     │   ├── heap_size.bin               ← active overlay heap size setting (4 / 6 / 8 MB)
     │   └── exit_flag.bin               ← runtime exit signal (transient; deleted after use)
+    ├── tesla/
+    │   └── config.ini                  ← Tesla-compatible key combo mirror
     └── ultrahand/
         ├── config.ini                  ← global settings (key combo, language, widget, etc.)
         ├── overlays.ini                ← overlay registry (auto-managed; combos, hide state, priority)
