@@ -310,7 +310,7 @@ This requires `ovlmenu.ovl` to already exist in the repo root from the previous 
 
 Contributions are welcome. Please open an [issue](https://github.com/ppkantorski/Ultrahand-Overlay/issues/new/choose) or submit a [pull request](https://github.com/ppkantorski/Ultrahand-Overlay/compare). You can also reach out on [GBATemp](https://gbatemp.net/threads/ultrahand-overlay-the-fully-craft-able-overlay-executor.633560/).
 
-[![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/X8X3VR194) [![sponsor](https://github.com/ppkantorski/ppkantorski/raw/refs/heads/main/.pics/sponsor_button.svg)](https://github.com/sponsors/ppkantorski)
+[![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/X8X3VR194) [![sponsor](https://github.com/ppkantorski/ppkantorski/raw/refs/heads/main/.pics/sponsor_button.png)](https://github.com/sponsors/ppkantorski)
 
 ---
 
