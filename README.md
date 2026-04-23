@@ -31,7 +31,7 @@ Built on [libultrahand](https://github.com/ppkantorski/libultrahand) (an enhance
 - Install and run community packages from [Ultrahand Packages](https://github.com/ppkantorski/Ultrahand-Packages)
 - Control volume (up to 150% via bundled audio patch), backlight, and system settings on the fly
 - Real-time progress feedback for downloads, copies, and installs
-- Full touch support alongside controller input
+- Full touch support — scrolling, tapping, long-tap, and swipe gestures work throughout the entire UI
 - Customizable themes, wallpapers, sound packs, and UI layout
 - Toast notification system — packages and external sysmodules/apps can push notifications to the overlay via JSON `.notify` files
 
@@ -78,6 +78,7 @@ Overlays built on [libultrahand](https://github.com/ppkantorski/libultrahand) ge
 - **Tesla compatibility** — full drop-in replacement for libtesla; existing overlays work without modification
 - **Improved rendering** — enhanced rendering performance and expanded shape primitives compared to libtesla
 - **Bug fixes** — title ID change foreground bug, underscan bug, and screenshot transparency bug all resolved versus stock libtesla
+- **Full touch support** — complete touch input handling with proper scrolling, tap, long-tap, and swipe gesture support (a significant improvement over libtesla's limited touch implementation)
 - **Launch integration** — assignable combos, hide/star state, and boot/exit package hooks
 - **Per-overlay themes** — independent theme overrides scoped to your overlay
 - **Per-overlay wallpapers** — custom wallpaper support with automatic heap-aware fallback
