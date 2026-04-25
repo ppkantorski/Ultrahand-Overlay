@@ -33,6 +33,7 @@ Built on [libultrahand](https://github.com/ppkantorski/libultrahand) (an enhance
 - Real-time progress feedback for downloads, copies, and installs
 - Full touch support — scrolling, tapping, long-tap, and swipe gestures work throughout the entire UI
 - Customizable themes, wallpapers, sound packs, and UI layout
+    - Browser-based [Wallpaper Designer](https://ppkantorski.github.io/Ultrahand-Wallpaper/) — crop, adjust, and export ready-to-drop `.rgba` wallpapers (448×720)
 - Toast notification system — packages and external sysmodules/apps can push notifications to the overlay via JSON `.notify` files
 
 A growing ecosystem of [libultrahand](https://github.com/ppkantorski/libultrahand)-based overlays is available, all launchable and manageable directly from Ultrahand:
