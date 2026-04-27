@@ -1633,7 +1633,7 @@ void addPackageInfo(tsl::elm::List* list, auto& packageHeader, std::string type 
     
     addField(_TITLE,        packageHeader.title,                  "none");
     addField(_VERSION,      packageHeader.version,                "none");
-    addField(creatorHeader, packageHeader.creator,                "none");
+    addField(creatorHeader, packageHeader.creator,                defaultLang == "en" ? WORD_STR : CHAR_STR);
     addField(_ABOUT,        getTranslated(packageHeader.about),   defaultLang == "en" ? WORD_STR : CHAR_STR);
     addField(_CREDITS,      getTranslated(packageHeader.credits), WORD_STR);
     std::vector<std::vector<std::string>> dummyTableData;
