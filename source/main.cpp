@@ -5271,14 +5271,23 @@ bool drawCommandsMenu(
                                     selectedListItem = listItem;
                                     
                                     std::string newKey = "";
+                                    // Normalize footer for option-mode checkmark matching:
+                                    // SelectionOverlay splits items on " - " and uses only the left
+                                    // part (itemName) for comparison. Seed selectedFooterDict with
+                                    // that same left part so boot_package-written footers like
+                                    // "18 - (0)" correctly match itemName "18".
+                                    const auto normalizeFooterKey = [](const std::string& f) -> std::string {
+                                        const size_t dashPos = f.find(" - ");
+                                        return (dashPos != std::string::npos) ? f.substr(0, dashPos) : f;
+                                    };
                                     if (inPackageMenu) {
                                         newKey = lastSection + keyName;
                                         if (selectedFooterDict.find(newKey) == selectedFooterDict.end())
-                                            selectedFooterDict[newKey] = footer;
+                                            selectedFooterDict[newKey] = normalizeFooterKey(footer);
                                     } else {
                                         newKey = "sub_" + lastSection + keyName;
                                         if (selectedFooterDict.find(newKey) == selectedFooterDict.end())
-                                            selectedFooterDict[newKey] = footer;
+                                            selectedFooterDict[newKey] = normalizeFooterKey(footer);
                                     }
                                     
                                     if (commandMode == OPTION_STR || commandMode == SLOT_STR) {
