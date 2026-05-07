@@ -4498,6 +4498,12 @@ bool drawCommandsMenu(
         std::string toggleStateArg2 = "";
         std::string toggleStateArg3 = "";
         
+        std::string toggleVisibilityMode = "";
+        std::string toggleVisibilityPath = "";
+        std::string toggleVisibilityArg = "";
+        std::string toggleVisibilityArg2 = "";
+        std::string toggleVisibilityArg3 = "";
+        
         
         bool isSlot = false;
 
@@ -4754,6 +4760,27 @@ bool drawCommandsMenu(
             
                 commandName = cmd[0];
                 
+                if (commandName == "toggle_visibility" && cmd.size() >= 2) {
+                    toggleVisibilityMode = cmd[1];
+                    if (cmd.size() >= 3) {
+                        toggleVisibilityPath = cmd[2];
+                        preprocessPath(toggleVisibilityPath, packagePath);
+                    }
+                    if (cmd.size() >= 4) {
+                        toggleVisibilityArg = cmd[3];
+                        removeQuotes(toggleVisibilityArg);
+                    }
+                    if (cmd.size() >= 5) {
+                        toggleVisibilityArg2 = cmd[4];
+                        removeQuotes(toggleVisibilityArg2);
+                    }
+                    if (cmd.size() >= 6) {
+                        toggleVisibilityArg3 = cmd[5];
+                        removeQuotes(toggleVisibilityArg3);
+                    }
+                    continue;
+                }
+
                 // Quick check for section markers
                 if (commandName.length() == 7) {
                     if ((commandName[0] == 'e' || commandName[0] == 'E') && 
@@ -4977,6 +5004,24 @@ bool drawCommandsMenu(
                                 toggleStateArg3 = cmd[5];
                                 removeQuotes(toggleStateArg3);
                             }
+                        } else if (commandName == "toggle_visibility" && cmd.size() >= 2) {
+                            toggleVisibilityMode = cmd[1];
+                            if (cmd.size() >= 3) {
+                                toggleVisibilityPath = cmd[2];
+                                preprocessPath(toggleVisibilityPath, packagePath);
+                            }
+                            if (cmd.size() >= 4) {
+                                toggleVisibilityArg = cmd[3];
+                                removeQuotes(toggleVisibilityArg);
+                            }
+                            if (cmd.size() >= 5) {
+                                toggleVisibilityArg2 = cmd[4];
+                                removeQuotes(toggleVisibilityArg2);
+                            }
+                            if (cmd.size() >= 6) {
+                                toggleVisibilityArg3 = cmd[5];
+                                removeQuotes(toggleVisibilityArg3);
+                            }
                         } else if (currentSection == GLOBAL_STR) {
                             commandsOn.push_back(cmd);
                             commandsOff.push_back(cmd);
@@ -5106,7 +5151,26 @@ bool drawCommandsMenu(
                 skipSystem = true;
             }
             
-            if (!skipSection && !skipSystem) { // for skipping the drawing of sections
+            bool skipVisibility = false;
+            if (!toggleVisibilityMode.empty()) {
+                if (toggleVisibilityMode == "file_exists") {
+                    skipVisibility = !isFileOrDirectory(toggleVisibilityPath);
+                } else if (toggleVisibilityMode == "has_line") {
+                    skipVisibility = !isLineExistInIni(toggleVisibilityPath, toggleVisibilityArg);
+                } else if (toggleVisibilityMode == "hex_check") {
+                    uint32_t offset = 0;
+                    if (isValidNumber(toggleVisibilityArg)) {
+                        offset = static_cast<uint32_t>(std::strtoul(toggleVisibilityArg.c_str(), nullptr, 0));
+                    }
+                    skipVisibility = !checkHexValue(toggleVisibilityPath, offset, toggleVisibilityArg2);
+                } else if (toggleVisibilityMode == "ini_val") {
+                    std::string currentVal = parseValueFromIniSection(toggleVisibilityPath, toggleVisibilityArg, toggleVisibilityArg2);
+                    removeQuotes(currentVal);
+                    skipVisibility = (currentVal != toggleVisibilityArg3);
+                }
+            }
+
+            if (!skipSection && !skipSystem && !skipVisibility) { // for skipping the drawing of sections
                 if (commandMode == TABLE_STR) {
                     if (useHeaderIndent) {
                         tableColumnOffset = 164;
@@ -7469,14 +7533,12 @@ void initializeSettingsAndDirectories() {
     if (needsUpdate)
         saveIniFileData(ULTRAHAND_CONFIG_INI_PATH, iniData);
 
-    const std::string holdTimeStr = parseValueFromIniSection(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "hold_time");
-    if (!holdTimeStr.empty()) {
+    const std::string& holdTimeStr = sec["hold_time"];
+    {
         int parsed = std::atoi(holdTimeStr.c_str());
         if (parsed < 500) parsed = 500;
         if (parsed > 10000) parsed = 10000;
         ult::holdDurationMs = static_cast<u32>(parsed);
-    } else {
-        ult::holdDurationMs = 3000;
     }
 
     // Sync combo and set initial menu page (run once)
