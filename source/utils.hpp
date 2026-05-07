@@ -1788,6 +1788,68 @@ void drawDevImage(tsl::gfx::Renderer* renderer) {
  * directories.
  */
 
+/**
+ * @brief Checks if a specific line exists in an INI file.
+ * 
+ * @param filePath The path to the INI file.
+ * @param line The line content to search for.
+ * @return true if the line exists, false otherwise.
+ */
+inline bool isLineExistInIni(const std::string& filePath, const std::string& line) {
+    if (!ult::isFile(filePath)) return false;
+    FILE* file = fopen(filePath.c_str(), "r");
+    if (!file) return false;
+    
+    char buffer[1024];
+    bool found = false;
+    while (fgets(buffer, sizeof(buffer), file)) {
+        if (strstr(buffer, line.c_str())) {
+            found = true;
+            break;
+        }
+    }
+    fclose(file);
+    return found;
+}
+
+/**
+ * @brief Checks if a hex value matches at a specific offset.
+ * 
+ * @param filePath The path to the file.
+ * @param offset The offset to check at.
+ * @param expectedHex The expected hex value (string of hex characters).
+ * @return true if the hex value matches, false otherwise.
+ */
+inline bool checkHexValue(const std::string& filePath, uint32_t offset, std::string expectedHex) {
+    if (!ult::isFile(filePath)) return false;
+    FILE* file = fopen(filePath.c_str(), "rb");
+    if (!file) return false;
+    
+    fseek(file, offset, SEEK_SET);
+    
+    // Remove spaces from expectedHex
+    expectedHex.erase(std::remove(expectedHex.begin(), expectedHex.end(), ' '), expectedHex.end());
+    if (expectedHex.length() % 2 != 0) {
+        fclose(file);
+        return false;
+    }
+    
+    size_t len = expectedHex.length() / 2;
+    std::vector<unsigned char> buffer(len);
+    size_t readLen = fread(buffer.data(), 1, len, file);
+    fclose(file);
+    
+    if (readLen < len) return false;
+    
+    for (size_t i = 0; i < len; ++i) {
+        unsigned int byte;
+        sscanf(expectedHex.substr(i * 2, 2).c_str(), "%x", &byte);
+        if (buffer[i] != (unsigned char)byte) return false;
+    }
+    return true;
+}
+
+
 bool isDangerousCombination(const std::string& originalPath) {
     // Early exit: Check for double wildcards first (cheapest check)
     if (originalPath.find("**") != std::string::npos) {

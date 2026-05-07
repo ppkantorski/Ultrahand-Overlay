@@ -186,6 +186,7 @@ static std::string lastCommandMode;
 static bool lastCommandIsHold;
 static bool lastFooterHighlight;
 static bool lastFooterHighlightDefined; 
+static bool lastToggleTargetState = false;
 
 static std::unordered_map<std::string, std::string> selectedFooterDict;
 
@@ -419,7 +420,7 @@ bool processHold(uint64_t keysDown, uint64_t keysHeld, u64& holdStartTick, bool&
     
     // Update hold progress
     const u64 elapsedMs = armTicksToNs(armGetSystemTick() - holdStartTick) / 1000000;
-    const int percentage = std::min(100, static_cast<int>((elapsedMs * 100) / 3000));
+    const int percentage = std::min(100, static_cast<int>((elapsedMs * 100) / ult::holdDurationMs));
     displayPercentage.store(percentage, std::memory_order_release);
     
     // Threshold-crossing rumble pulses — fired at ~33%, ~66%, ~100% of the hold.
@@ -604,13 +605,20 @@ static bool handleTriggerReturnToPackages(const std::string& packagePath);
 // Returns true when a hold is in progress so the caller can return early.
 [[gnu::noinline]]
 static bool handleCommandHold(uint64_t keysDown, uint64_t keysHeld, const std::string& cmdPath) {
-    bool isHolding = (lastCommandIsHold && runningInterpreter.load(std::memory_order_acquire));
+    bool isHolding = lastCommandIsHold;
     if (!isHolding) return false;
     processHold(keysDown, keysHeld, holdStartTick, isHolding, [&cmdPath]() {
         displayPercentage.store(-1, std::memory_order_release);
         lastCommandIsHold = false;
         lastSelectedListItem->setValue(INPROGRESS_SYMBOL);
         triggerEnterFeedback();
+
+        if (lastCommandMode == TOGGLE_STR && lastSelectedListItem) {
+            static_cast<tsl::elm::ToggleListItem*>(lastSelectedListItem)->setState(lastToggleTargetState);
+            const std::string configPath = cmdPath + "config.ini";
+            setIniFileValue(configPath, lastKeyName, FOOTER_STR, lastToggleTargetState ? CAPITAL_ON_STR : CAPITAL_OFF_STR);
+        }
+
         executeInterpreterCommands(std::move(storedCommands), cmdPath, lastKeyName);
         lastRunningInterpreter.store(true, std::memory_order_release);
     }, nullptr, true);
@@ -1752,6 +1760,28 @@ public:
             createToggleListItem(list, SWIPE_TO_OPEN, useSwipeToOpen, "swipe_to_open");
             rightAlignmentState = useRightAlignment = getBoolValue("right_alignment"); // FALSE_STR default
             createToggleListItem(list, RIGHT_SIDE_MODE, useRightAlignment, "right_alignment");
+
+            addHeader(list, INPUT);
+            std::vector<std::string> holdLabels = {"0.5s", "1.0s", "1.5s", "2.0s", "2.5s", "3.0s", "3.5s", "4.0s", "4.5s", "5.0s"};
+            auto* holdTrackbar = new tsl::elm::NamedStepTrackBarV2(
+                HOLD_TIME,
+                "",
+                holdLabels,
+                nullptr, nullptr, {}, "",
+                false,
+                false
+            );
+            holdTrackbar->setSimpleCallback([this](s16 /*value*/, s16 index) {
+                u32 newVal = (index + 1) * 500;
+                ult::holdDurationMs = newVal;
+                setUltrahandConfig("hold_time", std::to_string(newVal));
+            });
+            u32 currentProgress = (ult::holdDurationMs / 500);
+            if (currentProgress > 0) currentProgress--;
+            if (currentProgress > 9) currentProgress = 9;
+            holdTrackbar->setProgress(static_cast<u8>(currentProgress));
+            holdTrackbar->disableClickAnimation();
+            list->addItem(holdTrackbar);
 
 
             addHeader(list, MENU_SETTINGS);
@@ -3027,6 +3057,12 @@ private:
     bool isHold = false;
     bool isMini = false;
 
+    std::string toggleStateMode = "";
+    std::string toggleStatePath = "";
+    std::string toggleStateArg = "";
+    std::string toggleStateArg2 = "";
+    std::string toggleStateArg3 = "";
+
     size_t maxItemsLimit = 250;     // 0 = uncapped, any other value = max size
     
     // Helper function to apply size limit to any vector
@@ -3126,6 +3162,25 @@ public:
                         currentSection = ON_STR;
                     else if (commandName == "off:")
                         currentSection = OFF_STR;
+                    else if (commandName == "toggle_state" && cmd.size() >= 2) {
+                        toggleStateMode = cmd[1];
+                        if (cmd.size() >= 3) {
+                            toggleStatePath = cmd[2];
+                            preprocessPath(toggleStatePath, filePath);
+                        }
+                        if (cmd.size() >= 4) {
+                            toggleStateArg = cmd[3];
+                            removeQuotes(toggleStateArg);
+                        }
+                        if (cmd.size() >= 5) {
+                            toggleStateArg2 = cmd[4];
+                            removeQuotes(toggleStateArg2);
+                        }
+                        if (cmd.size() >= 6) {
+                            toggleStateArg3 = cmd[5];
+                            removeQuotes(toggleStateArg3);
+                        }
+                    }
                 }
     
                 if (cmd.size() > 1) {
@@ -3731,8 +3786,32 @@ public:
                 toggleListItem->m_shortHoldKey = SCRIPT_KEY;
     
                 // Use const iterators for better performance
-                const bool toggleStateOn = std::find(selectedItemsListOn.cbegin(), selectedItemsListOn.cend(), selectedItem) != selectedItemsListOn.cend();
+                bool toggleStateOn = false;
+                if (!toggleStateMode.empty()) {
+                    if (toggleStateMode == "file_exists") {
+                        toggleStateOn = ult::isFileOrDirectory(toggleStatePath);
+                    } else if (toggleStateMode == "has_line") {
+                        toggleStateOn = isLineExistInIni(toggleStatePath, toggleStateArg);
+                    } else if (toggleStateMode == "hex_check") {
+                        uint32_t offset = 0;
+                        if (isValidNumber(toggleStateArg)) {
+                            offset = std::stoul(toggleStateArg, nullptr, 0); // Handles 0x prefix
+                        }
+                        toggleStateOn = checkHexValue(toggleStatePath, offset, toggleStateArg2);
+                    } else if (toggleStateMode == "ini_val") {
+                        // toggle_state ini_val <path> <section> <key> <value>
+                        std::string currentVal = parseValueFromIniSection(toggleStatePath, toggleStateArg, toggleStateArg2);
+                        removeQuotes(currentVal);
+                        toggleStateOn = (currentVal == toggleStateArg3);
+                    }
+                } else {
+                    toggleStateOn = std::find(selectedItemsListOn.cbegin(), selectedItemsListOn.cend(), selectedItem) != selectedItemsListOn.cend();
+                }
                 toggleListItem->setState(toggleStateOn);
+                if (isHold) {
+                    toggleListItem->disableClickAnimation();
+                    toggleListItem->enableTouchHolding();
+                }
     
                 toggleListItem->setStateChangedListener([this, i, toggleListItem, selectedItem, itemName](bool state) {
                     if (runningInterpreter.load(std::memory_order_acquire)) {
@@ -3803,6 +3882,21 @@ public:
                     
                     if (usingProgress)
                         toggleListItem->setValue(INPROGRESS_SYMBOL);
+
+                    if (isHold && !lastCommandIsHold) {
+                        runningInterpreter.store(true, std::memory_order_release);
+                        toggleListItem->setState(!state);
+                        runningInterpreter.store(false, std::memory_order_release);
+                        
+                        lastSelectedListItem = toggleListItem;
+                        holdStartTick = armGetSystemTick();
+                        storedCommands = std::move(modifiedCmds);
+                        lastCommandMode = commandMode;
+                        lastCommandIsHold = true;
+                        lastKeyName = specificKey;
+                        lastToggleTargetState = state;
+                        return;
+                    }
 
                     nextToggleState = !state ? CAPITAL_OFF_STR : CAPITAL_ON_STR;
                     runningInterpreter.store(true, release);
@@ -4398,6 +4492,12 @@ bool drawCommandsMenu(
         sourceTypeOn = DEFAULT_STR;
         sourceTypeOff = DEFAULT_STR;
         
+        std::string toggleStateMode = "";
+        std::string toggleStatePath = "";
+        std::string toggleStateArg = "";
+        std::string toggleStateArg2 = "";
+        std::string toggleStateArg3 = "";
+        
         
         bool isSlot = false;
 
@@ -4859,7 +4959,25 @@ bool drawCommandsMenu(
                         else if (commandName.compare(0, 4, "off:") == 0)
                             currentSection = OFF_STR;
                         
-                        if (currentSection == GLOBAL_STR) {
+                        if (commandName == "toggle_state" && cmd.size() >= 2) {
+                            toggleStateMode = cmd[1];
+                            if (cmd.size() >= 3) {
+                                toggleStatePath = cmd[2];
+                                preprocessPath(toggleStatePath, packagePath);
+                            }
+                            if (cmd.size() >= 4) {
+                                toggleStateArg = cmd[3];
+                                removeQuotes(toggleStateArg);
+                            }
+                            if (cmd.size() >= 5) {
+                                toggleStateArg2 = cmd[4];
+                                removeQuotes(toggleStateArg2);
+                            }
+                            if (cmd.size() >= 6) {
+                                toggleStateArg3 = cmd[5];
+                                removeQuotes(toggleStateArg3);
+                            }
+                        } else if (currentSection == GLOBAL_STR) {
                             commandsOn.push_back(cmd);
                             commandsOff.push_back(cmd);
                         } else if (currentSection == ON_STR) {
@@ -5481,12 +5599,25 @@ bool drawCommandsMenu(
                     } else if (commandMode == TOGGLE_STR) {
                         cleanOptionName = optionName;
 
-                        auto* toggleListItem = new tsl::elm::ToggleListItem(cleanOptionName, false, ON, OFF, isMini, true);
-                        toggleListItem->enableShortHoldKey();
-                        toggleListItem->m_shortHoldKey = SCRIPT_KEY;
-
                         // Set the initial state of the toggle item
-                        if (!pathPatternOn.empty()){
+                        if (!toggleStateMode.empty()) {
+                            if (toggleStateMode == "file_exists") {
+                                toggleStateOn = isFileOrDirectory(toggleStatePath);
+                            } else if (toggleStateMode == "has_line") {
+                                toggleStateOn = isLineExistInIni(toggleStatePath, toggleStateArg);
+                            } else if (toggleStateMode == "hex_check") {
+                                uint32_t offset = 0;
+                                if (isValidNumber(toggleStateArg)) {
+                                    offset = std::stoul(toggleStateArg, nullptr, 0); // Handles 0x prefix
+                                }
+                                toggleStateOn = checkHexValue(toggleStatePath, offset, toggleStateArg2);
+                            } else if (toggleStateMode == "ini_val") {
+                                // toggle_state ini_val <path> <section> <key> <value>
+                                std::string currentVal = parseValueFromIniSection(toggleStatePath, toggleStateArg, toggleStateArg2);
+                                removeQuotes(currentVal);
+                                toggleStateOn = (currentVal == toggleStateArg3);
+                            }
+                        } else if (!pathPatternOn.empty()){
                             toggleStateOn = isFileOrDirectory(pathPatternOn);
                         }
                         else {
@@ -5499,30 +5630,56 @@ bool drawCommandsMenu(
                             
                             toggleStateOn = (footer == CAPITAL_ON_STR);
                         }
-                        
+
+                        auto* toggleListItem = new tsl::elm::ToggleListItem(cleanOptionName, false, ON, OFF, isMini, true);
+                        toggleListItem->enableShortHoldKey();
+                        toggleListItem->m_shortHoldKey = SCRIPT_KEY;
 
                         toggleListItem->setState(toggleStateOn);
+
+                        if (isHold) {
+                            toggleListItem->disableClickAnimation();
+                            toggleListItem->enableTouchHolding();
+                        }
                         
-                        toggleListItem->setStateChangedListener([i, usingProgress, toggleListItem, commandsOn, commandsOff, keyName = originalOptionName, packagePath,
-                            pathPatternOn, pathPatternOff](bool state) {
+                        toggleListItem->setStateChangedListener([i, usingProgress, toggleListItem, commandsOn, commandsOff, keyName = originalOptionName, packagePath, packageConfigIniPath,
+                            pathPatternOn, pathPatternOff, isHold, commandMode](bool state) {
                             if (runningInterpreter.load(std::memory_order_acquire)) {
                                 return;
                             }
                             
-                            
                             tsl::Overlay::get()->getCurrentGui()->requestFocus(toggleListItem, tsl::FocusDirection::None);
                             
+                            auto modifiedCmds = state ? getSourceReplacement(commandsOn, pathPatternOn, i, packagePath) :
+                                getSourceReplacement(commandsOff, pathPatternOff, i, packagePath);
+
+                             if (isHold && !lastCommandIsHold) {
+                                lastToggleTargetState = state;
+                                runningInterpreter.store(true, std::memory_order_release);
+                                toggleListItem->setState(!state);
+                                runningInterpreter.store(false, std::memory_order_release);
+                                
+                                lastSelectedListItem = toggleListItem;
+                                holdStartTick = armGetSystemTick();
+                                storedCommands = std::move(modifiedCmds);
+                                lastCommandMode = commandMode;
+                                lastCommandIsHold = true;
+                                lastKeyName = keyName;
+                                return;
+                            }
+
                             if (usingProgress)
                                 toggleListItem->setValue(INPROGRESS_SYMBOL);
-                            nextToggleState = !state ? CAPITAL_OFF_STR : CAPITAL_ON_STR;
+                            
+                            nextToggleState = state ? CAPITAL_ON_STR : CAPITAL_OFF_STR;
+                            setIniFileValue(packageConfigIniPath, keyName, FOOTER_STR, nextToggleState);
+                            
                             lastKeyName = keyName;
                             runningInterpreter.store(true, release);
                             lastRunningInterpreter.store(true, release);
                             lastSelectedListItem = toggleListItem;
                             
-                            executeInterpreterCommands(std::move(state ? getSourceReplacement(commandsOn, pathPatternOn, i, packagePath) :
-                                getSourceReplacement(commandsOff, pathPatternOff, i, packagePath)), packagePath, keyName);
-                            
+                            executeInterpreterCommands(std::move(modifiedCmds), packagePath, keyName);
                         });
 
                         // Set the script key listener (for SCRIPT_KEY)
@@ -7273,6 +7430,7 @@ void initializeSettingsAndDirectories() {
     ensureDefault("extended_widget_backdrop", FALSE_STR);
     ensureDefault("datetime_format",          DEFAULT_DT_FORMAT);
     ensureDefault(DEFAULT_LANG_STR,           "en");
+    ensureDefault("hold_time",                "3000");
 
     // Launcher-only keys (variables also set by parseOverlaySettings where accessible,
     // the rest are static to main.cpp so setDefaultValue is still needed here)
@@ -7310,6 +7468,16 @@ void initializeSettingsAndDirectories() {
 
     if (needsUpdate)
         saveIniFileData(ULTRAHAND_CONFIG_INI_PATH, iniData);
+
+    const std::string holdTimeStr = parseValueFromIniSection(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "hold_time");
+    if (!holdTimeStr.empty()) {
+        int parsed = std::atoi(holdTimeStr.c_str());
+        if (parsed < 500) parsed = 500;
+        if (parsed > 10000) parsed = 10000;
+        ult::holdDurationMs = static_cast<u32>(parsed);
+    } else {
+        ult::holdDurationMs = 3000;
+    }
 
     // Sync combo and set initial menu page (run once)
     updateMenuCombos = copyTeslaKeyComboToUltrahand();
