@@ -5003,6 +5003,8 @@ bool drawCommandsMenu(
             }
 
             
+            // Skip config.ini for toggles with toggle_state — external source is the single source of truth
+            if (toggleStateMode.empty()) {
             if (isFile(packageConfigIniPath)) {
                 packageConfigData = getParsedDataFromIniFile(packageConfigIniPath);
                 
@@ -5054,6 +5056,8 @@ bool drawCommandsMenu(
                 }
                 packageConfigData.clear();
             }
+            } // end toggleStateMode.empty()
+
             
             
             // Get Option name and footer
