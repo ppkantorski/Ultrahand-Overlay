@@ -7099,7 +7099,7 @@ public:
      */
     virtual bool handleInput(uint64_t keysDown, uint64_t keysHeld, touchPosition touchInput, JoystickPosition leftJoyStick, JoystickPosition rightJoyStick) override {
         
-        if (handleCommandHold(keysDown, keysHeld, packageIniPath)) return true;
+        if (handleCommandHold(keysDown, keysHeld, PACKAGE_PATH)) return true;
 
         if (ult::launchingOverlay.load(acquire)) return true;
 
