@@ -187,6 +187,7 @@ static bool lastCommandIsHold;
 static bool lastFooterHighlight;
 static bool lastFooterHighlightDefined; 
 static bool lastToggleTargetState = false;
+static bool lastToggleHasState = false;
 
 static std::unordered_map<std::string, std::string> selectedFooterDict;
 
@@ -550,7 +551,8 @@ static void handleInterpreterCompletion(const std::string& packageConfigIniPath)
                 lastSelectedListItem->setValue(finalState);
                 static_cast<tsl::elm::ToggleListItem*>(lastSelectedListItem)
                     ->setState(finalState == CAPITAL_ON_STR);
-                setIniFileValue(packageConfigIniPath, lastKeyName, FOOTER_STR, finalState);
+                if (!lastToggleHasState)
+                    setIniFileValue(packageConfigIniPath, lastKeyName, FOOTER_STR, finalState);
 
                 lastKeyName.clear();
                 nextToggleState.clear();
@@ -615,8 +617,10 @@ static bool handleCommandHold(uint64_t keysDown, uint64_t keysHeld, const std::s
 
         if (lastCommandMode == TOGGLE_STR && lastSelectedListItem) {
             static_cast<tsl::elm::ToggleListItem*>(lastSelectedListItem)->setState(lastToggleTargetState);
-            const std::string configPath = cmdPath + "config.ini";
-            setIniFileValue(configPath, lastKeyName, FOOTER_STR, lastToggleTargetState ? CAPITAL_ON_STR : CAPITAL_OFF_STR);
+            if (!lastToggleHasState) {
+                const std::string configPath = cmdPath + "config.ini";
+                setIniFileValue(configPath, lastKeyName, FOOTER_STR, lastToggleTargetState ? CAPITAL_ON_STR : CAPITAL_OFF_STR);
+            }
         }
 
         executeInterpreterCommands(std::move(storedCommands), cmdPath, lastKeyName);
@@ -5706,8 +5710,9 @@ bool drawCommandsMenu(
                             toggleListItem->enableTouchHolding();
                         }
                         
+                        const bool hasToggleState = !toggleStateMode.empty();
                         toggleListItem->setStateChangedListener([i, usingProgress, toggleListItem, commandsOn, commandsOff, keyName = originalOptionName, packagePath, packageConfigIniPath,
-                            pathPatternOn, pathPatternOff, isHold, commandMode](bool state) {
+                            pathPatternOn, pathPatternOff, isHold, commandMode, hasToggleState](bool state) {
                             if (runningInterpreter.load(std::memory_order_acquire)) {
                                 return;
                             }
@@ -5719,6 +5724,7 @@ bool drawCommandsMenu(
 
                              if (isHold && !lastCommandIsHold) {
                                 lastToggleTargetState = state;
+                                lastToggleHasState = hasToggleState;
                                 toggleListItem->setState(!state);
                                 
                                 lastSelectedListItemFooter = toggleListItem->getValue();
@@ -5735,7 +5741,9 @@ bool drawCommandsMenu(
                                 toggleListItem->setValue(INPROGRESS_SYMBOL);
                             
                             nextToggleState = state ? CAPITAL_ON_STR : CAPITAL_OFF_STR;
-                            setIniFileValue(packageConfigIniPath, keyName, FOOTER_STR, nextToggleState);
+                            lastToggleHasState = hasToggleState;
+                            if (!hasToggleState)
+                                setIniFileValue(packageConfigIniPath, keyName, FOOTER_STR, nextToggleState);
                             
                             lastKeyName = keyName;
                             runningInterpreter.store(true, release);
