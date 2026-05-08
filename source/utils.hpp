@@ -1189,8 +1189,9 @@ static bool buildTableDrawerLines(
     auto processLines = [&](const std::vector<std::string>& lines, const std::vector<std::string>& infos) {
         std::string infoText;
         int xPos;
-        float infoWidth;
+        float lineInfoWidth;
         std::vector<std::string> wrappedLines;
+        std::vector<std::string> wrappedInfoLines;
         for (size_t i = 0; i < lines.size(); ++i) {
             const std::string& baseText = lines[i];
             const std::string& infoTextRaw = (i < infos.size()) ? infos[i] : "";
@@ -1205,20 +1206,40 @@ static bool buildTableDrawerLines(
                 fontSize
             );
 
-            infoWidth = tsl::gfx::calculateStringWidth(infoText, fontSize, false);
+            // Wrap the info/values column.
+            // The label column's right edge is at (x+12) + (xMax-8) = x + xMax + 4.
+            // The info column starts at x + columnOffset, so its wrap width to reach
+            // the same right boundary is: (xMax + 4) - columnOffset.
+            // Pass empty indent/"" and 0 indentWidth (no indent for values column, and
+            // passing a non-zero indentWidth can affect effective line width inside
+            // wrapText even when useIndent=false, causing uneven line breaks).
+            wrappedInfoLines = tsl::wrapText(
+                infoText,
+                static_cast<float>(xMax) + 4.0f - static_cast<float>(columnOffset),
+                wrappingMode,
+                false,
+                "", 0.0f,
+                fontSize
+            );
 
-            for (auto& line : wrappedLines) {
-                outSection.push_back(std::move(line));
-                line.shrink_to_fit();
-                outInfo.push_back(infoText);
+            const size_t rowCount = std::max(wrappedLines.size(), wrappedInfoLines.size());
+
+            for (size_t j = 0; j < rowCount; ++j) {
+                const std::string secLine  = (j < wrappedLines.size())     ? wrappedLines[j]     : "";
+                const std::string infoLine = (j < wrappedInfoLines.size()) ? wrappedInfoLines[j] : "";
+
+                outSection.push_back(secLine);
+                outInfo.push_back(infoLine);
+
+                lineInfoWidth = tsl::gfx::calculateStringWidth(infoLine, fontSize, false);
 
                 xPos = 0;
                 if (alignment == LEFT_STR) {
                     xPos = static_cast<int>(columnOffset);
                 } else if (alignment == RIGHT_STR) {
-                    xPos = static_cast<int>(xMax - infoWidth + (columnOffset - 160 + 1));
+                    xPos = static_cast<int>(xMax - lineInfoWidth + (columnOffset - 160 + 1));
                 } else {
-                    xPos = static_cast<int>(columnOffset + (xMax - infoWidth) / 2);
+                    xPos = static_cast<int>(columnOffset + (xMax - lineInfoWidth) / 2);
                 }
 
                 outX.push_back(xPos);
@@ -1633,7 +1654,7 @@ void addPackageInfo(tsl::elm::List* list, auto& packageHeader, std::string type 
     
     addField(_TITLE,        packageHeader.title,                  "none");
     addField(_VERSION,      packageHeader.version,                "none");
-    addField(creatorHeader, packageHeader.creator,                defaultLang == "en" ? WORD_STR : CHAR_STR);
+    addField(creatorHeader, packageHeader.creator,                WORD_STR);
     addField(_ABOUT,        getTranslated(packageHeader.about),   defaultLang == "en" ? WORD_STR : CHAR_STR);
     addField(_CREDITS,      getTranslated(packageHeader.credits), WORD_STR);
     std::vector<std::vector<std::string>> dummyTableData;
