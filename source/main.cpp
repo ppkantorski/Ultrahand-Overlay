@@ -7554,13 +7554,10 @@ void initializeSettingsAndDirectories() {
     if (needsUpdate)
         saveIniFileData(ULTRAHAND_CONFIG_INI_PATH, iniData);
 
-    const std::string& holdTimeStr = sec["hold_time"];
-    {
-        int parsed = std::atoi(holdTimeStr.c_str());
-        if (parsed < 500) parsed = 500;
-        if (parsed > 10000) parsed = 10000;
-        ult::holdDurationMs = static_cast<u32>(parsed);
-    }
+    int holdParsed = std::atoi(sec["hold_time"].c_str());
+    if (holdParsed < 500) holdParsed = 500;
+    if (holdParsed > 10000) holdParsed = 10000;
+    ult::holdDurationMs = static_cast<u32>(holdParsed);
 
     // Sync combo and set initial menu page (run once)
     updateMenuCombos = copyTeslaKeyComboToUltrahand();
