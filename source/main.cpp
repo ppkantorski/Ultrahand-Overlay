@@ -178,6 +178,7 @@ static std::string lastMenuMode = "";
 static std::string lastKeyName = "";
 static bool hideUserGuide = false;
 static bool hidePackages = false;
+bool toPackages = false;
 static bool hideDelete = false;
 static bool hideUnsupported = false;
 
@@ -592,6 +593,10 @@ static void handleTriggerExit() {
         tsl::Overlay::get()->close();
     }
 }
+
+// Defined after returnContextStack is declared (~line 4179); forward-declared
+// here so ScriptOverlay::handleInput() (which precedes that point) can call it.
+static bool handleTriggerReturnToPackages(const std::string& packagePath);
 
 // The interpreter hold-and-launch pattern shared by SelectionOverlay,
 // PackageMenu, and MainMenu. The callers differ only in the path string
@@ -2913,6 +2918,7 @@ public:
         }
         
         handleTriggerExit();
+        if (handleTriggerReturnToPackages(filePath)) return true;
         
         return false;
     }
@@ -4167,6 +4173,62 @@ static CommandSettings parseCommandSettings(std::vector<std::vector<std::string>
 
 
 static std::stack<ReturnContext> returnContextStack;
+
+// Shared handler for the bare `exit` command.  Drains returnContextStack to
+// find the originating package, resets all navigation state, and swaps
+// directly to MainMenu on the packages tab with the cursor on that package.
+// Called from both PackageMenu::handleInput() and ScriptOverlay::handleInput().
+// Returns true when the flag was set so the caller can propagate.
+[[gnu::noinline]]
+static bool handleTriggerReturnToPackages(const std::string& packagePath) {
+    if (!triggerReturnToPackages.exchange(false, std::memory_order_acq_rel))
+        return false;
+
+    // Walk the forwarder stack to find the root package path.
+    // The bottom entry is where the user originally entered from the packages menu;
+    // if the stack is empty we are already at the root level.
+    std::string rootPkgPath = packagePath;
+    while (!returnContextStack.empty()) {
+        rootPkgPath = returnContextStack.top().packagePath;
+        returnContextStack.pop();
+    }
+
+    if (!selectedPackage.empty()) {
+        // Launched via --package arg: no packages menu to return to — close normally.
+        ult::launchingOverlay.store(true, std::memory_order_release);
+        exitingUltrahand.store(true, std::memory_order_release);
+        tsl::setNextOverlay(OVERLAY_PATH + "ovlmenu.ovl");
+        tsl::Overlay::get()->close();
+        return true;
+    }
+
+    // Strip trailing slash — getNameFromPath returns "" for trailing-slash paths.
+    if (!rootPkgPath.empty() && rootPkgPath.back() == '/')
+        rootPkgPath.pop_back();
+    comboReturnPackageName = getNameFromPath(rootPkgPath);
+
+    // Reset all navigation state.
+    nestedMenuCount = 0;
+    inPackageMenu   = false;
+    inSubPackageMenu = false;
+    inScriptMenu    = false;
+    inSelectionMenu = false;
+    returningToMain        = false;
+    returningToHiddenMain  = false;
+    jumpItemName.clear();
+    jumpItemValue.clear();
+
+    // Route to the correct tab.
+    // createPackagesMenu picks up comboReturnPackageName and positions the cursor.
+    if (inHiddenMode.load(std::memory_order_acquire)) {
+        setUltrahandConfig(IN_HIDDEN_PACKAGE_STR, TRUE_STR);
+    } else {
+        toPackages = true;
+    }
+
+    tsl::swapTo<MainMenu>();
+    return true;
+}
 
 
 class PackageMenu; // forwarding
@@ -5988,6 +6050,9 @@ public:
             tsl::setNextOverlay(OVERLAY_PATH+"ovlmenu.ovl");
             tsl::Overlay::get()->close();
         }
+
+        // Bare `exit` command: return instantly to the packages menu.
+        if (handleTriggerReturnToPackages(packagePath)) return true;
         
         // Fallback for lost navigations
         if (backKeyPressed) {
@@ -6018,7 +6083,6 @@ public:
 };
 
 bool triggerBootCommands = true;
-bool toPackages = false;
 bool inOverlay = false;
 bool isComboReturnFrom = false;    // set when --comboReturnFrom was passed; gated on useLaunchRecall in loadInitialGui
 bool isComboReturnPackage = false; // set when --comboReturnPackage was passed; gated on useLaunchRecall in loadInitialGui
