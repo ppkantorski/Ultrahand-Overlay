@@ -5733,11 +5733,13 @@ bool drawCommandsMenu(
                             auto modifiedCmds = state ? getSourceReplacement(commandsOn, pathPatternOn, i, packagePath) :
                                 getSourceReplacement(commandsOff, pathPatternOff, i, packagePath);
 
-                             if (isHold && !lastCommandIsHold) {
+                            if (isHold && !lastCommandIsHold) {
                                 lastToggleTargetState = state;
                                 lastToggleHasState = hasToggleState;
+                                runningInterpreter.store(true, std::memory_order_release);
                                 toggleListItem->setState(!state);
-                                
+                                runningInterpreter.store(false, std::memory_order_release);
+
                                 lastSelectedListItemFooter = toggleListItem->getValue();
                                 lastSelectedListItem = toggleListItem;
                                 holdStartTick = armGetSystemTick();
