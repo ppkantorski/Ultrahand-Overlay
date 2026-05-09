@@ -4984,49 +4984,56 @@ bool drawCommandsMenu(
                         continue;
                     }
                     
+                    // Parse toggle_state and toggle_visibility independently of commandMode
+                    // so they work regardless of order relative to ;mode=toggle
+                    if (commandName == "toggle_state" && cmd.size() >= 2) {
+                        toggleStateMode = cmd[1];
+                        if (cmd.size() >= 3) {
+                            toggleStatePath = cmd[2];
+                            preprocessPath(toggleStatePath, packagePath);
+                        }
+                        if (cmd.size() >= 4) {
+                            toggleStateArg = cmd[3];
+                            removeQuotes(toggleStateArg);
+                        }
+                        if (cmd.size() >= 5) {
+                            toggleStateArg2 = cmd[4];
+                            removeQuotes(toggleStateArg2);
+                        }
+                        if (cmd.size() >= 6) {
+                            toggleStateArg3 = cmd[5];
+                            removeQuotes(toggleStateArg3);
+                        }
+                        continue;
+                    } else if (commandName == "toggle_visibility" && cmd.size() >= 2) {
+                        toggleVisibilityMode = cmd[1];
+                        if (cmd.size() >= 3) {
+                            toggleVisibilityPath = cmd[2];
+                            preprocessPath(toggleVisibilityPath, packagePath);
+                        }
+                        if (cmd.size() >= 4) {
+                            toggleVisibilityArg = cmd[3];
+                            removeQuotes(toggleVisibilityArg);
+                        }
+                        if (cmd.size() >= 5) {
+                            toggleVisibilityArg2 = cmd[4];
+                            removeQuotes(toggleVisibilityArg2);
+                        }
+                        if (cmd.size() >= 6) {
+                            toggleVisibilityArg3 = cmd[5];
+                            removeQuotes(toggleVisibilityArg3);
+                        }
+                        continue;
+                    }
+
                     if (commandMode == TOGGLE_STR) {
                         if (commandName.compare(0, 3, "on:") == 0)
                             currentSection = ON_STR;
                         else if (commandName.compare(0, 4, "off:") == 0)
                             currentSection = OFF_STR;
                         
-                        if (commandName == "toggle_state" && cmd.size() >= 2) {
-                            toggleStateMode = cmd[1];
-                            if (cmd.size() >= 3) {
-                                toggleStatePath = cmd[2];
-                                preprocessPath(toggleStatePath, packagePath);
-                            }
-                            if (cmd.size() >= 4) {
-                                toggleStateArg = cmd[3];
-                                removeQuotes(toggleStateArg);
-                            }
-                            if (cmd.size() >= 5) {
-                                toggleStateArg2 = cmd[4];
-                                removeQuotes(toggleStateArg2);
-                            }
-                            if (cmd.size() >= 6) {
-                                toggleStateArg3 = cmd[5];
-                                removeQuotes(toggleStateArg3);
-                            }
-                        } else if (commandName == "toggle_visibility" && cmd.size() >= 2) {
-                            toggleVisibilityMode = cmd[1];
-                            if (cmd.size() >= 3) {
-                                toggleVisibilityPath = cmd[2];
-                                preprocessPath(toggleVisibilityPath, packagePath);
-                            }
-                            if (cmd.size() >= 4) {
-                                toggleVisibilityArg = cmd[3];
-                                removeQuotes(toggleVisibilityArg);
-                            }
-                            if (cmd.size() >= 5) {
-                                toggleVisibilityArg2 = cmd[4];
-                                removeQuotes(toggleVisibilityArg2);
-                            }
-                            if (cmd.size() >= 6) {
-                                toggleVisibilityArg3 = cmd[5];
-                                removeQuotes(toggleVisibilityArg3);
-                            }
-                        } else if (currentSection == GLOBAL_STR) {
+                        if (currentSection == GLOBAL_STR) {
+
                             commandsOn.push_back(cmd);
                             commandsOff.push_back(cmd);
                         } else if (currentSection == ON_STR) {
