@@ -395,6 +395,11 @@ bool processHold(uint64_t keysDown, uint64_t keysHeld, u64& holdStartTick, bool&
 
                 lastSelectedListItem->setValue(lastSelectedListItemFooter, highlightParam);
                 lastSelectedListItemFooter.clear();
+
+                if (lastCommandMode == TOGGLE_STR) {
+                    static_cast<tsl::elm::ToggleListItem*>(lastSelectedListItem)
+                        ->setState(lastToggleTargetState);
+                }
             } else {
                 lastSelectedListItem->setValue("", true);
             }
