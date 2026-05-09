@@ -3891,7 +3891,8 @@ public:
                         runningInterpreter.store(true, std::memory_order_release);
                         toggleListItem->setState(!state);
                         runningInterpreter.store(false, std::memory_order_release);
-                        
+
+                        lastSelectedListItemFooter = toggleListItem->getValue();
                         lastSelectedListItem = toggleListItem;
                         holdStartTick = armGetSystemTick();
                         storedCommands = std::move(modifiedCmds);
