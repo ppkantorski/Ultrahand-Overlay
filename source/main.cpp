@@ -397,8 +397,10 @@ bool processHold(uint64_t keysDown, uint64_t keysHeld, u64& holdStartTick, bool&
                 lastSelectedListItemFooter.clear();
 
                 if (lastCommandMode == TOGGLE_STR) {
+                    // lastToggleTargetState holds the post-onClick (i.e. new) state;
+                    // on cancel we revert to the original, which is its negation.
                     static_cast<tsl::elm::ToggleListItem*>(lastSelectedListItem)
-                        ->setState(lastToggleTargetState);
+                        ->setState(!lastToggleTargetState);
                 }
             } else {
                 lastSelectedListItem->setValue("", true);
