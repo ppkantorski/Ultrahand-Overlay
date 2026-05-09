@@ -1789,21 +1789,44 @@ void drawDevImage(tsl::gfx::Renderer* renderer) {
  */
 
 /**
- * @brief Checks if a specific line exists in an INI file.
- * 
- * @param filePath The path to the INI file.
- * @param line The line content to search for.
- * @return true if the line exists, false otherwise.
+ * @brief Checks if a file contains a line that exactly matches the given content.
+ *
+ * Lines are compared after stripping trailing CR/LF, so both CRLF and LF files
+ * work. Lines longer than the internal read buffer are skipped (never match).
+ *
+ * @param filePath The path to the file.
+ * @param line The exact line content to search for.
+ * @return true if a matching line exists, false otherwise.
  */
 inline bool isLineExistInIni(const std::string& filePath, const std::string& line) {
     if (!ult::isFile(filePath)) return false;
     FILE* file = fopen(filePath.c_str(), "r");
     if (!file) return false;
-    
+
     char buffer[1024];
     bool found = false;
+    bool skipUntilNewline = false;
     while (fgets(buffer, sizeof(buffer), file)) {
-        if (strstr(buffer, line.c_str())) {
+        size_t len = strlen(buffer);
+        const bool hasNewline = (len > 0 && buffer[len - 1] == '\n');
+
+        if (skipUntilNewline) {
+            // Previous chunk was a partial read of a line longer than the buffer; skip the remainder.
+            skipUntilNewline = !hasNewline;
+            continue;
+        }
+        if (!hasNewline && !feof(file)) {
+            // Line is longer than the buffer — skip the rest and don't compare.
+            skipUntilNewline = true;
+            continue;
+        }
+
+        // Strip trailing CR/LF.
+        while (len > 0 && (buffer[len - 1] == '\n' || buffer[len - 1] == '\r')) {
+            buffer[--len] = '\0';
+        }
+
+        if (line.size() == len && std::memcmp(buffer, line.c_str(), len) == 0) {
             found = true;
             break;
         }
@@ -1814,37 +1837,44 @@ inline bool isLineExistInIni(const std::string& filePath, const std::string& lin
 
 /**
  * @brief Checks if a hex value matches at a specific offset.
- * 
+ *
+ * The expected hex string must contain only hex digits (after removing spaces)
+ * and have an even length; otherwise the function returns false.
+ *
  * @param filePath The path to the file.
- * @param offset The offset to check at.
- * @param expectedHex The expected hex value (string of hex characters).
- * @return true if the hex value matches, false otherwise.
+ * @param offset The byte offset to check at.
+ * @param expectedHex The expected hex value (string of hex characters, optional spaces).
+ * @return true if the bytes at offset match expectedHex, false otherwise.
  */
 inline bool checkHexValue(const std::string& filePath, uint32_t offset, std::string expectedHex) {
     if (!ult::isFile(filePath)) return false;
+
+    // Remove spaces and validate length and characters before opening the file.
+    expectedHex.erase(std::remove(expectedHex.begin(), expectedHex.end(), ' '), expectedHex.end());
+    if (expectedHex.empty() || expectedHex.length() % 2 != 0) return false;
+    for (char c : expectedHex) {
+        if (!std::isxdigit(static_cast<unsigned char>(c))) return false;
+    }
+
     FILE* file = fopen(filePath.c_str(), "rb");
     if (!file) return false;
-    
-    fseek(file, offset, SEEK_SET);
-    
-    // Remove spaces from expectedHex
-    expectedHex.erase(std::remove(expectedHex.begin(), expectedHex.end(), ' '), expectedHex.end());
-    if (expectedHex.length() % 2 != 0) {
+
+    if (fseek(file, static_cast<long>(offset), SEEK_SET) != 0) {
         fclose(file);
         return false;
     }
-    
-    size_t len = expectedHex.length() / 2;
+
+    const size_t len = expectedHex.length() / 2;
     std::vector<unsigned char> buffer(len);
-    size_t readLen = fread(buffer.data(), 1, len, file);
+    const size_t readLen = fread(buffer.data(), 1, len, file);
     fclose(file);
-    
+
     if (readLen < len) return false;
-    
+
     for (size_t i = 0; i < len; ++i) {
-        unsigned int byte;
-        sscanf(expectedHex.substr(i * 2, 2).c_str(), "%x", &byte);
-        if (buffer[i] != (unsigned char)byte) return false;
+        unsigned int byte = 0;
+        if (sscanf(expectedHex.c_str() + i * 2, "%2x", &byte) != 1) return false;
+        if (buffer[i] != static_cast<unsigned char>(byte)) return false;
     }
     return true;
 }
