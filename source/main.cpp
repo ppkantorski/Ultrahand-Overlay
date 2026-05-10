@@ -618,6 +618,8 @@ namespace WarningConfirm {
     void collapseUI();         // UI-only; safe to call after a successful Accept-hold
     void requestDeferredCollapse();   // mark pending; consumed once interpreter completes
     bool consumeDeferredCollapse();   // returns true once and runs collapseUI()
+    void requestFocusToAccept();      // mark pending focus transfer to Accept (one-shot)
+    bool consumePendingFocusToAccept();   // run the focus transfer once Accept is in m_items
 }
 
 // The interpreter hold-and-launch pattern shared by SelectionOverlay,
@@ -719,6 +721,7 @@ namespace WarningConfirm {
     inline tsl::elm::List*      g_list         = nullptr;
     inline tsl::elm::ListItem*  g_sourceItem   = nullptr;
     inline bool                 g_pendingCollapse = false;  // set by onComplete; consumed after handleInterpreterCompletion finishes
+    inline bool                 g_pendingFocusToAccept = false;  // set by expand(); consumed once Accept is live in m_items
 
     inline bool isActive() { return g_acceptItem != nullptr; }
 
@@ -818,6 +821,40 @@ namespace WarningConfirm {
     inline bool consumeDeferredCollapse() {
         if (!g_pendingCollapse) return false;
         collapseUI();
+        return true;
+    }
+
+    // Mark that focus should jump to the Accept item once it has been actually
+    // inserted into m_items (which only happens during the next List::draw
+    // pass).  Calling tsl::Gui::requestFocus(acceptItem, ...) directly from
+    // expand() is a no-op because List::requestFocus() returns nullptr while
+    // m_itemsToAdd is non-empty.  So we set a flag here and let the next
+    // handleInput frame in PackageMenu / MainMenu run the actual transfer
+    // through consumePendingFocusToAccept().
+    inline void requestFocusToAccept() {
+        if (g_acceptItem != nullptr) g_pendingFocusToAccept = true;
+    }
+
+    // Try to transfer focus to the Accept item.  Returns true once the
+    // transfer was actually performed (or aborted because state went stale).
+    // Returns false if Accept is not yet in m_items so the caller knows to
+    // try again on the following frame.
+    inline bool consumePendingFocusToAccept() {
+        if (!g_pendingFocusToAccept) return false;
+        if (g_list == nullptr || g_acceptItem == nullptr) {
+            g_pendingFocusToAccept = false;
+            return true;
+        }
+        const s32 idx = g_list->getIndexInList(g_acceptItem);
+        if (idx < 0) return false;  // not yet inserted; try next frame
+
+        auto* tslOverlay = tsl::Overlay::get();
+        auto* gui = (tslOverlay != nullptr) ? tslOverlay->getCurrentGui().get() : nullptr;
+        if (gui != nullptr) {
+            g_list->setFocusedIndex(static_cast<u32>(idx));
+            gui->requestFocus(g_acceptItem, tsl::FocusDirection::None, false);
+        }
+        g_pendingFocusToAccept = false;
         return true;
     }
 
@@ -972,6 +1009,12 @@ namespace WarningConfirm {
         g_acceptItem = acceptItem;
         g_list       = list;
         g_sourceItem = sourceItem;
+
+        // Defer focus transfer to Accept until it is actually inserted into
+        // m_items by List::draw -> addPendingItems on the next frame.  Calling
+        // requestFocus() now is a no-op because List::requestFocus() returns
+        // nullptr while m_itemsToAdd is non-empty.
+        requestFocusToAccept();
     }
 
 }  // namespace WarningConfirm
@@ -6319,6 +6362,10 @@ public:
      */
     virtual bool handleInput(uint64_t keysDown, uint64_t keysHeld, touchPosition touchInput, JoystickPosition leftJoyStick, JoystickPosition rightJoyStick) override {
         
+        // After expand() inserts banner+Accept, focus transfer is deferred
+        // until Accept is actually present in m_items (next frame).
+        WarningConfirm::consumePendingFocusToAccept();
+
         if (handleCommandHold(keysDown, keysHeld, packagePath)) return true;
 
         // B-cancel for an active inline warning panel: collapse banner+Accept and consume B.
@@ -7511,6 +7558,10 @@ public:
      */
     virtual bool handleInput(uint64_t keysDown, uint64_t keysHeld, touchPosition touchInput, JoystickPosition leftJoyStick, JoystickPosition rightJoyStick) override {
         
+        // After expand() inserts banner+Accept, focus transfer is deferred
+        // until Accept is actually present in m_items (next frame).
+        WarningConfirm::consumePendingFocusToAccept();
+
         if (handleCommandHold(keysDown, keysHeld, PACKAGE_PATH)) return true;
 
         if (ult::launchingOverlay.load(acquire)) return true;
