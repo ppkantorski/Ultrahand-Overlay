@@ -649,9 +649,13 @@ static bool handleCommandHold(uint64_t keysDown, uint64_t keysHeld, const std::s
             warningOnConfirmCallback = nullptr;
             cb();
         }
-        // UI-only collapse here: leave lastSelectedListItem / runningInterpreter
-        // alone so the existing interpreter-completion pipeline can finish cleanly.
-        if (WarningConfirm::isActive()) WarningConfirm::collapseUI();
+        // Defer the UI removal until AFTER the interpreter has finished and
+        // handleInterpreterCompletion has updated the Accept item with
+        // CHECKMARK / CROSSMARK / footer.  Removing the banner+Accept here would
+        // run synchronously while the click animation triggered by processHold is
+        // still in flight and lastSelectedListItem still points at us, producing
+        // a use-after-free (LR=0xbebebebebebebebe) on the next handleInput frame.
+        if (WarningConfirm::isActive()) WarningConfirm::requestDeferredCollapse();
     }, nullptr, true);
     return true;
 }
@@ -751,6 +755,30 @@ namespace WarningConfirm {
         if (lastSelectedListItem == g_acceptItem && g_acceptItem != nullptr) {
             lastSelectedListItem = nullptr;
         }
+
+        // Move focus back to the source item BEFORE removing banner+Accept so
+        // that neither m_focusedElement (Gui-level raw pointer) nor m_focusedIndex
+        // (List-level index) end up dangling on a freed Element.  removePendingItems
+        // only adjusts m_focusedIndex; it does NOT clear the Gui's m_focusedElement,
+        // so without this transfer the next handleInput frame would call
+        // p->onClick(...) on freed memory (LR=0xbebebebebebebebe poison crash).
+        {
+            auto* tslOverlay = tsl::Overlay::get();
+            auto* gui = (tslOverlay != nullptr) ? tslOverlay->getCurrentGui().get() : nullptr;
+            if (gui != nullptr) {
+                if (g_list != nullptr && g_sourceItem != nullptr) {
+                    const s32 srcIdx = g_list->getIndexInList(g_sourceItem);
+                    if (srcIdx >= 0) {
+                        g_list->setFocusedIndex(static_cast<u32>(srcIdx));
+                    }
+                    gui->requestFocus(g_sourceItem, tsl::FocusDirection::None, false);
+                } else {
+                    if (g_acceptItem != nullptr) gui->removeFocus(g_acceptItem);
+                    if (g_banner     != nullptr) gui->removeFocus(g_banner);
+                }
+            }
+        }
+
         if (g_list != nullptr) {
             if (g_banner)     g_list->removeItem(g_banner);
             if (g_acceptItem) g_list->removeItem(g_acceptItem);
