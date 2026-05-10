@@ -614,8 +614,10 @@ static void handleTriggerExit() {
 // is defined further down (after the input-helper free functions).
 namespace WarningConfirm {
     bool isActive();
-    void collapse();        // full reset; safe to call on B-cancel
-    void collapseUI();      // UI-only; safe to call after a successful Accept-hold
+    void collapse();           // full reset; safe to call on B-cancel
+    void collapseUI();         // UI-only; safe to call after a successful Accept-hold
+    void requestDeferredCollapse();   // mark pending; consumed once interpreter completes
+    bool consumeDeferredCollapse();   // returns true once and runs collapseUI()
 }
 
 // The interpreter hold-and-launch pattern shared by SelectionOverlay,
@@ -712,6 +714,7 @@ namespace WarningConfirm {
     inline tsl::elm::ListItem*  g_acceptItem   = nullptr;
     inline tsl::elm::List*      g_list         = nullptr;
     inline tsl::elm::ListItem*  g_sourceItem   = nullptr;
+    inline bool                 g_pendingCollapse = false;  // set by onComplete; consumed after handleInterpreterCompletion finishes
 
     inline bool isActive() { return g_acceptItem != nullptr; }
 
@@ -741,9 +744,10 @@ namespace WarningConfirm {
     // interpreter pipeline already manages lastSelectedListItem / runningInterpreter
     // and we must NOT clobber them here).
     inline void collapseUI() {
-        // The Accept ListItem is about to be queued for deletion by libultrahand;
-        // null the global pointer if it still points at us so the next-frame
-        // handleInterpreterCompletion path does not dereference freed memory.
+        // Defensive: clear lastSelectedListItem if it still aliases the Accept item
+        // we are about to remove.  In the deferred path, handleInterpreterCompletion
+        // has already cleared it, but B-cancel and single-active-rule resets reach
+        // this via collapse() while the global may still be live.
         if (lastSelectedListItem == g_acceptItem && g_acceptItem != nullptr) {
             lastSelectedListItem = nullptr;
         }
@@ -751,10 +755,11 @@ namespace WarningConfirm {
             if (g_banner)     g_list->removeItem(g_banner);
             if (g_acceptItem) g_list->removeItem(g_acceptItem);
         }
-        g_banner     = nullptr;
-        g_acceptItem = nullptr;
-        g_list       = nullptr;
-        g_sourceItem = nullptr;
+        g_banner          = nullptr;
+        g_acceptItem      = nullptr;
+        g_list            = nullptr;
+        g_sourceItem      = nullptr;
+        g_pendingCollapse = false;
     }
 
     // Full collapse: cancels any in-flight hold targeting our Accept item,
@@ -770,6 +775,22 @@ namespace WarningConfirm {
         }
         warningOnConfirmCallback = nullptr;
         collapseUI();
+    }
+
+    // Mark that the banner+Accept should be removed once the interpreter
+    // completion pipeline has finished updating the Accept ListItem.
+    inline void requestDeferredCollapse() {
+        if (g_acceptItem != nullptr) g_pendingCollapse = true;
+    }
+
+    // Consume the deferred-collapse flag if set.  Called from the tail of
+    // the interpreter-completion handlers in PackageMenu / SelectionOverlay
+    // / MainMenu / ScriptOverlay so the Accept item is removed AFTER its
+    // CHECKMARK / CROSSMARK update has been applied.
+    inline bool consumeDeferredCollapse() {
+        if (!g_pendingCollapse) return false;
+        collapseUI();
+        return true;
     }
 
     // Insert the warning banner + Accept item right under `sourceItem` in
@@ -2169,6 +2190,7 @@ public:
             }
             signalFeedback();
 
+            WarningConfirm::consumeDeferredCollapse();
             return true;
         }
         
@@ -3172,6 +3194,7 @@ public:
                 reloadSoundCacheNow.store(true, std::memory_order_release);
             }
             signalFeedback();
+            WarningConfirm::consumeDeferredCollapse();
             return true;
         }
         
@@ -4285,6 +4308,7 @@ public:
             }
             signalFeedback();
 
+            WarningConfirm::consumeDeferredCollapse();
             return true;
         }
         
@@ -6285,6 +6309,7 @@ public:
             
         if (lastRunningInterpreter.exchange(false, std::memory_order_acq_rel)) {
             handleInterpreterCompletion(packageConfigIniPath);
+            WarningConfirm::consumeDeferredCollapse();
             return true;
         }
 
@@ -7470,6 +7495,7 @@ public:
     
         if (lastRunningInterpreter.exchange(false, std::memory_order_acq_rel)) {
             handleInterpreterCompletion(packageConfigIniPath);
+            WarningConfirm::consumeDeferredCollapse();
             return true;
         }
         
