@@ -98,6 +98,9 @@ constexpr std::string_view GROUPING_PATTERN = ";grouping=";
 constexpr std::string_view FOOTER_PATTERN = ";footer=";
 constexpr std::string_view FOOTER_HIGHLIGHT_PATTERN = ";footer_highlight=";
 constexpr std::string_view HOLD_PATTERN = ";hold=";
+constexpr std::string_view WARNING_PATTERN = ";warning=";
+constexpr std::string_view WARNING_ON_PATTERN = ";warning_on=";
+constexpr std::string_view WARNING_OFF_PATTERN = ";warning_off=";
 
 constexpr std::string_view MINI_PATTERN = ";mini=";
 constexpr std::string_view SELECTION_MINI_PATTERN = ";selection_mini=";
@@ -141,6 +144,9 @@ constexpr size_t GROUPING_PATTERN_LEN = GROUPING_PATTERN.size();
 constexpr size_t FOOTER_PATTERN_LEN = FOOTER_PATTERN.size();
 constexpr size_t FOOTER_HIGHLIGHT_PATTERN_LEN = FOOTER_HIGHLIGHT_PATTERN.size();
 constexpr size_t HOLD_PATTERN_LEN = HOLD_PATTERN.size();
+constexpr size_t WARNING_PATTERN_LEN = WARNING_PATTERN.size();
+constexpr size_t WARNING_ON_PATTERN_LEN = WARNING_ON_PATTERN.size();
+constexpr size_t WARNING_OFF_PATTERN_LEN = WARNING_OFF_PATTERN.size();
 constexpr size_t MINI_PATTERN_LEN = MINI_PATTERN.size();
 constexpr size_t SELECTION_MINI_PATTERN_LEN = SELECTION_MINI_PATTERN.size();
 constexpr size_t PROGRESS_PATTERN_LEN = PROGRESS_PATTERN.size();
@@ -361,6 +367,11 @@ bool handleRunningInterpreter(uint64_t& keysDown, uint64_t& keysHeld) {
 static u64 holdStartTick = 0;
 static std::string lastSelectedListItemFooter;
 static std::vector<std::vector<std::string>> storedCommands;
+// Optional callback fired AFTER handleCommandHold runs the stored commands.
+// Used by inline warning-confirm to apply toggle state changes that would
+// otherwise depend on lastCommandMode == TOGGLE_STR + lastSelectedListItem
+// being the toggle (which is no longer true once Accept becomes the hold target).
+static std::function<void()> warningOnConfirmCallback;
 static bool holdRumbleFired[3] = {false, false, false}; // guards for the ~33%, ~66%, ~100% rumble pulses
 
 bool processHold(uint64_t keysDown, uint64_t keysHeld, u64& holdStartTick, bool& isHolding,
@@ -406,6 +417,7 @@ bool processHold(uint64_t keysDown, uint64_t keysHeld, u64& holdStartTick, bool&
             lastCommandMode.clear();
             lastCommandIsHold = false;
             lastKeyName.clear();
+            warningOnConfirmCallback = nullptr;
         }
 
         if (onRelease) onRelease();
@@ -596,6 +608,13 @@ static void handleTriggerExit() {
     }
 }
 
+// Forward-decls for the inline warning-confirm helpers; the namespace itself
+// is defined further down (after the input-helper free functions).
+namespace WarningConfirm {
+    bool isActive();
+    void collapse();
+}
+
 // The interpreter hold-and-launch pattern shared by SelectionOverlay,
 // PackageMenu, and MainMenu. The callers differ only in the path string
 // passed to executeInterpreterCommands; all other logic is identical.
@@ -620,6 +639,12 @@ static bool handleCommandHold(uint64_t keysDown, uint64_t keysHeld, const std::s
 
         executeInterpreterCommands(std::move(storedCommands), cmdPath, lastKeyName);
         lastRunningInterpreter.store(true, std::memory_order_release);
+        if (warningOnConfirmCallback) {
+            auto cb = std::move(warningOnConfirmCallback);
+            warningOnConfirmCallback = nullptr;
+            cb();
+        }
+        if (WarningConfirm::isActive()) WarningConfirm::collapse();
     }, nullptr, true);
     return true;
 }
@@ -665,6 +690,194 @@ static void setSystemSettingsReturn(const std::string& jumpName) {
     returnJumpItemName = jumpName;
     returnJumpItemValue.clear();
 }
+// =============================================================================
+// Inline warning/confirmation expansion
+// =============================================================================
+// When a list item carries a `;warning=`, `;warning_on=` or `;warning_off=`
+// directive, pressing A on it does NOT immediately execute the action.  Instead
+// the routines below splice a multi-line warning banner directly under the item
+// plus a hold-A "Accept" list item.  Only when the Accept hold completes does
+// the original action run.  Pressing B (or activating any other warning-armed
+// item) collapses the expansion.
+namespace WarningConfirm {
+
+    // The banner element (CustomDrawer) and Accept item, both pending in the
+    // currently visible list.  Non-null between expand() and collapse().
+    inline tsl::elm::Element*   g_banner       = nullptr;
+    inline tsl::elm::ListItem*  g_acceptItem   = nullptr;
+    inline tsl::elm::List*      g_list         = nullptr;
+    inline tsl::elm::ListItem*  g_sourceItem   = nullptr;
+
+    inline bool isActive() { return g_acceptItem != nullptr; }
+
+    // Decode `\n` escape sequences in-place so package authors can write
+    //     ;warning=Line 1\nLine 2
+    // and get a real line break.
+    inline void unescapeWarningText(std::string& s) {
+        if (s.empty()) return;
+        std::string out;
+        out.reserve(s.size());
+        for (size_t i = 0; i < s.size(); ++i) {
+            if (s[i] == '\\' && i + 1 < s.size()) {
+                const char nxt = s[i + 1];
+                if (nxt == 'n') { out.push_back('\n'); ++i; continue; }
+                if (nxt == 't') { out.push_back('\t'); ++i; continue; }
+                if (nxt == '\\') { out.push_back('\\'); ++i; continue; }
+            }
+            out.push_back(s[i]);
+        }
+        s = std::move(out);
+    }
+
+    // Cancel any in-flight hold targeting our Accept item, then queue removal
+    // of banner + Accept.  Safe to call when nothing is active.
+    inline void collapse() {
+        if (lastSelectedListItem == g_acceptItem && g_acceptItem != nullptr) {
+            lastCommandIsHold = false;
+            displayPercentage.store(0, std::memory_order_release);
+            runningInterpreter.store(false, std::memory_order_release);
+            storedCommands.clear();
+            lastCommandMode.clear();
+            lastKeyName.clear();
+            lastSelectedListItem = nullptr;
+        }
+        warningOnConfirmCallback = nullptr;
+        if (g_list != nullptr) {
+            if (g_banner)     g_list->removeItem(g_banner);
+            if (g_acceptItem) g_list->removeItem(g_acceptItem);
+        }
+        g_banner     = nullptr;
+        g_acceptItem = nullptr;
+        g_list       = nullptr;
+        g_sourceItem = nullptr;
+    }
+
+    // Insert the warning banner + Accept item right under `sourceItem` in
+    // `list`.  The Accept item, when held to completion, runs `commandsToRun`
+    // through the existing handleCommandHold pipeline.
+    inline void expand(tsl::elm::List* list,
+                       tsl::elm::ListItem* sourceItem,
+                       const std::string& warningText,
+                       std::vector<std::vector<std::string>> commandsToRun,
+                       const std::string& packagePath,
+                       const std::string& keyName,
+                       std::function<void()> onConfirmExtra = nullptr) {
+        if (list == nullptr || sourceItem == nullptr || warningText.empty())
+            return;
+
+        // Collapse any other active warning first (single-active rule).
+        if (isActive()) collapse();
+
+        const s32 sourceIdx = list->getIndexInList(sourceItem);
+        if (sourceIdx < 0) return;
+        const ssize_t insertAt = sourceIdx + 1;
+
+        // Banner: yellow accent bar on the left + warning glyph + multi-line
+        // text (split on '\n').  Width-wise, full list width minus padding;
+        // height computed from line count.
+        const int lineCount = 1 + static_cast<int>(
+            std::count(warningText.begin(), warningText.end(), '\n'));
+        const s32 lineHeight = 22;
+        const s32 topPad     = 8;
+        const s32 botPad     = 8;
+        const u16 bannerH    = static_cast<u16>(topPad + lineCount * lineHeight + botPad);
+
+        std::string textCopy = warningText;
+        auto* banner = new tsl::elm::CustomDrawer(
+            [text = std::move(textCopy), lineHeight](tsl::gfx::Renderer* r,
+                                                     s32 x, s32 y, s32 w, s32 h) {
+                // Yellow accent bar along the left edge.
+                const s32 accentX = x + 12;
+                const s32 accentW = 4;
+                r->drawRect(accentX, y + 4, accentW, h - 8, tsl::warningTextColor);
+
+                // Warning glyph then text.  Glyph is drawn once on the first line.
+                const s32 textX  = accentX + accentW + 12;
+                const u32 fontSize = 17;
+                s32 cursor = y + 4 + lineHeight;
+
+                // Glyph (Unicode warning sign).
+                r->drawString("\u26A0", false, textX, cursor, fontSize,
+                              tsl::warningTextColor);
+                const s32 glyphAdvance = 24;
+
+                // Walk text by '\n', drawing each line.  First line is offset
+                // past the glyph; subsequent lines start at textX.
+                size_t start = 0;
+                bool firstLine = true;
+                while (start <= text.size()) {
+                    size_t end = text.find('\n', start);
+                    const std::string line = (end == std::string::npos)
+                        ? text.substr(start)
+                        : text.substr(start, end - start);
+
+                    const s32 lx = firstLine ? (textX + glyphAdvance) : textX;
+                    r->drawString(line, false, lx, cursor, fontSize,
+                                  tsl::defaultTextColor);
+                    cursor    += lineHeight;
+                    firstLine  = false;
+
+                    if (end == std::string::npos) break;
+                    start = end + 1;
+                }
+            });
+
+        list->addItem(banner, bannerH, insertAt);
+
+        // Accept item: regular ListItem with hold-A behaviour.  We piggy-back
+        // on the existing global lastCommandIsHold + handleCommandHold pipeline
+        // so the user gets the same progress bar / rumble feedback as a
+        // ;hold=true item.
+        // TODO: localise via libultrahand string table once a Phase-2 PR adds it.
+        auto* acceptItem = new tsl::elm::ListItem("Hold A to confirm");
+        acceptItem->enableTouchHolding();
+        acceptItem->setValue(HOLD_A_SYMBOL, true);
+        acceptItem->disableClickAnimation();
+
+        std::vector<std::vector<std::string>> capturedCmds = std::move(commandsToRun);
+        const std::string capturedPkgPath = packagePath;
+        const std::string capturedKeyName = keyName;
+        std::function<void()> capturedOnConfirm = std::move(onConfirmExtra);
+
+        acceptItem->setClickListener(
+            [acceptItem,
+             cmds = std::move(capturedCmds),
+             pkgPath = capturedPkgPath,
+             keyName = capturedKeyName,
+             onConfirm = std::move(capturedOnConfirm)](uint64_t keys) mutable -> bool {
+                if (runningInterpreter.load(std::memory_order_acquire))
+                    return false;
+
+                if ((keys & KEY_A) && !(keys & ~KEY_A & ALL_KEYS_MASK)) {
+                    if (lastCommandIsHold) return true;  // already counting
+
+                    lastSelectedListItemFooter   = acceptItem->getValue();
+                    lastFooterHighlight          = false;
+                    lastFooterHighlightDefined   = false;
+                    acceptItem->setValue(INPROGRESS_SYMBOL);
+                    lastSelectedListItem         = acceptItem;
+
+                    holdStartTick                = armGetSystemTick();
+                    storedCommands               = cmds;  // copy; allows re-hold
+                    lastCommandMode              = DEFAULT_STR;
+                    lastCommandIsHold            = true;
+                    lastKeyName                  = keyName;
+                    warningOnConfirmCallback     = onConfirm;  // copy; persists across re-holds
+                    return true;
+                }
+                return false;
+            });
+
+        list->addItem(acceptItem, 0, insertAt + 1);
+
+        g_banner     = banner;
+        g_acceptItem = acceptItem;
+        g_list       = list;
+        g_sourceItem = sourceItem;
+    }
+
+}  // namespace WarningConfirm
+
 // Forward declaration of the MainMenu class.
 class MainMenu;
 
@@ -4306,6 +4519,9 @@ bool drawCommandsMenu(
     bool commandFooterHighlight;
     bool commandFooterHighlightDefined;
     bool isHold;
+    std::string warningText;
+    std::string warningOnText;
+    std::string warningOffText;
 
     std::string commandSystem;
     std::string commandState;
@@ -4421,6 +4637,9 @@ bool drawCommandsMenu(
         commandFooterHighlight = false;
         commandFooterHighlightDefined = false;
         isHold = false;
+        warningText.clear();
+        warningOnText.clear();
+        warningOffText.clear();
         commandSystem = DEFAULT_STR;
         commandState = DEFAULT_STR;
         commandHOSFirmware = "";
@@ -4900,6 +5119,31 @@ bool drawCommandsMenu(
                                 break;
                                 
                             case 'w':
+                                // Warning patterns must be checked _OFF / _ON before plain to avoid prefix collision.
+                                if (commandName.size() >= WARNING_OFF_PATTERN_LEN &&
+                                    commandName.compare(0, WARNING_OFF_PATTERN_LEN, WARNING_OFF_PATTERN) == 0) {
+                                    warningOffText = commandName.substr(WARNING_OFF_PATTERN_LEN);
+                                    for (size_t j = 1; j < cmd.size(); ++j) warningOffText += " " + cmd[j];
+                                    removeQuotes(warningOffText);
+                                    WarningConfirm::unescapeWarningText(warningOffText);
+                                    continue;
+                                }
+                                if (commandName.size() >= WARNING_ON_PATTERN_LEN &&
+                                    commandName.compare(0, WARNING_ON_PATTERN_LEN, WARNING_ON_PATTERN) == 0) {
+                                    warningOnText = commandName.substr(WARNING_ON_PATTERN_LEN);
+                                    for (size_t j = 1; j < cmd.size(); ++j) warningOnText += " " + cmd[j];
+                                    removeQuotes(warningOnText);
+                                    WarningConfirm::unescapeWarningText(warningOnText);
+                                    continue;
+                                }
+                                if (commandName.size() >= WARNING_PATTERN_LEN &&
+                                    commandName.compare(0, WARNING_PATTERN_LEN, WARNING_PATTERN) == 0) {
+                                    warningText = commandName.substr(WARNING_PATTERN_LEN);
+                                    for (size_t j = 1; j < cmd.size(); ++j) warningText += " " + cmd[j];
+                                    removeQuotes(warningText);
+                                    WarningConfirm::unescapeWarningText(warningText);
+                                    continue;
+                                }
                                 if (commandName.compare(0, WRAPPING_MODE_PATTERN_LEN, WRAPPING_MODE_PATTERN) == 0) {
                                     tableWrappingMode = commandName.substr(WRAPPING_MODE_PATTERN_LEN);
                                     continue;
@@ -5552,7 +5796,7 @@ bool drawCommandsMenu(
                         }
 
                         listItem->setClickListener([i, commands, keyName = originalOptionName, cleanOptionName, packagePath, packageName,
-                            selectedItem, listItem, lastPackageHeader, commandMode, footer, isHold, showWidget, commandFooterHighlight, commandFooterHighlightDefined](uint64_t keys) {
+                            selectedItem, listItem, list, warningText, lastPackageHeader, commandMode, footer, isHold, showWidget, commandFooterHighlight, commandFooterHighlightDefined](uint64_t keys) {
                             
                             if (runningInterpreter.load(acquire)) {
                                 return false;
@@ -5563,6 +5807,11 @@ bool drawCommandsMenu(
                             }
 
                             if (((keys & KEY_A && !(keys & ~KEY_A & ALL_KEYS_MASK)))) {
+                                if (!warningText.empty()) {
+                                    auto warnCmds = getSourceReplacement(commands, selectedItem, i, packagePath);
+                                    WarningConfirm::expand(list, listItem, warningText, std::move(warnCmds), packagePath, keyName);
+                                    return true;
+                                }
                                 isDownloadCommand.store(false, release);
                                 runningInterpreter.store(true, release);
 
@@ -5661,13 +5910,47 @@ bool drawCommandsMenu(
                         
                         const bool hasToggleState = !toggleStateMode.empty();
                         toggleListItem->setStateChangedListener([i, usingProgress, toggleListItem, commandsOn, commandsOff, keyName = originalOptionName, packagePath, packageConfigIniPath,
-                            pathPatternOn, pathPatternOff, isHold, commandMode, hasToggleState](bool state) {
+                            pathPatternOn, pathPatternOff, isHold, commandMode, hasToggleState,
+                            list, warningText, warningOnText, warningOffText](bool state) {
                             if (runningInterpreter.load(std::memory_order_acquire)) {
                                 return;
                             }
                             
                             tsl::Overlay::get()->getCurrentGui()->requestFocus(toggleListItem, tsl::FocusDirection::None);
                             
+                            // Inline warning-confirm: if the package author set a warning, expand a banner+Accept
+                            // pair underneath this toggle and defer execution. Direction-specific texts
+                            // (warning_on / warning_off) win when set; otherwise fall back to plain warning.
+                            const std::string& directionalWarning =
+                                state ? (!warningOnText.empty()  ? warningOnText  : warningText)
+                                      : (!warningOffText.empty() ? warningOffText : warningText);
+                            if (!directionalWarning.empty()) {
+                                // Revert visual; Accept-hold completion will flip it back.
+                                toggleListItem->setState(!state);
+
+                                auto warnCmds = state ? getSourceReplacement(commandsOn, pathPatternOn, i, packagePath) :
+                                    getSourceReplacement(commandsOff, pathPatternOff, i, packagePath);
+
+                                const bool targetState  = state;
+                                const bool noConfigPath = hasToggleState;
+                                std::string capturedConfigPath = packageConfigIniPath;
+                                std::string capturedKeyName    = keyName;
+                                auto* capturedToggle = toggleListItem;
+
+                                WarningConfirm::expand(
+                                    list, toggleListItem, directionalWarning,
+                                    std::move(warnCmds), packagePath, keyName,
+                                    [capturedToggle, targetState, noConfigPath,
+                                     capturedConfigPath, capturedKeyName]() {
+                                        capturedToggle->setState(targetState);
+                                        if (!noConfigPath) {
+                                            setIniFileValue(capturedConfigPath, capturedKeyName, FOOTER_STR,
+                                                            targetState ? CAPITAL_ON_STR : CAPITAL_OFF_STR);
+                                        }
+                                    });
+                                return;
+                            }
+
                             auto modifiedCmds = state ? getSourceReplacement(commandsOn, pathPatternOn, i, packagePath) :
                                 getSourceReplacement(commandsOff, pathPatternOff, i, packagePath);
 
@@ -5926,7 +6209,13 @@ public:
     virtual bool handleInput(uint64_t keysDown, uint64_t keysHeld, touchPosition touchInput, JoystickPosition leftJoyStick, JoystickPosition rightJoyStick) override {
         
         if (handleCommandHold(keysDown, keysHeld, packagePath)) return true;
-        
+
+        // B-cancel for an active inline warning panel: collapse banner+Accept and consume B.
+        if (WarningConfirm::isActive() && !stillTouching.load(acquire) &&
+            (keysDown & KEY_B) && !(keysHeld & ~KEY_B & ALL_KEYS_MASK)) {
+            WarningConfirm::collapse();
+            return true;
+        }
 
         const bool isRunningInterp = runningInterpreter.load(acquire);
         const bool isTouching = stillTouching.load(acquire);
