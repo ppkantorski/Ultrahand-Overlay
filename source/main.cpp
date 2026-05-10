@@ -101,6 +101,7 @@ constexpr std::string_view HOLD_PATTERN = ";hold=";
 constexpr std::string_view WARNING_PATTERN = ";warning=";
 constexpr std::string_view WARNING_ON_PATTERN = ";warning_on=";
 constexpr std::string_view WARNING_OFF_PATTERN = ";warning_off=";
+constexpr std::string_view ACCEPT_PATTERN = ";accept=";
 
 constexpr std::string_view MINI_PATTERN = ";mini=";
 constexpr std::string_view SELECTION_MINI_PATTERN = ";selection_mini=";
@@ -147,6 +148,7 @@ constexpr size_t HOLD_PATTERN_LEN = HOLD_PATTERN.size();
 constexpr size_t WARNING_PATTERN_LEN = WARNING_PATTERN.size();
 constexpr size_t WARNING_ON_PATTERN_LEN = WARNING_ON_PATTERN.size();
 constexpr size_t WARNING_OFF_PATTERN_LEN = WARNING_OFF_PATTERN.size();
+constexpr size_t ACCEPT_PATTERN_LEN = ACCEPT_PATTERN.size();
 constexpr size_t MINI_PATTERN_LEN = MINI_PATTERN.size();
 constexpr size_t SELECTION_MINI_PATTERN_LEN = SELECTION_MINI_PATTERN.size();
 constexpr size_t PROGRESS_PATTERN_LEN = PROGRESS_PATTERN.size();
@@ -612,7 +614,8 @@ static void handleTriggerExit() {
 // is defined further down (after the input-helper free functions).
 namespace WarningConfirm {
     bool isActive();
-    void collapse();
+    void collapse();        // full reset; safe to call on B-cancel
+    void collapseUI();      // UI-only; safe to call after a successful Accept-hold
 }
 
 // The interpreter hold-and-launch pattern shared by SelectionOverlay,
@@ -644,7 +647,9 @@ static bool handleCommandHold(uint64_t keysDown, uint64_t keysHeld, const std::s
             warningOnConfirmCallback = nullptr;
             cb();
         }
-        if (WarningConfirm::isActive()) WarningConfirm::collapse();
+        // UI-only collapse here: leave lastSelectedListItem / runningInterpreter
+        // alone so the existing interpreter-completion pipeline can finish cleanly.
+        if (WarningConfirm::isActive()) WarningConfirm::collapseUI();
     }, nullptr, true);
     return true;
 }
@@ -731,17 +736,17 @@ namespace WarningConfirm {
 
     // Cancel any in-flight hold targeting our Accept item, then queue removal
     // of banner + Accept.  Safe to call when nothing is active.
-    inline void collapse() {
+    // UI-only collapse: just drops the banner+Accept items from the list.
+    // Used after a successful Accept-hold (the existing handleCommandHold +
+    // interpreter pipeline already manages lastSelectedListItem / runningInterpreter
+    // and we must NOT clobber them here).
+    inline void collapseUI() {
+        // The Accept ListItem is about to be queued for deletion by libultrahand;
+        // null the global pointer if it still points at us so the next-frame
+        // handleInterpreterCompletion path does not dereference freed memory.
         if (lastSelectedListItem == g_acceptItem && g_acceptItem != nullptr) {
-            lastCommandIsHold = false;
-            displayPercentage.store(0, std::memory_order_release);
-            runningInterpreter.store(false, std::memory_order_release);
-            storedCommands.clear();
-            lastCommandMode.clear();
-            lastKeyName.clear();
             lastSelectedListItem = nullptr;
         }
-        warningOnConfirmCallback = nullptr;
         if (g_list != nullptr) {
             if (g_banner)     g_list->removeItem(g_banner);
             if (g_acceptItem) g_list->removeItem(g_acceptItem);
@@ -750,6 +755,21 @@ namespace WarningConfirm {
         g_acceptItem = nullptr;
         g_list       = nullptr;
         g_sourceItem = nullptr;
+    }
+
+    // Full collapse: cancels any in-flight hold targeting our Accept item,
+    // then drops the UI.  Used by B-cancel and by single-active-rule resets.
+    inline void collapse() {
+        if (lastSelectedListItem == g_acceptItem && g_acceptItem != nullptr) {
+            lastCommandIsHold = false;
+            displayPercentage.store(0, std::memory_order_release);
+            storedCommands.clear();
+            lastCommandMode.clear();
+            lastKeyName.clear();
+            lastSelectedListItem = nullptr;
+        }
+        warningOnConfirmCallback = nullptr;
+        collapseUI();
     }
 
     // Insert the warning banner + Accept item right under `sourceItem` in
@@ -761,6 +781,7 @@ namespace WarningConfirm {
                        std::vector<std::vector<std::string>> commandsToRun,
                        const std::string& packagePath,
                        const std::string& keyName,
+                       const std::string& acceptText = std::string(),
                        std::function<void()> onConfirmExtra = nullptr) {
         if (list == nullptr || sourceItem == nullptr || warningText.empty())
             return;
@@ -783,40 +804,66 @@ namespace WarningConfirm {
         const u16 bannerH    = static_cast<u16>(topPad + lineCount * lineHeight + botPad);
 
         std::string textCopy = warningText;
+        const u64 expandStartTick = armGetSystemTick();
         auto* banner = new tsl::elm::CustomDrawer(
-            [text = std::move(textCopy), lineHeight](tsl::gfx::Renderer* r,
-                                                     s32 x, s32 y, s32 w, s32 h) {
-                // Yellow accent bar along the left edge.
-                const s32 accentX = x + 12;
-                const s32 accentW = 4;
-                r->drawRect(accentX, y + 4, accentW, h - 8, tsl::warningTextColor);
+            [text = std::move(textCopy), lineHeight, expandStartTick](tsl::gfx::Renderer* r,
+                                                                       s32 x, s32 y, s32 w, s32 h) {
+                // Slide-in / fade-in over ~150 ms.  Compute alpha factor in [0, 0xF].
+                const u64 nowTick = armGetSystemTick();
+                const u64 elapsedNs = armTicksToNs(nowTick - expandStartTick);
+                const float t = (elapsedNs >= 150000000ULL) ? 1.0f
+                                                            : (static_cast<float>(elapsedNs) / 150000000.0f);
+                const u8 alphaScale = static_cast<u8>(0xF * t);
+                auto fade = [alphaScale](const tsl::Color& c) {
+                    const u8 a = static_cast<u8>((static_cast<u32>(c.a) * alphaScale) / 0xF);
+                    return tsl::Color(c.r, c.g, c.b, a);
+                };
 
-                // Warning glyph then text.  Glyph is drawn once on the first line.
-                const s32 textX  = accentX + accentW + 12;
+                // Indent banner content slightly relative to source-item left edge.
+                const s32 indent  = 20;
+                const s32 accentX = x + indent;
+                const s32 accentW = 4;
+                r->drawRect(accentX, y + 4, accentW, h - 8, fade(tsl::warningTextColor));
+
+                // Custom-drawn yellow warning triangle (filled isosceles, apex up)
+                // followed by a small dark "!" inside.  Avoids relying on the
+                // built-in font containing U+26A0 (which it does not).
+                const s32 glyphSize = 18;
+                const s32 glyphX    = accentX + accentW + 8;          // left edge of glyph box
+                const s32 glyphY    = y + 6;                          // top edge
+                {
+                    const s32 cx = glyphX + glyphSize / 2;
+                    const s32 apexY = glyphY + 1;
+                    const s32 baseY = glyphY + glyphSize - 1;
+                    const s32 baseHalfW = glyphSize / 2 - 1;
+                    // Filled triangle via horizontal scanlines.
+                    const tsl::Color tri = fade(tsl::warningTextColor);
+                    const s32 height = baseY - apexY;
+                    for (s32 dy = 0; dy <= height; ++dy) {
+                        const s32 halfW = (baseHalfW * dy) / (height == 0 ? 1 : height);
+                        r->drawLine(cx - halfW, apexY + dy, cx + halfW, apexY + dy, tri);
+                    }
+                    // Dark "!" mark inside the triangle (3-pixel-wide vertical stem
+                    // and a 2x2 dot below it).
+                    const tsl::Color mark = fade(tsl::Color(0x0, 0x0, 0x0, 0xF));
+                    const s32 stemH = std::max<s32>(4, glyphSize / 2 - 4);
+                    const s32 stemTop = apexY + (height / 2) - stemH / 2;
+                    r->drawRect(cx - 1, stemTop, 2, stemH, mark);
+                    r->drawRect(cx - 1, stemTop + stemH + 1, 2, 2, mark);
+                }
+                const s32 textX  = glyphX + glyphSize + 8;
                 const u32 fontSize = 17;
                 s32 cursor = y + 4 + lineHeight;
 
-                // Glyph (Unicode warning sign).
-                r->drawString("\u26A0", false, textX, cursor, fontSize,
-                              tsl::warningTextColor);
-                const s32 glyphAdvance = 24;
-
-                // Walk text by '\n', drawing each line.  First line is offset
-                // past the glyph; subsequent lines start at textX.
+                const tsl::Color textCol = fade(tsl::defaultTextColor);
                 size_t start = 0;
-                bool firstLine = true;
                 while (start <= text.size()) {
                     size_t end = text.find('\n', start);
                     const std::string line = (end == std::string::npos)
                         ? text.substr(start)
                         : text.substr(start, end - start);
-
-                    const s32 lx = firstLine ? (textX + glyphAdvance) : textX;
-                    r->drawString(line, false, lx, cursor, fontSize,
-                                  tsl::defaultTextColor);
-                    cursor    += lineHeight;
-                    firstLine  = false;
-
+                    r->drawString(line, false, textX, cursor, fontSize, textCol);
+                    cursor += lineHeight;
                     if (end == std::string::npos) break;
                     start = end + 1;
                 }
@@ -827,9 +874,11 @@ namespace WarningConfirm {
         // Accept item: regular ListItem with hold-A behaviour.  We piggy-back
         // on the existing global lastCommandIsHold + handleCommandHold pipeline
         // so the user gets the same progress bar / rumble feedback as a
-        // ;hold=true item.
-        // TODO: localise via libultrahand string table once a Phase-2 PR adds it.
-        auto* acceptItem = new tsl::elm::ListItem("Hold A to confirm");
+        // ;hold=true item.  Two leading spaces nest the label visually under
+        // the source item, matching the banner indent below.
+        const std::string acceptLabel = std::string("  ")
+            + (acceptText.empty() ? std::string("Hold A to confirm") : acceptText);
+        auto* acceptItem = new tsl::elm::ListItem(acceptLabel);
         acceptItem->enableTouchHolding();
         acceptItem->setValue(HOLD_A_SYMBOL, true);
         acceptItem->disableClickAnimation();
@@ -4522,6 +4571,7 @@ bool drawCommandsMenu(
     std::string warningText;
     std::string warningOnText;
     std::string warningOffText;
+    std::string acceptText;  // optional ;accept=TEXT override for hold-A button label
 
     std::string commandSystem;
     std::string commandState;
@@ -4640,6 +4690,7 @@ bool drawCommandsMenu(
         warningText.clear();
         warningOnText.clear();
         warningOffText.clear();
+        acceptText.clear();
         commandSystem = DEFAULT_STR;
         commandState = DEFAULT_STR;
         commandHOSFirmware = "";
@@ -5108,6 +5159,14 @@ bool drawCommandsMenu(
                                 break;
                                 
                             case 'a':
+                                if (commandName.size() >= ACCEPT_PATTERN_LEN &&
+                                    commandName.compare(0, ACCEPT_PATTERN_LEN, ACCEPT_PATTERN) == 0) {
+                                    acceptText = commandName.substr(ACCEPT_PATTERN_LEN);
+                                    for (size_t j = 1; j < cmd.size(); ++j) acceptText += " " + cmd[j];
+                                    removeQuotes(acceptText);
+                                    WarningConfirm::unescapeWarningText(acceptText);
+                                    continue;
+                                }
                                 if (commandName.compare(0, AMS_VERSION_PATTERN_LEN, AMS_VERSION_PATTERN) == 0) {
                                     commandAMSFirmware = commandName.substr(AMS_VERSION_PATTERN_LEN);
                                     continue;
@@ -5796,7 +5855,7 @@ bool drawCommandsMenu(
                         }
 
                         listItem->setClickListener([i, commands, keyName = originalOptionName, cleanOptionName, packagePath, packageName,
-                            selectedItem, listItem, list, warningText, lastPackageHeader, commandMode, footer, isHold, showWidget, commandFooterHighlight, commandFooterHighlightDefined](uint64_t keys) {
+                            selectedItem, listItem, list, warningText, acceptText, lastPackageHeader, commandMode, footer, isHold, showWidget, commandFooterHighlight, commandFooterHighlightDefined](uint64_t keys) {
                             
                             if (runningInterpreter.load(acquire)) {
                                 return false;
@@ -5809,7 +5868,7 @@ bool drawCommandsMenu(
                             if (((keys & KEY_A && !(keys & ~KEY_A & ALL_KEYS_MASK)))) {
                                 if (!warningText.empty()) {
                                     auto warnCmds = getSourceReplacement(commands, selectedItem, i, packagePath);
-                                    WarningConfirm::expand(list, listItem, warningText, std::move(warnCmds), packagePath, keyName);
+                                    WarningConfirm::expand(list, listItem, warningText, std::move(warnCmds), packagePath, keyName, acceptText);
                                     return true;
                                 }
                                 isDownloadCommand.store(false, release);
@@ -5911,7 +5970,7 @@ bool drawCommandsMenu(
                         const bool hasToggleState = !toggleStateMode.empty();
                         toggleListItem->setStateChangedListener([i, usingProgress, toggleListItem, commandsOn, commandsOff, keyName = originalOptionName, packagePath, packageConfigIniPath,
                             pathPatternOn, pathPatternOff, isHold, commandMode, hasToggleState,
-                            list, warningText, warningOnText, warningOffText](bool state) {
+                            list, warningText, warningOnText, warningOffText, acceptText](bool state) {
                             if (runningInterpreter.load(std::memory_order_acquire)) {
                                 return;
                             }
@@ -5939,7 +5998,7 @@ bool drawCommandsMenu(
 
                                 WarningConfirm::expand(
                                     list, toggleListItem, directionalWarning,
-                                    std::move(warnCmds), packagePath, keyName,
+                                    std::move(warnCmds), packagePath, keyName, acceptText,
                                     [capturedToggle, targetState, noConfigPath,
                                      capturedConfigPath, capturedKeyName]() {
                                         capturedToggle->setState(targetState);
