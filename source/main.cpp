@@ -827,16 +827,22 @@ namespace WarningConfirm {
             const u8 aFinal = static_cast<u8>((static_cast<u32>(c.a) * alphaScale) / 0xF);
             const tsl::Color tint(c.r, c.g, c.b, aFinal);
 
-            // Strip is full-height of the Accept row so it visually joins the
-            // banner's strip above with no gap.  ListItem::layout() shifts
-            // its own X by +3 relative to its parent List (libtesla
-            // internals at tesla.hpp:7390), while the banner CustomDrawer
-            // sits at the raw List X.  Subtract 3 here so the banner strip
-            // and Accept strip share the exact same screen X.
+            // Strip joins the banner's strip above with no gap at the top,
+            // and skips the bottom 6 px so the focus-border halo of the next
+            // item below (libtesla's top halo for a focused item extends 5
+            // px UP, plus 1 px offset) isn't covered when the user navigates
+            // to that item with the warning still open.
+            //
+            // ListItem::layout() shifts its own X by +3 relative to its
+            // parent List (libtesla internals at tesla.hpp:7390), while the
+            // banner CustomDrawer sits at the raw List X.  Subtract 3 here
+            // so the banner strip and Accept strip share the exact same
+            // screen X.
             constexpr s32 LIST_ITEM_X_OFFSET = 3;
+            constexpr s32 HALO_EXTENT_PX     = 6;
             const s32 ax = this->getX() + BANNER_INDENT_PX - LIST_ITEM_X_OFFSET;
             const s32 ay = this->getY();
-            const s32 ah = static_cast<s32>(this->getHeight());
+            const s32 ah = static_cast<s32>(this->getHeight()) - HALO_EXTENT_PX;
             r->drawRect(ax, ay, ACCENT_WIDTH_PX, ah, tint);
         }
     };
@@ -1104,9 +1110,16 @@ namespace WarningConfirm {
                 // Indent banner content noticeably relative to source-item left edge
                 // so banner+Accept visually nest under the originating item.
                 const s32 accentX = x + BANNER_INDENT_PX;
-                // Full-height strip so the banner and Accept accent strips join
-                // visually into one continuous vertical line.
-                r->drawRect(accentX, y, ACCENT_WIDTH_PX, h, fade(accentColor));
+                // Banner strip skips its top 6 px so the focus-border halo of
+                // the source item above (libtesla draws its bottom halo at
+                // source.y + source.h + 1, height 5) is not painted over by
+                // the strip when the source is currently focused.  Items render
+                // in list order, so the strip would otherwise be drawn AFTER
+                // (= on top of) the source's halo and visually mask it.
+                constexpr s32 HALO_EXTENT_PX = 6;
+                r->drawRect(accentX, y + HALO_EXTENT_PX,
+                            ACCENT_WIDTH_PX, h - HALO_EXTENT_PX,
+                            fade(accentColor));
 
                 // Icon glyph next to the accent strip.  All shapes drawn via
                 // drawRect / drawLine / drawCircle so we don't depend on the
