@@ -1326,7 +1326,7 @@ static bool buildTableDrawerLines(
                 }
                 else {
                     if (!cmd[0].empty() && cmd[0][0] == ';') continue;
-                    if (cmd[0].empty() && cmd.size() > 1) {
+                    if (cmd[0].empty() && cmd.size() > 2) {
                         // {json(...)} prefix resolved to "" — shift: cmd[1]→col1, cmd[2]→col2
                         baseSection.push_back(getTranslated(cmd[1]));
                         baseInfo.push_back(getTranslated(cmd.size() > 2 ? cmd[2] : ""));
