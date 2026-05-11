@@ -59,6 +59,7 @@ static char hosVersion[12];
 static std::string memoryVendor = UNAVAILABLE_SELECTION;
 static std::string memoryModel = UNAVAILABLE_SELECTION;
 static std::string memorySize = UNAVAILABLE_SELECTION;
+static std::string hekateVersion = UNAVAILABLE_SELECTION;
 static uint32_t cpuSpeedo0, cpuSpeedo2, socSpeedo0; // CPU, GPU, SOC
 static uint32_t cpuIDDQ, gpuIDDQ, socIDDQ;
 static bool usingEmunand = true;
@@ -655,6 +656,11 @@ void unpackDeviceInfo() {
 
     splGetConfig((SplConfigItem)65007, &packed_version);
     usingEmunand = (packed_version != 0);
+
+    // Cache hekate version once at startup (extractVersionFromBinary reads the entire binary)
+    const std::string _hekateVer = extractVersionFromBinary("sdmc:/bootloader/update.bin");
+    hekateVersion = _hekateVer.empty() ? UNAVAILABLE_SELECTION : _hekateVer;
+
     fuseDumpToIni();
     
     if (isFile(FUSE_DATA_INI_PATH)) {
@@ -1319,8 +1325,15 @@ static bool buildTableDrawerLines(
                     preprocessPath(hexPath, packagePath);
                 }
                 else {
-                    baseSection.push_back(getTranslated(cmd[0]));
-                    baseInfo.push_back(getTranslated(cmd.size() > 1 ? cmd[1] : ""));
+                    if (!cmd[0].empty() && cmd[0][0] == ';') continue;
+                    if (cmd[0].empty() && cmd.size() > 1) {
+                        // {json(...)} prefix resolved to "" — shift: cmd[1]→col1, cmd[2]→col2
+                        baseSection.push_back(getTranslated(cmd[1]));
+                        baseInfo.push_back(getTranslated(cmd.size() > 2 ? cmd[2] : ""));
+                    } else {
+                        baseSection.push_back(getTranslated(cmd[0]));
+                        baseInfo.push_back(getTranslated(cmd.size() > 1 ? cmd[1] : ""));
+                    }
                 }
             }
         }
@@ -2893,6 +2906,8 @@ void updateGeneralPlaceholders() {
         {"{ram_model}", memoryModel},
         {"{ams_version}", amsVersion},
         {"{hos_version}", hosVersion},
+        {"{hekate_version}", hekateVersion},
+        {"{ultrahand_version}", APP_VERSION},
         {"{package_version}", packageRootLayerVersion},
         {"{cpu_speedo}", ult::to_string(cpuSpeedo0)},
         {"{cpu_iddq}", ult::to_string(cpuIDDQ)},
@@ -3100,6 +3115,15 @@ bool applyPlaceholderReplacements(std::vector<std::string>& cmd, const std::stri
         }},
         {"{math(", [&](const std::string& placeholder) { return handleMath(placeholder); }},
         {"{length(", [&](const std::string& placeholder) { return handleLength(placeholder); }},
+        {"{ovl_version(", [&](const std::string& placeholder) {
+            std::string ovlPath;
+            if (!getPlaceholderContent(placeholder, ovlPath)) return NULL_STR;
+            removeQuotes(ovlPath);
+            trim(ovlPath);
+            if (ovlPath.empty()) return NULL_STR;
+            const auto& [result, _ovlName, version, _lib, _ams] = getOverlayInfo(ovlPath);
+            return result != ResultSuccess ? NULL_STR : returnOrNull(version);
+        }},
     };
 
     updateGeneralPlaceholders();
@@ -3556,6 +3580,28 @@ void handleMakeDirCommand(const std::vector<std::string>& cmd, const std::string
     }
 }
 
+// If destPath exactly matches a PROTECTED_FILES entry, redirects it to destPath + ".ultra"
+// BEFORE the operation so the live file is never touched.
+// For directory destinations (unzip, dir copy), renames any protected file that landed
+// at its exact path after the operation.
+static inline void redirectIfProtected(std::string& destPath) {
+    for (const std::string& file : PROTECTED_FILES) {
+        if (destPath == file) {
+            destPath += ".ultra";
+            return;
+        }
+    }
+}
+
+static inline void stageProtectedFromDir(const std::string& destPath) {
+    if (destPath.empty() || destPath.back() != '/') return;
+    for (const std::string& file : PROTECTED_FILES) {
+        if (file.compare(0, destPath.size(), destPath) == 0 && isFile(file)) {
+            rename(file.c_str(), (file + ".ultra").c_str());
+        }
+    }
+}
+
 void handleCopyCommand(const std::vector<std::string>& cmd, const std::string& packagePath) {
     // Declare only the strings we always need
     std::string sourceListPath, destinationListPath, logSource, logDestination, sourcePath, destinationPath, copyFilterListPath, filterListPath;
@@ -3587,6 +3633,7 @@ void handleCopyCommand(const std::vector<std::string>& cmd, const std::string& p
             const bool shouldCopy = !filterSet || filterSet->find(sourcePath) == filterSet->end();
             
             if (shouldCopy) {
+                redirectIfProtected(destinationPath);
                 const long long totalSize = getTotalSize(sourcePath);
                 long long totalBytesCopied = 0;
                 copyFileOrDirectory(sourcePath, destinationPath, &totalBytesCopied, totalSize);
@@ -3617,7 +3664,9 @@ void handleCopyCommand(const std::vector<std::string>& cmd, const std::string& p
                 filterSet = std::make_unique<std::unordered_set<std::string>>(readSetFromFile(filterListPath, packagePath));
             }
             copyFileOrDirectoryByPattern(sourcePath, destinationPath, logSource, logDestination, filterSet.get());
+            stageProtectedFromDir(destinationPath);
         } else {
+            redirectIfProtected(destinationPath);
             const long long totalSize = getTotalSize(sourcePath);
             long long totalBytesCopied = 0;
             copyFileOrDirectory(sourcePath, destinationPath, &totalBytesCopied, totalSize, logSource, logDestination);
@@ -3813,10 +3862,12 @@ void handleMoveCommand(const std::vector<std::string>& cmd, const std::string& p
                     const bool shouldCopy = copyFilterSet && copyFilterSet->find(sourcePath) != copyFilterSet->end();
                     
                     if (shouldCopy) {
+                        redirectIfProtected(destinationPath);
                         const long long totalSize = getTotalSize(sourcePath);
                         long long totalBytesCopied = 0;
                         copyFileOrDirectory(sourcePath, destinationPath, &totalBytesCopied, totalSize);
                     } else {
+                        redirectIfProtected(destinationPath);
                         moveFileOrDirectory(sourcePath, destinationPath, logSource, logDestination);
                     }
                 } else {
@@ -3859,9 +3910,10 @@ void handleMoveCommand(const std::vector<std::string>& cmd, const std::string& p
             if (!filterListPath.empty()) {
                 filterSet = std::make_unique<std::unordered_set<std::string>>(readSetFromFile(filterListPath, packagePath));
             }
-            
             moveFilesOrDirectoriesByPattern(sourcePath, destinationPath, logSource, logDestination, filterSet.get());
+            stageProtectedFromDir(destinationPath);
         } else {
+            redirectIfProtected(destinationPath);
             moveFileOrDirectory(sourcePath, destinationPath, logSource, logDestination);
         }
     }
@@ -4232,11 +4284,15 @@ void processCommand(const std::vector<std::string>& cmd, const std::string& pack
                         std::string iniPath = secondArg;
                         preprocessPath(iniPath, packagePath);
                         
+                        const size_t lastSlash = iniPath.find_last_of('/');
+                        const std::string iniPackagePath = (lastSlash != std::string::npos)
+                            ? iniPath.substr(0, lastSlash + 1) : packagePath;
+                        
                         bool resetCommandSuccess = false;
                         if (!commandSuccess.load(std::memory_order_acquire))
                             resetCommandSuccess = true;
                         
-                        executeIniCommands(iniPath, sectionName, packagePath);
+                        executeIniCommands(iniPath, sectionName, iniPackagePath);
                         
                         if (resetCommandSuccess)
                             setCommandFailed();

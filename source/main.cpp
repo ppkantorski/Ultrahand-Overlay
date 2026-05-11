@@ -5616,7 +5616,7 @@ public:
     ~PackageMenu() {
         //std::lock_guard<std::mutex> lock(transitionMutex);
 
-        if (returningToMain || returningToHiddenMain) {
+        if (returningToMain || returningToHiddenMain || pendingExitPackage.load(std::memory_order_acquire)) {
             lastOpenPackagePath.clear();  // no longer in a package
             tsl::clearGlyphCacheNow.store(true, release);
             clearMemory();
@@ -7534,8 +7534,9 @@ public:
     virtual void exitServices() override {
         closeInterpreterThread(); // just in case ¯\_(ツ)_/¯
 
-        if (exitingUltrahand.load(acquire) && !reloadingBoot)
+        if ((exitingUltrahand.load(acquire) || pendingExitPackage.load(acquire)) && !reloadingBoot)
             executeIniCommands(PACKAGE_PATH + EXIT_PACKAGE_FILENAME, "exit");
+        pendingExitPackage.store(false, std::memory_order_release); // consumed
 
         curl_global_cleanup(); // safe cleanup
     }
