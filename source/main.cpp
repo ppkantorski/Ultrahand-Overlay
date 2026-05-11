@@ -634,11 +634,13 @@ static void handleTriggerExit() {
 namespace WarningConfirm {
     bool isActive();
     bool isCollapsing();   // true while the fade-out animation is in progress
+    bool isSettling();     // true during the brief post-collapse settling window
     void collapse(bool animate = true);  // full reset; B-cancel animates, single-active replace skips
     void collapseUI();         // UI-only; safe to call after a successful Accept-hold
     void requestDeferredCollapse();   // mark pending; consumed once interpreter completes
     bool consumeDeferredCollapse();   // returns true once and starts collapse fade-out
     bool tickCollapseAnim();          // per-frame poll: finalizes removal once fade-out elapsed
+    bool tickSettle();                // per-frame poll: re-enables source highlight after settle window
     void requestFocusToAccept();      // mark pending focus transfer to Accept (one-shot)
     bool consumePendingFocusToAccept();   // run the focus transfer once Accept is in m_items
 }
@@ -744,12 +746,23 @@ namespace WarningConfirm {
     inline bool                 g_pendingCollapse = false;  // set by onComplete; consumed after handleInterpreterCompletion finishes
     inline bool                 g_pendingFocusToAccept = false;  // set by expand(); consumed once Accept is live in m_items
     inline u64                  g_collapseStartTick = 0;     // armGetSystemTick() when collapse fade-out began (0 = not collapsing)
+    inline u64                  g_settleStartTick   = 0;     // armGetSystemTick() when post-collapse settling began (0 = not settling)
+    inline tsl::elm::ListItem*  g_settleTarget      = nullptr;  // source item whose focus highlight is suppressed during settle
 
     // Animation timings.  Expand fade-in is read directly inside the banner
     // CustomDrawer lambda; the collapse fade-out is what tickCollapseAnim()
     // measures against to decide when to actually drop banner+Accept.
     constexpr u64               EXPAND_ANIM_NS   = 150ULL * 1000000ULL;  // 150 ms
     constexpr u64               COLLAPSE_ANIM_NS = 220ULL * 1000000ULL;  // 220 ms
+    // After banner+Accept have been removed the List still needs a couple of
+    // frames to clamp m_offset, recompute m_listHeight and run its scroll
+    // animation toward the source item.  During that window we keep the
+    // source's focus highlight invisible -- otherwise the blue ring snaps
+    // onto a row that may itself be sliding to a new position, which the
+    // user perceives as a chaotic flash.  Once the window elapses we toggle
+    // m_focused back on and libtesla animates the ring in via its built-in
+    // pulse + m_clickAnimationProgress reset.
+    constexpr u64               SETTLE_ANIM_NS   = 250ULL * 1000000ULL;  // 250 ms
 
     // Indent shared by the banner accent strip and the Accept-side accent strip.
     // Keep these in sync so the bar is one continuous vertical line across both.
@@ -865,6 +878,13 @@ namespace WarningConfirm {
     // second hold or scroll while items are vanishing.
     inline bool isCollapsing() { return g_collapseStartTick != 0; }
 
+    // True during the brief post-collapse window where banner+Accept are
+    // already gone but the source's highlight is still suppressed to let the
+    // List finish settling its scroll/layout state.  PackageMenu / MainMenu
+    // handleInput overrides treat this exactly like isCollapsing() for the
+    // purposes of swallowing input.
+    inline bool isSettling()   { return g_settleStartTick   != 0; }
+
     // True iff the currently-active warning was expanded for `item`.  Used by
     // source-item click listeners to implement "press source again to collapse".
     inline bool isActiveFor(tsl::elm::ListItem* item) {
@@ -932,12 +952,56 @@ namespace WarningConfirm {
             if (g_banner)     g_list->removeItem(g_banner);
             if (g_acceptItem) g_list->removeItem(g_acceptItem);
         }
+
+        // Hand off to the post-collapse settling window: the List still has
+        // a couple of frames of work (clamp m_offset, recompute m_listHeight,
+        // run its scroll animation) before the source row is at its final
+        // screen position.  Suppress the source's focus highlight for the
+        // duration of that window so it doesn't snap on while the row is
+        // still sliding.  tickSettle() restores the highlight when the timer
+        // elapses.
+        if (g_sourceItem != nullptr) {
+            g_settleTarget    = g_sourceItem;
+            g_settleStartTick = armGetSystemTick();
+            g_settleTarget->setFocused(false);
+        }
+
         g_banner          = nullptr;
         g_acceptItem      = nullptr;
         g_list            = nullptr;
         g_sourceItem      = nullptr;
         g_pendingCollapse = false;
         g_collapseStartTick = 0;
+    }
+
+    // Per-frame poll: once the post-collapse settling window has elapsed,
+    // re-enable the source item's focus highlight.  Setting m_focused=true
+    // via setFocused() also resets m_clickAnimationProgress, which is what
+    // libtesla's drawHighlight uses to animate the ring fade-in -- so the
+    // highlight reappears smoothly rather than popping on.
+    inline bool tickSettle() {
+        if (g_settleStartTick == 0) return false;
+        const u64 elapsedNs = armTicksToNs(armGetSystemTick() - g_settleStartTick);
+        if (elapsedNs >= SETTLE_ANIM_NS) {
+            if (g_settleTarget != nullptr) {
+                // Only restore the highlight on the settle target if Gui's
+                // focused element is still the same item.  If the player has
+                // navigated away during the settle window (or a new warning
+                // has grabbed focus through expand()), some OTHER element
+                // already has m_focused=true and is drawing its own ring; we
+                // must NOT also flip the settle target's flag on, otherwise
+                // two highlights paint on screen simultaneously.
+                auto* tslOverlay = tsl::Overlay::get();
+                auto* gui = (tslOverlay != nullptr) ? tslOverlay->getCurrentGui().get() : nullptr;
+                if (gui != nullptr && gui->getFocusedElement() == g_settleTarget) {
+                    g_settleTarget->setFocused(true);
+                }
+            }
+            g_settleTarget    = nullptr;
+            g_settleStartTick = 0;
+            return true;
+        }
+        return false;
     }
 
     // Forward decls needed below.
@@ -1069,6 +1133,15 @@ namespace WarningConfirm {
         // Use immediate (non-animated) collapse so the new banner doesn't visually
         // overlap with a fading old one.
         if (isActive()) collapse(false);
+
+        // After single-active-rule replacement, collapseUI started a settle
+        // window targeting the OLD source.  We're about to install a brand
+        // new banner+Accept whose focus path is independent, so clear that
+        // pending settle now -- otherwise tickSettle could 250 ms from now
+        // call setFocused(true) on the old source while the new Accept is
+        // the actual focused element, painting two highlights on screen.
+        g_settleStartTick = 0;
+        g_settleTarget    = nullptr;
 
         const s32 sourceIdx = list->getIndexInList(sourceItem);
         if (sourceIdx < 0) return;
@@ -6653,10 +6726,16 @@ public:
         // Per-frame poll: once the collapse fade-out has elapsed, actually drop
         // banner+Accept from the list.
         WarningConfirm::tickCollapseAnim();
+        // Per-frame poll: once banner+Accept are gone and the List has had
+        // a couple of frames to settle, re-enable the source's focus highlight.
+        WarningConfirm::tickSettle();
 
         // While the collapse fade-out is in progress, swallow all input so
         // the user can't trigger a second hold, scroll, or B-cancel while
-        // banner+Accept are still alive but fading.
+        // banner+Accept are still alive but fading.  The subsequent settle
+        // window is purely visual (source highlight suppressed) and stays
+        // input-responsive: tickSettle() checks Gui's focused element before
+        // restoring m_focused, so navigation away during settle is safe.
         if (WarningConfirm::isCollapsing()) return true;
 
         if (handleCommandHold(keysDown, keysHeld, packagePath)) return true;
@@ -7857,10 +7936,16 @@ public:
         // Per-frame poll: once the collapse fade-out has elapsed, actually drop
         // banner+Accept from the list.
         WarningConfirm::tickCollapseAnim();
+        // Per-frame poll: once banner+Accept are gone and the List has had
+        // a couple of frames to settle, re-enable the source's focus highlight.
+        WarningConfirm::tickSettle();
 
         // While the collapse fade-out is in progress, swallow all input so
         // the user can't trigger a second hold, scroll, or B-cancel while
-        // banner+Accept are still alive but fading.
+        // banner+Accept are still alive but fading.  The subsequent settle
+        // window is purely visual (source highlight suppressed) and stays
+        // input-responsive: tickSettle() checks Gui's focused element before
+        // restoring m_focused, so navigation away during settle is safe.
         if (WarningConfirm::isCollapsing()) return true;
 
         if (handleCommandHold(keysDown, keysHeld, PACKAGE_PATH)) return true;
