@@ -826,21 +826,13 @@ namespace WarningConfirm {
             const u8 aFinal = static_cast<u8>((static_cast<u32>(c.a) * alphaScale) / 0xF);
             const tsl::Color tint(c.r, c.g, c.b, aFinal);
 
-            // Match the banner's accent strip exactly.  ListItem internally
-            // pads its left content edge by 4 px; we offset relative to that
-            // same anchor so the strip on banner and Accept share one X.
+            // Strip is full-height of the Accept row so it visually joins the
+            // banner's strip above with no gap (banner uses the same indent +
+            // width and its strip also covers the full row).
             const s32 ax = this->getX() + BANNER_INDENT_PX;
-            const s32 ay = this->getY() + 4;
-            const s32 ah = static_cast<s32>(this->getHeight()) - 8;
+            const s32 ay = this->getY();
+            const s32 ah = static_cast<s32>(this->getHeight());
             r->drawRect(ax, ay, ACCENT_WIDTH_PX, ah, tint);
-
-            // DEBUG-VISIBILITY: 6px-tall bright-magenta probe along the very
-            // top of the Accept row.  If this is visible, the WarningAccept
-            // ListItem override is definitely being called.  If it's NOT
-            // visible, the override never runs (build stale or vtable issue).
-            r->drawRect(this->getX() + 4, this->getY() + 1,
-                        this->getWidth() - 8, 6,
-                        tsl::Color(0xF, 0x0, 0xF, 0xF));
         }
     };
 
@@ -1059,19 +1051,7 @@ namespace WarningConfirm {
         // Resolve runtime-overridable accent color + icon shape.  parseHexColor()
         // falls back to the default warning yellow on parse error; parseIconKind()
         // falls back to Triangle on unknown/empty.
-        // DEBUG: write to a fixed, package-independent path so the user
-        // doesn't have to guess where ult::logMessage routed the line.
-        {
-            FILE* dbg = std::fopen("sdmc:/config/wc-debug.log", "a");
-            if (dbg != nullptr) {
-                std::fprintf(dbg, "[WC] expand accentHex='%s' iconName='%s' keyName='%s'\n",
-                             accentHex.c_str(), iconName.c_str(), keyName.c_str());
-                std::fclose(dbg);
-            }
-        }
-        // DEBUG-FRESHNESS: fallback intentionally bright cyan so we can
-        // visually distinguish 'parse failed/empty' from theme red/yellow.
-        const tsl::Color accentColor = parseHexColor(accentHex, tsl::Color(0x0, 0xF, 0xF, 0xF));
+        const tsl::Color accentColor = parseHexColor(accentHex, tsl::warningTextColor);
         const IconKind   iconKind    = parseIconKind(iconName);
         g_accentColor = accentColor;  // shared with WarningAcceptListItem::draw()
 
@@ -1101,7 +1081,9 @@ namespace WarningConfirm {
                 // Indent banner content noticeably relative to source-item left edge
                 // so banner+Accept visually nest under the originating item.
                 const s32 accentX = x + BANNER_INDENT_PX;
-                r->drawRect(accentX, y + 4, ACCENT_WIDTH_PX, h - 8, fade(accentColor));
+                // Full-height strip so the banner and Accept accent strips join
+                // visually into one continuous vertical line.
+                r->drawRect(accentX, y, ACCENT_WIDTH_PX, h, fade(accentColor));
 
                 // Icon glyph next to the accent strip.  All shapes drawn via
                 // drawRect / drawLine / drawCircle so we don't depend on the
@@ -5503,26 +5485,11 @@ bool drawCommandsMenu(
                                 break;
                                 
                             case 'w':
-                                // DEBUG: trace every ;w... directive we see to confirm we reach this case.
-                                {
-                                    FILE* dbg = std::fopen("sdmc:/config/wc-debug.log", "a");
-                                    if (dbg != nullptr) {
-                                        std::fprintf(dbg, "[WC] parse 'w' commandName='%s'\n", commandName.c_str());
-                                        std::fclose(dbg);
-                                    }
-                                }
                                 // Warning patterns must be checked _COLOR / _ICON / _OFF / _ON before plain to avoid prefix collision.
                                 if (commandName.size() > WARNING_COLOR_PATTERN_LEN &&
                                     commandName.compare(0, WARNING_COLOR_PATTERN_LEN, WARNING_COLOR_PATTERN) == 0) {
                                     warningColorHex = commandName.substr(WARNING_COLOR_PATTERN_LEN);
                                     removeQuotes(warningColorHex);
-                                    {
-                                        FILE* dbg = std::fopen("sdmc:/config/wc-debug.log", "a");
-                                        if (dbg != nullptr) {
-                                            std::fprintf(dbg, "[WC] matched warning_color='%s'\n", warningColorHex.c_str());
-                                            std::fclose(dbg);
-                                        }
-                                    }
                                     continue;
                                 }
                                 if (commandName.size() > WARNING_ICON_PATTERN_LEN &&
