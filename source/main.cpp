@@ -809,6 +809,16 @@ namespace WarningConfirm {
         virtual void draw(tsl::gfx::Renderer* r) override {
             tsl::elm::ListItem::draw(r);
 
+            // Erase the top separator (libtesla draws a 1 px line at topBound
+            // in ListItem::draw -- tesla.hpp:7350).  We want banner + Accept
+            // to look like one continuous panel, so overwrite the line with
+            // the overlay's default background color.  Done before the accent
+            // strip so the strip itself, drawn next, sits on top of the
+            // erased pixel.
+            r->drawRect(this->getX() + 4, this->getY(),
+                        this->getWidth() + 10, 1,
+                        a(tsl::defaultBackgroundColor));
+
             // Compute the same alpha factor as the banner so both fade in / out
             // together.
             const u64 nowTick = armGetSystemTick();
