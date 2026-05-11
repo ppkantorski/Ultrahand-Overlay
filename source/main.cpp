@@ -824,7 +824,7 @@ namespace WarningConfirm {
     // then either animates the UI fade-out (default) or drops it immediately
     // (used by single-active-rule replacement so the new banner doesn't visually
     // overlap with a fading old one).
-    inline void collapse(bool animate = true) {
+    inline void collapse(bool animate) {
         if (lastSelectedListItem == g_acceptItem && g_acceptItem != nullptr) {
             lastCommandIsHold = false;
             displayPercentage.store(0, std::memory_order_release);
