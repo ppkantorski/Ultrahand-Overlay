@@ -102,6 +102,8 @@ constexpr std::string_view HOLD_SECONDS_PATTERN = ";hold_seconds=";
 constexpr std::string_view WARNING_PATTERN = ";warning=";
 constexpr std::string_view WARNING_ON_PATTERN = ";warning_on=";
 constexpr std::string_view WARNING_OFF_PATTERN = ";warning_off=";
+constexpr std::string_view WARNING_COLOR_PATTERN = ";warning_color=";
+constexpr std::string_view WARNING_ICON_PATTERN  = ";warning_icon=";
 constexpr std::string_view ACCEPT_PATTERN = ";accept=";
 
 constexpr std::string_view MINI_PATTERN = ";mini=";
@@ -150,6 +152,8 @@ constexpr size_t HOLD_SECONDS_PATTERN_LEN = HOLD_SECONDS_PATTERN.size();
 constexpr size_t WARNING_PATTERN_LEN = WARNING_PATTERN.size();
 constexpr size_t WARNING_ON_PATTERN_LEN = WARNING_ON_PATTERN.size();
 constexpr size_t WARNING_OFF_PATTERN_LEN = WARNING_OFF_PATTERN.size();
+constexpr size_t WARNING_COLOR_PATTERN_LEN = WARNING_COLOR_PATTERN.size();
+constexpr size_t WARNING_ICON_PATTERN_LEN  = WARNING_ICON_PATTERN.size();
 constexpr size_t ACCEPT_PATTERN_LEN = ACCEPT_PATTERN.size();
 constexpr size_t MINI_PATTERN_LEN = MINI_PATTERN.size();
 constexpr size_t SELECTION_MINI_PATTERN_LEN = SELECTION_MINI_PATTERN.size();
@@ -746,6 +750,88 @@ namespace WarningConfirm {
     constexpr u64               EXPAND_ANIM_NS   = 150ULL * 1000000ULL;  // 150 ms
     constexpr u64               COLLAPSE_ANIM_NS = 220ULL * 1000000ULL;  // 220 ms
 
+    // Indent shared by the banner accent strip and the Accept-side accent strip.
+    // Keep these in sync so the bar is one continuous vertical line across both.
+    constexpr s32               BANNER_INDENT_PX = 36;
+    constexpr s32               ACCENT_WIDTH_PX  = 4;
+
+    // Builtin icon shapes drawn next to the warning text.  All are rendered
+    // via drawRect / drawLine / drawCircle so they don't depend on font glyph
+    // tables (which lack U+26A0 etc on the bundled system font).
+    enum class IconKind { Triangle, Info, Error, None };
+
+    inline IconKind parseIconKind(const std::string& s) {
+        if (s.empty())                             return IconKind::Triangle;
+        if (s == "triangle" || s == "warning")     return IconKind::Triangle;
+        if (s == "info"     || s == "i")           return IconKind::Info;
+        if (s == "error"    || s == "x" || s == "danger") return IconKind::Error;
+        if (s == "none"     || s == "off")         return IconKind::None;
+        return IconKind::Triangle;
+    }
+
+    // Parse a "#RRGGBB" / "RRGGBB" hex string into a 4-bit-per-channel tsl::Color.
+    // Falls back to `fallback` on any parse error (wrong length, non-hex char).
+    inline tsl::Color parseHexColor(const std::string& hexIn, tsl::Color fallback) {
+        std::string s = hexIn;
+        if (!s.empty() && s.front() == '#') s.erase(0, 1);
+        if (s.size() != 6) return fallback;
+        auto h = [](char c) -> int {
+            if (c >= '0' && c <= '9') return c - '0';
+            if (c >= 'a' && c <= 'f') return c - 'a' + 10;
+            if (c >= 'A' && c <= 'F') return c - 'A' + 10;
+            return -1;
+        };
+        const int r8 = h(s[0]) * 16 + h(s[1]);
+        const int g8 = h(s[2]) * 16 + h(s[3]);
+        const int b8 = h(s[4]) * 16 + h(s[5]);
+        if (r8 < 0 || g8 < 0 || b8 < 0) return fallback;
+        return tsl::Color(static_cast<u8>(r8 >> 4),
+                          static_cast<u8>(g8 >> 4),
+                          static_cast<u8>(b8 >> 4),
+                          0xF);
+    }
+
+    // The currently-active warning's accent color, exposed at namespace scope
+    // so the WarningAcceptListItem subclass can read it from its draw() override.
+    // Updated in expand() and read each frame.
+    inline tsl::Color           g_accentColor = tsl::warningTextColor;
+
+    // ListItem subclass that overlays the same vertical accent strip used by
+    // the banner above it, so banner+Accept appear as one connected panel.
+    class WarningAcceptListItem : public tsl::elm::ListItem {
+    public:
+        using tsl::elm::ListItem::ListItem;
+
+        u64 m_expandStartTick = 0;
+
+        virtual void draw(tsl::gfx::Renderer* r) override {
+            tsl::elm::ListItem::draw(r);
+
+            // Compute the same alpha factor as the banner so both fade in / out
+            // together.
+            const u64 nowTick = armGetSystemTick();
+            const u64 elapsedInNs = armTicksToNs(nowTick - m_expandStartTick);
+            float alpha = (elapsedInNs >= EXPAND_ANIM_NS) ? 1.0f
+                                                          : (static_cast<float>(elapsedInNs) / static_cast<float>(EXPAND_ANIM_NS));
+            if (g_collapseStartTick != 0) {
+                const u64 elapsedOutNs = armTicksToNs(nowTick - g_collapseStartTick);
+                const float tout = (elapsedOutNs >= COLLAPSE_ANIM_NS) ? 1.0f
+                                                                      : (static_cast<float>(elapsedOutNs) / static_cast<float>(COLLAPSE_ANIM_NS));
+                alpha *= (1.0f - tout);
+            }
+            if (alpha < 0.0f) alpha = 0.0f;
+            const u8 alphaScale = static_cast<u8>(0xF * alpha);
+            const tsl::Color& c = g_accentColor;
+            const u8 aFinal = static_cast<u8>((static_cast<u32>(c.a) * alphaScale) / 0xF);
+            const tsl::Color tint(c.r, c.g, c.b, aFinal);
+
+            const s32 ax = this->getX() + BANNER_INDENT_PX;
+            const s32 ay = this->getY() + 4;
+            const s32 ah = static_cast<s32>(this->getHeight()) - 8;
+            r->drawRect(ax, ay, ACCENT_WIDTH_PX, ah, tint);
+        }
+    };
+
     inline bool isActive() { return g_acceptItem != nullptr; }
 
     // Decode `\n` escape sequences in-place so package authors can write
@@ -924,7 +1010,9 @@ namespace WarningConfirm {
                        const std::string& keyName,
                        const std::string& acceptText = std::string(),
                        std::function<void()> onConfirmExtra = nullptr,
-                       u64 holdMsOverride = 0) {
+                       u64 holdMsOverride = 0,
+                       const std::string& accentHex = std::string(),
+                       const std::string& iconName  = std::string()) {
         if (list == nullptr || sourceItem == nullptr || warningText.empty())
             return;
 
@@ -949,9 +1037,17 @@ namespace WarningConfirm {
 
         std::string textCopy = warningText;
         const u64 expandStartTick = armGetSystemTick();
+
+        // Resolve runtime-overridable accent color + icon shape.  parseHexColor()
+        // falls back to the default warning yellow on parse error; parseIconKind()
+        // falls back to Triangle on unknown/empty.
+        const tsl::Color accentColor = parseHexColor(accentHex, tsl::warningTextColor);
+        const IconKind   iconKind    = parseIconKind(iconName);
+        g_accentColor = accentColor;  // shared with WarningAcceptListItem::draw()
+
         auto* banner = new tsl::elm::CustomDrawer(
-            [text = std::move(textCopy), lineHeight, expandStartTick](tsl::gfx::Renderer* r,
-                                                                       s32 x, s32 y, s32 w, s32 h) {
+            [text = std::move(textCopy), lineHeight, expandStartTick, accentColor, iconKind]
+            (tsl::gfx::Renderer* r, s32 x, s32 y, s32 w, s32 h) {
                 // Expand fade-in over ~150 ms, multiplicatively combined with
                 // collapse fade-out over ~220 ms (when active).  This avoids
                 // the previous one-frame snap on dismissal.
@@ -974,38 +1070,56 @@ namespace WarningConfirm {
 
                 // Indent banner content noticeably relative to source-item left edge
                 // so banner+Accept visually nest under the originating item.
-                const s32 indent  = 36;
-                const s32 accentX = x + indent;
-                const s32 accentW = 4;
-                r->drawRect(accentX, y + 4, accentW, h - 8, fade(tsl::warningTextColor));
+                const s32 accentX = x + BANNER_INDENT_PX;
+                r->drawRect(accentX, y + 4, ACCENT_WIDTH_PX, h - 8, fade(accentColor));
 
-                // Custom-drawn yellow warning triangle (filled isosceles, apex up)
-                // followed by a small dark "!" inside.  Avoids relying on the
-                // built-in font containing U+26A0 (which it does not).
+                // Icon glyph next to the accent strip.  All shapes drawn via
+                // drawRect / drawLine / drawCircle so we don't depend on the
+                // bundled font containing U+26A0 etc.
                 const s32 glyphSize = 18;
-                const s32 glyphX    = accentX + accentW + 8;          // left edge of glyph box
+                const s32 glyphX    = accentX + ACCENT_WIDTH_PX + 8;  // left edge of glyph box
                 const s32 glyphY    = y + 6;                          // top edge
-                {
-                    const s32 cx = glyphX + glyphSize / 2;
-                    const s32 apexY = glyphY + 1;
-                    const s32 baseY = glyphY + glyphSize - 1;
-                    const s32 baseHalfW = glyphSize / 2 - 1;
-                    // Filled triangle via horizontal scanlines.
-                    const tsl::Color tri = fade(tsl::warningTextColor);
-                    const s32 height = baseY - apexY;
-                    for (s32 dy = 0; dy <= height; ++dy) {
-                        const s32 halfW = (baseHalfW * dy) / (height == 0 ? 1 : height);
-                        r->drawLine(cx - halfW, apexY + dy, cx + halfW, apexY + dy, tri);
-                    }
-                    // Dark "!" mark inside the triangle (3-pixel-wide vertical stem
-                    // and a 2x2 dot below it).
+                if (iconKind != IconKind::None) {
+                    const s32 cx     = glyphX + glyphSize / 2;
+                    const s32 cy     = glyphY + glyphSize / 2;
+                    const tsl::Color fill = fade(accentColor);
                     const tsl::Color mark = fade(tsl::Color(0x0, 0x0, 0x0, 0xF));
-                    const s32 stemH = std::max<s32>(4, glyphSize / 2 - 4);
-                    const s32 stemTop = apexY + (height / 2) - stemH / 2;
-                    r->drawRect(cx - 1, stemTop, 2, stemH, mark);
-                    r->drawRect(cx - 1, stemTop + stemH + 1, 2, 2, mark);
+
+                    if (iconKind == IconKind::Triangle) {
+                        // Filled isosceles triangle, apex up, with dark "!" inside.
+                        const s32 apexY = glyphY + 1;
+                        const s32 baseY = glyphY + glyphSize - 1;
+                        const s32 baseHalfW = glyphSize / 2 - 1;
+                        const s32 height = baseY - apexY;
+                        for (s32 dy = 0; dy <= height; ++dy) {
+                            const s32 halfW = (baseHalfW * dy) / (height == 0 ? 1 : height);
+                            r->drawLine(cx - halfW, apexY + dy, cx + halfW, apexY + dy, fill);
+                        }
+                        const s32 stemH   = std::max<s32>(4, glyphSize / 2 - 4);
+                        const s32 stemTop = apexY + (height / 2) - stemH / 2;
+                        r->drawRect(cx - 1, stemTop, 2, stemH, mark);
+                        r->drawRect(cx - 1, stemTop + stemH + 1, 2, 2, mark);
+                    } else if (iconKind == IconKind::Info) {
+                        // Filled circle with dark "i" (dot near top + short stem).
+                        r->drawCircle(cx, cy, static_cast<u16>(glyphSize / 2), true, fill);
+                        const s32 dotY = cy - glyphSize / 2 + 3;
+                        r->drawRect(cx - 1, dotY, 2, 2, mark);
+                        const s32 stemTop = dotY + 4;
+                        const s32 stemH   = std::max<s32>(4, glyphSize / 2 - 1);
+                        r->drawRect(cx - 1, stemTop, 2, stemH, mark);
+                    } else if (iconKind == IconKind::Error) {
+                        // Filled circle with dark "X" (two crossed lines).
+                        r->drawCircle(cx, cy, static_cast<u16>(glyphSize / 2), true, fill);
+                        const s32 d = glyphSize / 2 - 3;
+                        r->drawLine(cx - d, cy - d, cx + d, cy + d, mark);
+                        r->drawLine(cx - d, cy - d + 1, cx + d, cy + d + 1, mark);
+                        r->drawLine(cx - d, cy + d, cx + d, cy - d, mark);
+                        r->drawLine(cx - d, cy + d - 1, cx + d, cy - d - 1, mark);
+                    }
                 }
-                const s32 textX  = glyphX + glyphSize + 8;
+                const s32 textX  = (iconKind == IconKind::None)
+                                       ? (accentX + ACCENT_WIDTH_PX + 8)
+                                       : (glyphX + glyphSize + 8);
                 const u32 fontSize = 17;
                 s32 cursor = y + 4 + lineHeight;
 
@@ -1032,7 +1146,8 @@ namespace WarningConfirm {
         // the source item, matching the banner indent below.
         const std::string acceptLabel = std::string("    ")
             + (acceptText.empty() ? std::string("Hold A to confirm") : acceptText);
-        auto* acceptItem = new tsl::elm::ListItem(acceptLabel);
+        auto* acceptItem = new WarningAcceptListItem(acceptLabel);
+        acceptItem->m_expandStartTick = expandStartTick;  // sync fade timing with banner
         acceptItem->enableTouchHolding();
         acceptItem->setValue(HOLD_A_SYMBOL, true);
         acceptItem->disableClickAnimation();
@@ -4740,6 +4855,8 @@ bool drawCommandsMenu(
     std::string warningOnText;
     std::string warningOffText;
     std::string acceptText;  // optional ;accept=TEXT override for hold-A button label
+    std::string warningColorHex;   // optional ;warning_color=#RRGGBB (or RRGGBB) override
+    std::string warningIconName;   // optional ;warning_icon=triangle|info|error|none
 
     std::string commandSystem;
     std::string commandState;
@@ -4860,6 +4977,8 @@ bool drawCommandsMenu(
         warningOnText.clear();
         warningOffText.clear();
         acceptText.clear();
+        warningColorHex.clear();
+        warningIconName.clear();
         commandSystem = DEFAULT_STR;
         commandState = DEFAULT_STR;
         commandHOSFirmware = "";
@@ -5353,7 +5472,19 @@ bool drawCommandsMenu(
                                 break;
                                 
                             case 'w':
-                                // Warning patterns must be checked _OFF / _ON before plain to avoid prefix collision.
+                                // Warning patterns must be checked _COLOR / _ICON / _OFF / _ON before plain to avoid prefix collision.
+                                if (commandName.size() > WARNING_COLOR_PATTERN_LEN &&
+                                    commandName.compare(0, WARNING_COLOR_PATTERN_LEN, WARNING_COLOR_PATTERN) == 0) {
+                                    warningColorHex = commandName.substr(WARNING_COLOR_PATTERN_LEN);
+                                    removeQuotes(warningColorHex);
+                                    continue;
+                                }
+                                if (commandName.size() > WARNING_ICON_PATTERN_LEN &&
+                                    commandName.compare(0, WARNING_ICON_PATTERN_LEN, WARNING_ICON_PATTERN) == 0) {
+                                    warningIconName = commandName.substr(WARNING_ICON_PATTERN_LEN);
+                                    removeQuotes(warningIconName);
+                                    continue;
+                                }
                                 if (commandName.size() >= WARNING_OFF_PATTERN_LEN &&
                                     commandName.compare(0, WARNING_OFF_PATTERN_LEN, WARNING_OFF_PATTERN) == 0) {
                                     warningOffText = commandName.substr(WARNING_OFF_PATTERN_LEN);
@@ -6030,7 +6161,7 @@ bool drawCommandsMenu(
                         }
 
                         listItem->setClickListener([i, commands, keyName = originalOptionName, cleanOptionName, packagePath, packageName,
-                            selectedItem, listItem, list, warningText, acceptText, holdMsOverride, lastPackageHeader, commandMode, footer, isHold, showWidget, commandFooterHighlight, commandFooterHighlightDefined](uint64_t keys) {
+                            selectedItem, listItem, list, warningText, acceptText, holdMsOverride, warningColorHex, warningIconName, lastPackageHeader, commandMode, footer, isHold, showWidget, commandFooterHighlight, commandFooterHighlightDefined](uint64_t keys) {
                             
                             if (runningInterpreter.load(acquire)) {
                                 return false;
@@ -6043,7 +6174,7 @@ bool drawCommandsMenu(
                             if (((keys & KEY_A && !(keys & ~KEY_A & ALL_KEYS_MASK)))) {
                                 if (!warningText.empty()) {
                                     auto warnCmds = getSourceReplacement(commands, selectedItem, i, packagePath);
-                                    WarningConfirm::expand(list, listItem, warningText, std::move(warnCmds), packagePath, keyName, acceptText, nullptr, holdMsOverride);
+                                    WarningConfirm::expand(list, listItem, warningText, std::move(warnCmds), packagePath, keyName, acceptText, nullptr, holdMsOverride, warningColorHex, warningIconName);
                                     return true;
                                 }
                                 isDownloadCommand.store(false, release);
@@ -6145,7 +6276,7 @@ bool drawCommandsMenu(
                         const bool hasToggleState = !toggleStateMode.empty();
                         toggleListItem->setStateChangedListener([i, usingProgress, toggleListItem, commandsOn, commandsOff, keyName = originalOptionName, packagePath, packageConfigIniPath,
                             pathPatternOn, pathPatternOff, isHold, commandMode, hasToggleState,
-                            list, warningText, warningOnText, warningOffText, acceptText, holdMsOverride](bool state) {
+                            list, warningText, warningOnText, warningOffText, acceptText, holdMsOverride, warningColorHex, warningIconName](bool state) {
                             if (runningInterpreter.load(std::memory_order_acquire)) {
                                 return;
                             }
@@ -6182,7 +6313,9 @@ bool drawCommandsMenu(
                                                             targetState ? CAPITAL_ON_STR : CAPITAL_OFF_STR);
                                         }
                                     },
-                                    holdMsOverride);
+                                    holdMsOverride,
+                                    warningColorHex,
+                                    warningIconName);
                                 return;
                             }
 
