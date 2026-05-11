@@ -833,6 +833,14 @@ namespace WarningConfirm {
             const s32 ay = this->getY() + 4;
             const s32 ah = static_cast<s32>(this->getHeight()) - 8;
             r->drawRect(ax, ay, ACCENT_WIDTH_PX, ah, tint);
+
+            // DEBUG-VISIBILITY: 6px-tall bright-magenta probe along the very
+            // top of the Accept row.  If this is visible, the WarningAccept
+            // ListItem override is definitely being called.  If it's NOT
+            // visible, the override never runs (build stale or vtable issue).
+            r->drawRect(this->getX() + 4, this->getY() + 1,
+                        this->getWidth() - 8, 6,
+                        tsl::Color(0xF, 0x0, 0xF, 0xF));
         }
     };
 
@@ -1051,11 +1059,19 @@ namespace WarningConfirm {
         // Resolve runtime-overridable accent color + icon shape.  parseHexColor()
         // falls back to the default warning yellow on parse error; parseIconKind()
         // falls back to Triangle on unknown/empty.
-        // One-shot debug log to /switch/.packages/log.txt so package authors can
-        // confirm parsing of ;warning_color= / ;warning_icon=.
-        ult::logMessage(std::string("[WarningConfirm] expand accentHex='") + accentHex
-                        + "' iconName='" + iconName + "' keyName='" + keyName + "'");
-        const tsl::Color accentColor = parseHexColor(accentHex, tsl::warningTextColor);
+        // DEBUG: write to a fixed, package-independent path so the user
+        // doesn't have to guess where ult::logMessage routed the line.
+        {
+            FILE* dbg = std::fopen("sdmc:/config/wc-debug.log", "a");
+            if (dbg != nullptr) {
+                std::fprintf(dbg, "[WC] expand accentHex='%s' iconName='%s' keyName='%s'\n",
+                             accentHex.c_str(), iconName.c_str(), keyName.c_str());
+                std::fclose(dbg);
+            }
+        }
+        // DEBUG-FRESHNESS: fallback intentionally bright cyan so we can
+        // visually distinguish 'parse failed/empty' from theme red/yellow.
+        const tsl::Color accentColor = parseHexColor(accentHex, tsl::Color(0x0, 0xF, 0xF, 0xF));
         const IconKind   iconKind    = parseIconKind(iconName);
         g_accentColor = accentColor;  // shared with WarningAcceptListItem::draw()
 
@@ -5487,11 +5503,26 @@ bool drawCommandsMenu(
                                 break;
                                 
                             case 'w':
+                                // DEBUG: trace every ;w... directive we see to confirm we reach this case.
+                                {
+                                    FILE* dbg = std::fopen("sdmc:/config/wc-debug.log", "a");
+                                    if (dbg != nullptr) {
+                                        std::fprintf(dbg, "[WC] parse 'w' commandName='%s'\n", commandName.c_str());
+                                        std::fclose(dbg);
+                                    }
+                                }
                                 // Warning patterns must be checked _COLOR / _ICON / _OFF / _ON before plain to avoid prefix collision.
                                 if (commandName.size() > WARNING_COLOR_PATTERN_LEN &&
                                     commandName.compare(0, WARNING_COLOR_PATTERN_LEN, WARNING_COLOR_PATTERN) == 0) {
                                     warningColorHex = commandName.substr(WARNING_COLOR_PATTERN_LEN);
                                     removeQuotes(warningColorHex);
+                                    {
+                                        FILE* dbg = std::fopen("sdmc:/config/wc-debug.log", "a");
+                                        if (dbg != nullptr) {
+                                            std::fprintf(dbg, "[WC] matched warning_color='%s'\n", warningColorHex.c_str());
+                                            std::fclose(dbg);
+                                        }
+                                    }
                                     continue;
                                 }
                                 if (commandName.size() > WARNING_ICON_PATTERN_LEN &&
