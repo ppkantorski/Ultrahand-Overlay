@@ -633,6 +633,7 @@ static void handleTriggerExit() {
 // is defined further down (after the input-helper free functions).
 namespace WarningConfirm {
     bool isActive();
+    bool isCollapsing();   // true while the fade-out animation is in progress
     void collapse(bool animate = true);  // full reset; B-cancel animates, single-active replace skips
     void collapseUI();         // UI-only; safe to call after a successful Accept-hold
     void requestDeferredCollapse();   // mark pending; consumed once interpreter completes
@@ -842,6 +843,12 @@ namespace WarningConfirm {
 
     inline bool isActive() { return g_acceptItem != nullptr; }
 
+    // True while a collapse animation is mid-flight (banner+Accept still in
+    // the list but fading out).  PackageMenu / MainMenu handleInput overrides
+    // swallow all input during this window so the player can't trigger a
+    // second hold or scroll while items are vanishing.
+    inline bool isCollapsing() { return g_collapseStartTick != 0; }
+
     // True iff the currently-active warning was expanded for `item`.  Used by
     // source-item click listeners to implement "press source again to collapse".
     inline bool isActiveFor(tsl::elm::ListItem* item) {
@@ -964,6 +971,18 @@ namespace WarningConfirm {
         if (g_acceptItem == nullptr) return;          // nothing to collapse
         if (g_collapseStartTick != 0)  return;        // already collapsing
         g_collapseStartTick = armGetSystemTick();
+
+        // Hide focus highlight on Accept (and defensively on banner) so the
+        // 220 ms fade-out is visually clean: the user sees banner+Accept
+        // dissolve without a bright focus ring jumping around.  Gui's
+        // m_focusedElement pointer still references Accept here, but its
+        // m_focused flag is false, so Element::frame() skips both
+        // drawFocusBackground() and drawHighlight().  collapseUI() at the end
+        // of the animation will transfer focus to the source item, which sets
+        // setFocused(true) and lets the highlight animate in smoothly on the
+        // original menu row.
+        if (g_acceptItem != nullptr) g_acceptItem->setFocused(false);
+        if (g_banner     != nullptr) g_banner    ->setFocused(false);
     }
 
     // Per-frame poll: once the collapse fade-out has elapsed, actually drop
@@ -6612,6 +6631,11 @@ public:
         // banner+Accept from the list.
         WarningConfirm::tickCollapseAnim();
 
+        // While the collapse fade-out is in progress, swallow all input so
+        // the user can't trigger a second hold, scroll, or B-cancel while
+        // banner+Accept are still alive but fading.
+        if (WarningConfirm::isCollapsing()) return true;
+
         if (handleCommandHold(keysDown, keysHeld, packagePath)) return true;
 
         // B-cancel for an active inline warning panel: collapse banner+Accept and consume B.
@@ -7810,6 +7834,11 @@ public:
         // Per-frame poll: once the collapse fade-out has elapsed, actually drop
         // banner+Accept from the list.
         WarningConfirm::tickCollapseAnim();
+
+        // While the collapse fade-out is in progress, swallow all input so
+        // the user can't trigger a second hold, scroll, or B-cancel while
+        // banner+Accept are still alive but fading.
+        if (WarningConfirm::isCollapsing()) return true;
 
         if (handleCommandHold(keysDown, keysHeld, PACKAGE_PATH)) return true;
 
