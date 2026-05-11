@@ -827,9 +827,13 @@ namespace WarningConfirm {
             const tsl::Color tint(c.r, c.g, c.b, aFinal);
 
             // Strip is full-height of the Accept row so it visually joins the
-            // banner's strip above with no gap (banner uses the same indent +
-            // width and its strip also covers the full row).
-            const s32 ax = this->getX() + BANNER_INDENT_PX;
+            // banner's strip above with no gap.  ListItem::layout() shifts
+            // its own X by +3 relative to its parent List (libtesla
+            // internals at tesla.hpp:7390), while the banner CustomDrawer
+            // sits at the raw List X.  Subtract 3 here so the banner strip
+            // and Accept strip share the exact same screen X.
+            constexpr s32 LIST_ITEM_X_OFFSET = 3;
+            const s32 ax = this->getX() + BANNER_INDENT_PX - LIST_ITEM_X_OFFSET;
             const s32 ay = this->getY();
             const s32 ah = static_cast<s32>(this->getHeight());
             r->drawRect(ax, ay, ACCENT_WIDTH_PX, ah, tint);
