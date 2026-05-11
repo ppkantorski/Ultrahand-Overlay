@@ -802,7 +802,8 @@ namespace WarningConfirm {
     public:
         using tsl::elm::ListItem::ListItem;
 
-        u64 m_expandStartTick = 0;
+        u64        m_expandStartTick = 0;
+        tsl::Color m_accentColor     = tsl::warningTextColor;
 
         virtual void draw(tsl::gfx::Renderer* r) override {
             tsl::elm::ListItem::draw(r);
@@ -821,10 +822,13 @@ namespace WarningConfirm {
             }
             if (alpha < 0.0f) alpha = 0.0f;
             const u8 alphaScale = static_cast<u8>(0xF * alpha);
-            const tsl::Color& c = g_accentColor;
+            const tsl::Color& c = m_accentColor;
             const u8 aFinal = static_cast<u8>((static_cast<u32>(c.a) * alphaScale) / 0xF);
             const tsl::Color tint(c.r, c.g, c.b, aFinal);
 
+            // Match the banner's accent strip exactly.  ListItem internally
+            // pads its left content edge by 4 px; we offset relative to that
+            // same anchor so the strip on banner and Accept share one X.
             const s32 ax = this->getX() + BANNER_INDENT_PX;
             const s32 ay = this->getY() + 4;
             const s32 ah = static_cast<s32>(this->getHeight()) - 8;
@@ -833,6 +837,12 @@ namespace WarningConfirm {
     };
 
     inline bool isActive() { return g_acceptItem != nullptr; }
+
+    // True iff the currently-active warning was expanded for `item`.  Used by
+    // source-item click listeners to implement "press source again to collapse".
+    inline bool isActiveFor(tsl::elm::ListItem* item) {
+        return isActive() && g_sourceItem == item;
+    }
 
     // Decode `\n` escape sequences in-place so package authors can write
     //     ;warning=Line 1\nLine 2
@@ -1041,6 +1051,10 @@ namespace WarningConfirm {
         // Resolve runtime-overridable accent color + icon shape.  parseHexColor()
         // falls back to the default warning yellow on parse error; parseIconKind()
         // falls back to Triangle on unknown/empty.
+        // One-shot debug log to /switch/.packages/log.txt so package authors can
+        // confirm parsing of ;warning_color= / ;warning_icon=.
+        ult::logMessage(std::string("[WarningConfirm] expand accentHex='") + accentHex
+                        + "' iconName='" + iconName + "' keyName='" + keyName + "'");
         const tsl::Color accentColor = parseHexColor(accentHex, tsl::warningTextColor);
         const IconKind   iconKind    = parseIconKind(iconName);
         g_accentColor = accentColor;  // shared with WarningAcceptListItem::draw()
@@ -1148,6 +1162,7 @@ namespace WarningConfirm {
             + (acceptText.empty() ? std::string("Hold A to confirm") : acceptText);
         auto* acceptItem = new WarningAcceptListItem(acceptLabel);
         acceptItem->m_expandStartTick = expandStartTick;  // sync fade timing with banner
+        acceptItem->m_accentColor     = accentColor;      // match banner's accent strip color
         acceptItem->enableTouchHolding();
         acceptItem->setValue(HOLD_A_SYMBOL, true);
         acceptItem->disableClickAnimation();
@@ -6173,6 +6188,11 @@ bool drawCommandsMenu(
 
                             if (((keys & KEY_A && !(keys & ~KEY_A & ALL_KEYS_MASK)))) {
                                 if (!warningText.empty()) {
+                                    // Second press of the same source item collapses the open warning.
+                                    if (WarningConfirm::isActiveFor(listItem)) {
+                                        WarningConfirm::collapse(true);
+                                        return true;
+                                    }
                                     auto warnCmds = getSourceReplacement(commands, selectedItem, i, packagePath);
                                     WarningConfirm::expand(list, listItem, warningText, std::move(warnCmds), packagePath, keyName, acceptText, nullptr, holdMsOverride, warningColorHex, warningIconName);
                                     return true;
@@ -6290,6 +6310,13 @@ bool drawCommandsMenu(
                                 state ? (!warningOnText.empty()  ? warningOnText  : warningText)
                                       : (!warningOffText.empty() ? warningOffText : warningText);
                             if (!directionalWarning.empty()) {
+                                // Second press of the same toggle (while warning is already
+                                // expanded) collapses the warning and reverts the visual flip.
+                                if (WarningConfirm::isActiveFor(toggleListItem)) {
+                                    toggleListItem->setState(!state);  // undo the flip the press just triggered
+                                    WarningConfirm::collapse(true);
+                                    return;
+                                }
                                 // Revert visual; Accept-hold completion will flip it back.
                                 toggleListItem->setState(!state);
 
