@@ -86,10 +86,12 @@ static size_t nestedMenuCount = 0;
 
 // Command mode globals
 static const std::array<std::string_view, 3> commandSystems = {DEFAULT_STR, ERISTA_STR, MARIKO_STR};
+static const std::array<std::string_view, 3> commandRAMSizes = {DEFAULT_STR, "4", "8"};
 static const std::array<std::string_view, 11> commandModes = {DEFAULT_STR, HOLD_STR, SLOT_STR, TOGGLE_STR, OPTION_STR, FORWARDER_STR, TEXT_STR, TABLE_STR, TRACKBAR_STR, STEP_TRACKBAR_STR, NAMED_STEP_TRACKBAR_STR};
 static const std::array<std::string_view, 6> commandGroupings = {DEFAULT_STR, "split", "split2", "split3", "split4", "split5"};
 
 constexpr std::string_view SYSTEM_PATTERN = ";system=";
+constexpr std::string_view RAM_SIZE_GB_PATTERN = ";ram_size_gb=";
 constexpr std::string_view STATE_PATTERN = ";state=";
 constexpr std::string_view HOS_VERSION_PATTERN = ";hos_version=";
 constexpr std::string_view AMS_VERSION_PATTERN = ";ams_version=";
@@ -133,6 +135,7 @@ constexpr std::string_view ON_EVERY_TICK_PATTERN = ";on_every_tick=";
 
 
 constexpr size_t SYSTEM_PATTERN_LEN = SYSTEM_PATTERN.size();
+constexpr size_t RAM_SIZE_GB_PATTERN_LEN = RAM_SIZE_GB_PATTERN.size();
 constexpr size_t STATE_PATTERN_LEN = STATE_PATTERN.size();
 constexpr size_t HOS_VERSION_PATTERN_LEN = HOS_VERSION_PATTERN.size();
 constexpr size_t AMS_VERSION_PATTERN_LEN = AMS_VERSION_PATTERN.size();
@@ -4291,6 +4294,7 @@ bool drawCommandsMenu(
     bool isHold;
 
     std::string commandSystem;
+    std::string commandRAMSize;
     std::string commandState;
     std::string commandHOSFirmware;
     std::string commandAMSFirmware;
@@ -4405,6 +4409,7 @@ bool drawCommandsMenu(
         commandFooterHighlightDefined = false;
         isHold = false;
         commandSystem = DEFAULT_STR;
+        commandRAMSize = DEFAULT_STR;
         commandState = DEFAULT_STR;
         commandHOSFirmware = "";
         commandAMSFirmware = "";
@@ -4857,6 +4862,14 @@ bool drawCommandsMenu(
                                 if (parseBoolFlag(commandName, WRAPPING_INDENT_PATTERN, useWrappingIndent)) continue;
                                 break;
                                 
+                            case 'r':
+                                if (commandName.compare(0, RAM_SIZE_GB_PATTERN_LEN, RAM_SIZE_GB_PATTERN) == 0) {
+                                    commandRAMSize = commandName.substr(RAM_SIZE_GB_PATTERN_LEN);
+                                    if (std::find(commandRAMSizes.begin(), commandRAMSizes.end(), commandRAMSize) == commandRAMSizes.end())
+                                        commandRAMSize = commandRAMSizes[0];
+                                    continue;
+                                }
+                                break;
                             case 'u':
                                 if (commandName.compare(0, UNITS_PATTERN_LEN, UNITS_PATTERN) == 0) {
                                     units = commandName.substr(UNITS_PATTERN_LEN);
@@ -4996,6 +5009,10 @@ bool drawCommandsMenu(
             if (commandSystem == ERISTA_STR && !usingErista) {
                 skipSystem = true;
             } else if (commandSystem == MARIKO_STR && !usingMariko) {
+                skipSystem = true;
+            } else if (commandRAMSize == "4" && is8GBEnabled) {
+                skipSystem = true;
+            } else if (commandRAMSize == "8" && !is8GBEnabled) {
                 skipSystem = true;
             } else if (commandState == DOCKED_STR && !isDocked) {
                 skipSystem = true;

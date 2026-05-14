@@ -60,9 +60,11 @@ static std::string memoryVendor = UNAVAILABLE_SELECTION;
 static std::string memoryModel = UNAVAILABLE_SELECTION;
 static std::string memorySize = UNAVAILABLE_SELECTION;
 static std::string hekateVersion = UNAVAILABLE_SELECTION;
+static std::string ovlloaderVersion = UNAVAILABLE_SELECTION; 
 static uint32_t cpuSpeedo0, cpuSpeedo2, socSpeedo0; // CPU, GPU, SOC
 static uint32_t cpuIDDQ, gpuIDDQ, socIDDQ;
 static bool usingEmunand = true;
+static bool is8GBEnabled = false;
 
 
 // For persistent versions and colors across nested packages (when not specified)
@@ -387,6 +389,15 @@ void writeFuseIni(const std::string& outputPath, const char* data = nullptr) {
             fprintf(outFile, "cpu_iddq=%u\n", *reinterpret_cast<const uint32_t*>(data + FUSE_CPU_IDDQ_CALIB) * 4);
             fprintf(outFile, "soc_iddq=%u\n", *reinterpret_cast<const uint32_t*>(data + FUSE_SOC_IDDQ_CALIB) * 4);
             fprintf(outFile, "gpu_iddq=%u\n", *reinterpret_cast<const uint32_t*>(data + FUSE_GPU_IDDQ_CALIB) * 5);
+            // Detect RAM size at write time and persist it
+            {
+                u64 totalMem = 0;
+                const char* ramSizeGB = "4";
+                if (R_SUCCEEDED(svcGetSystemInfo(&totalMem, 0, INVALID_HANDLE, 0)) &&
+                    totalMem > (6ULL * 1024 * 1024 * 1024))
+                    ramSizeGB = "8";
+                fprintf(outFile, "ram_size_gb=%s\n", ramSizeGB);
+            }
             fputs("disable_reload=false\n", outFile);
         } else {
             // Single fputs call instead of seven separate ones
@@ -396,6 +407,7 @@ void writeFuseIni(const std::string& outputPath, const char* data = nullptr) {
                   "cpu_iddq=\n"
                   "soc_iddq=\n"
                   "gpu_iddq=\n"
+                  "ram_size_gb=\n"
                   "disable_reload=false\n", outFile);
         }
         fclose(outFile);
@@ -661,6 +673,10 @@ void unpackDeviceInfo() {
     const std::string _hekateVer = extractVersionFromBinary("sdmc:/bootloader/update.bin");
     hekateVersion = _hekateVer.empty() ? UNAVAILABLE_SELECTION : _hekateVer;
 
+    // nx-volloader version
+    const std::string _ovlloaderVer = cleanVersionLabel(loaderInfo);
+    ovlloaderVersion = _ovlloaderVer.empty() ? UNAVAILABLE_SELECTION : _ovlloaderVer;
+
     fuseDumpToIni();
     
     if (isFile(FUSE_DATA_INI_PATH)) {
@@ -679,6 +695,17 @@ void unpackDeviceInfo() {
         cpuIDDQ = getValue("cpu_iddq");
         socIDDQ = getValue("soc_iddq");
         gpuIDDQ = getValue("gpu_iddq");
+
+        auto itRamSize = fuseSection.find("ram_size_gb");
+        if (itRamSize != end && !itRamSize->second.empty()) {
+            is8GBEnabled = (itRamSize->second == "8");
+        } else {
+            // Key missing (old fuse file) — detect live and patch the file
+            u64 totalMem = 0;
+            is8GBEnabled = R_SUCCEEDED(svcGetSystemInfo(&totalMem, 0, INVALID_HANDLE, 0)) &&
+                           totalMem > (6ULL * 1024 * 1024 * 1024);
+            setIniFileValue(FUSE_DATA_INI_PATH, FUSE_STR, "ram_size_gb", is8GBEnabled ? "8" : "4");
+        }
     }
 }
 
@@ -2904,9 +2931,11 @@ void updateGeneralPlaceholders() {
     generalPlaceholders = {
         {"{ram_vendor}", memoryVendor},
         {"{ram_model}", memoryModel},
+        {"{ram_size_gb}", is8GBEnabled ? "8" : "4"},
         {"{ams_version}", amsVersion},
         {"{hos_version}", hosVersion},
         {"{hekate_version}", hekateVersion},
+        {"{ovlloader_version}", ovlloaderVersion},
         {"{ultrahand_version}", APP_VERSION},
         {"{package_version}", packageRootLayerVersion},
         {"{cpu_speedo}", ult::to_string(cpuSpeedo0)},
