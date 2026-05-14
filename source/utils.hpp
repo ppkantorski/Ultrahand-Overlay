@@ -4332,14 +4332,19 @@ void processCommand(const std::vector<std::string>& cmd, const std::string& pack
                         ult::launchingOverlay.store(true, std::memory_order_release);
                         tsl::setNextOverlay(OVERLAY_PATH+"ovlmenu.ovl");
                         tsl::Overlay::get()->close(true);
+                    } else if (selection == "package") {
+                        // Bare `exit package`: signal the UI thread to return to the packages menu instantly.
+                        // PackageMenu::handleInput() will drain returnContextStack, identify the
+                        // originating package folder, and swapTo<MainMenu> on the packages tab with
+                        // the cursor positioned on the correct package entry.
+                        triggerReturnToPackages.store(true, std::memory_order_release);
                     }
                     // Unknown arg: no-op (fall through to return)
                 } else {
-                    // Bare `exit`: signal the UI thread to return to the packages menu instantly.
-                    // PackageMenu::handleInput() will drain returnContextStack, identify the
-                    // originating package folder, and swapTo<MainMenu> on the packages tab with
-                    // the cursor positioned on the correct package entry.
-                    triggerReturnToPackages.store(true, std::memory_order_release);
+                    exitingUltrahand.store(true, std::memory_order_release);
+                    ult::launchingOverlay.store(true, std::memory_order_release);
+                    tsl::setNextOverlay(OVERLAY_PATH+"ovlmenu.ovl");
+                    tsl::Overlay::get()->close(true);
                 }
                 return;
             }
