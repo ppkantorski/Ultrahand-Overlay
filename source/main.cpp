@@ -3986,17 +3986,23 @@ public:
                 }
                 
                 // Handle package config footer logic
-                if (commandMode == OPTION_STR && isFile(packageConfigIniPath)) {
-                    const auto packageConfigData = getParsedDataFromIniFile(packageConfigIniPath);
-                    auto it = packageConfigData.find(specificKey);
-                    if (it != packageConfigData.end()) {
-                        auto& optionSection = it->second;
-                        auto footerIt = optionSection.find(FOOTER_STR);
-                        if (footerIt != optionSection.end() && (footerIt->second.find(NULL_STR) == std::string::npos)) {
-                            if (selectedListItem)
-                                selectedListItem->setValue(footerIt->second);
+                if (commandMode == OPTION_STR) {
+                    std::string restoreFooter = OPTION_SYMBOL; // default: never-set indicator
+                    if (isFile(packageConfigIniPath)) {
+                        const auto packageConfigData = getParsedDataFromIniFile(packageConfigIniPath);
+                        auto it = packageConfigData.find(specificKey);
+                        if (it != packageConfigData.end()) {
+                            auto& optionSection = it->second;
+                            auto footerIt = optionSection.find(FOOTER_STR);
+                            if (footerIt != optionSection.end() &&
+                                !footerIt->second.empty() &&
+                                footerIt->second.find(NULL_STR) == std::string::npos) {
+                                restoreFooter = footerIt->second;
+                            }
                         }
                     }
+                    if (selectedListItem)
+                        selectedListItem->setValue(restoreFooter);
                 }
 
                 tsl::goBack();
