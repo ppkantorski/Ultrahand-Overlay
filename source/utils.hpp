@@ -2944,10 +2944,12 @@ bool applyPlaceholderReplacements(std::vector<std::string>& cmd, const std::stri
     
     std::vector<std::pair<std::string, std::function<std::string(const std::string&)>>> placeholders = {
         {"{hex_file(", [&](const std::string& placeholder) { 
+            if (hexPath.empty() || !isFileOrDirectory(hexPath)) return NULL_STR;
             std::string result = replaceHexPlaceholder(placeholder, hexPath);
             return returnOrNull(result);
         }},
         {"{ini_file(", [&](const std::string& placeholder) { 
+            if (iniPath.empty() || !isFileOrDirectory(iniPath)) return NULL_STR;
             std::string result = placeholder;
             applyReplaceIniPlaceholder(result, INI_FILE_STR, iniPath); 
             return result;
@@ -2965,12 +2967,14 @@ bool applyPlaceholderReplacements(std::vector<std::string>& cmd, const std::stri
             std::string indexStr;
             if (!getPlaceholderContent(placeholder, indexStr) || !isValidNumber(indexStr))
                 return NULL_STR;
+            if (listPath.empty() || !isFileOrDirectory(listPath)) return NULL_STR;
             return returnOrNull(getEntryFromListFile(listPath, ult::stoi(indexStr)));
         }},
         {"{json(", [&](const std::string& placeholder) { 
             return replaceJsonPlaceholder(placeholder, JSON_STR, jsonString);
         }},
         {"{json_file(", [&](const std::string& placeholder) { 
+            if (jsonPath.empty() || !isFileOrDirectory(jsonPath)) return NULL_STR;
             return replaceJsonPlaceholder(placeholder, JSON_FILE_STR, jsonPath);
         }},
         {"{timestamp(", [&](const std::string& placeholder) {
@@ -4343,7 +4347,10 @@ void processCommand(const std::vector<std::string>& cmd, const std::string& pack
             break;
             
         case 'f':
-            if (commandName == "flag") {
+            if (commandName == "force_failure") {
+                commandSuccess.store(false, std::memory_order_release);
+                return;
+            } if (commandName == "flag") {
                 if (cmdSize >= 3) {
                     std::string wildcardPattern = cmd[1];
                     preprocessPath(wildcardPattern, packagePath);
