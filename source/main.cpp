@@ -769,6 +769,19 @@ private:
                 if (executingCommands && commandSuccess.load(acquire)) {
                     softwareHasUpdated = true;
                     triggerMenuReload = true;
+
+                    // Handle nx-ovlloader reloading if necessary
+                    const std::string versionBefore = cleanVersionLabel(loaderInfo);
+                    const std::string versionAfter  = cleanVersionLabel(extractVersionFromBinary("/atmosphere/contents/420000000007E51A/exefs.nsp"));
+                    if (!versionAfter.empty() && versionAfter != versionBefore) {
+                        if (requestOverlayReload()) {
+                            exitingUltrahand.store(true, std::memory_order_release);
+                            ult::launchingOverlay.store(true, std::memory_order_release);
+                            tsl::setNextOverlay(OVERLAY_PATH+"ovlmenu.ovl");
+                            tsl::Overlay::get()->close(true);
+                            return true;
+                        }
+                    }
                 }
                 executingCommands = false;
             }

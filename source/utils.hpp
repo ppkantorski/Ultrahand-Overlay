@@ -4319,13 +4319,13 @@ void processCommand(const std::vector<std::string>& cmd, const std::string& pack
                 if (cmdSize >= 2) {
                     // Explicit destination: close overlay and relaunch into the requested tab.
                     const std::string selection = getUnquoted(cmd, 1);
-                    if (selection == "overlays") {
+                    if (selection == "to_overlays") {
                         setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, IN_OVERLAY_STR, TRUE_STR);
                         exitingUltrahand.store(true, std::memory_order_release);
                         ult::launchingOverlay.store(true, std::memory_order_release);
                         tsl::setNextOverlay(OVERLAY_PATH+"ovlmenu.ovl");
                         tsl::Overlay::get()->close(true);
-                    } else if (selection == "packages") {
+                    } else if (selection == "to_packages") {
                         setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "to_packages", TRUE_STR);
                         setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, IN_OVERLAY_STR, TRUE_STR);
                         exitingUltrahand.store(true, std::memory_order_release);
@@ -4338,6 +4338,13 @@ void processCommand(const std::vector<std::string>& cmd, const std::string& pack
                         // originating package folder, and swapTo<MainMenu> on the packages tab with
                         // the cursor positioned on the correct package entry.
                         triggerReturnToPackages.store(true, std::memory_order_release);
+                    } if (selection == "nx-ovlloader") {
+                        if (requestOverlayExit()) {
+                            exitingUltrahand.store(true, std::memory_order_release);
+                            ult::launchingOverlay.store(true, std::memory_order_release);
+                            tsl::setNextOverlay(OVERLAY_PATH+"ovlmenu.ovl");
+                            tsl::Overlay::get()->close(true);
+                        }
                     }
                     // Unknown arg: no-op (fall through to return)
                 } else {
@@ -4618,6 +4625,19 @@ void processCommand(const std::vector<std::string>& cmd, const std::string& pack
                 return;
             }
             if (commandName == "reboot") {
+                if (cmdSize == 2) {
+                    const std::string rebootPattern = getUnquoted(cmd, 1);
+                    if (rebootPattern == "nx-ovlloader") {
+                        if (requestOverlayReload()) {
+                            exitingUltrahand.store(true, std::memory_order_release);
+                            ult::launchingOverlay.store(true, std::memory_order_release);
+                            tsl::setNextOverlay(OVERLAY_PATH+"ovlmenu.ovl");
+                            tsl::Overlay::get()->close(true);
+                        }
+                        return;
+                    }
+                }
+
                 bool launchUpdaterPayload = false;
                 for (const std::string& file : PROTECTED_FILES) {
                     if (isFile(file + ".ultra")) {
@@ -4703,6 +4723,10 @@ void processCommand(const std::vector<std::string>& cmd, const std::string& pack
                 spsmExit();
                 return;
             }
+            else if (commandName == "reload") {
+
+            }
+
             break;
             
         case 's':
