@@ -4723,9 +4723,6 @@ void processCommand(const std::vector<std::string>& cmd, const std::string& pack
                 spsmExit();
                 return;
             }
-            else if (commandName == "reload") {
-
-            }
 
             break;
             
