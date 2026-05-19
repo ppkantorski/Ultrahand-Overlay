@@ -3383,7 +3383,7 @@ public:
                 listPath = "";
             }
             else if (sourceType == INI_FILE_STR) {
-                selectedItemsList = parseSectionsFromIni(iniPath);
+                selectedItemsList = parseSectionsFromIniSource(iniPath, maxItemsLimit);
                 iniPath.clear();
             }
             else if (sourceType == JSON_STR || sourceType == JSON_FILE_STR) {
@@ -3404,7 +3404,7 @@ public:
                 listPathOn = "";
             }
             else if (sourceTypeOn == INI_FILE_STR) {
-                selectedItemsListOn = parseSectionsFromIni(iniPathOn);
+                selectedItemsListOn = parseSectionsFromIniSource(iniPathOn, maxItemsLimit);
                 iniPathOn = "";
             }
             else if (sourceTypeOn == JSON_STR || sourceTypeOn == JSON_FILE_STR) {
@@ -3424,7 +3424,7 @@ public:
                 listPathOff = "";
             }
             else if (sourceTypeOff == INI_FILE_STR) {
-                selectedItemsListOff = parseSectionsFromIni(iniPathOff);
+                selectedItemsListOff = parseSectionsFromIniSource(iniPathOff, maxItemsLimit);
                 iniPathOff = "";
             }
             else if (sourceTypeOff == JSON_STR || sourceTypeOff == JSON_FILE_STR) {
@@ -5190,7 +5190,7 @@ bool drawCommandsMenu(
                             else if (cmd[0] == "ini_file_source") {
                                 std::string iniPath = cmd[1];
                                 preprocessPath(iniPath, packagePath);
-                                entryList = parseSectionsFromIni(iniPath);
+                                entryList = parseSectionsFromIniSource(iniPath);
                                 break;
                             }
                         }
