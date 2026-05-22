@@ -4248,6 +4248,7 @@ static bool handleTriggerReturnToPackages(const std::string& packagePath) {
         toPackages = true;
     }
 
+    pendingExitPackage.store(true, std::memory_order_release);
     tsl::swapTo<MainMenu>();
     return true;
 }
