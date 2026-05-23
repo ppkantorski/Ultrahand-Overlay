@@ -243,14 +243,17 @@ def main():
 
         # Step 8d: Copy common/audio_mastervolume (local repo) to atmosphere/exefs_patches/audio_mastervolume
         print("Copying audio_mastervolume patches...")
-        audio_mv_source = script_dir / "common/audio_mastervolume"
+        audio_mv_source = ultrahand_root / "common/audio_mastervolume"
         audio_mv_dest = sdout_dir / "atmosphere/exefs_patches/audio_mastervolume"
 
         if audio_mv_source.exists():
-            for f in audio_mv_source.iterdir():
+            for f in audio_mv_source.rglob("*"):
                 if f.is_file():
-                    shutil.copy2(f, audio_mv_dest)
-                    print(f"Copied {f.name}")
+                    rel = f.relative_to(audio_mv_source)
+                    dest_file = audio_mv_dest / rel
+                    dest_file.parent.mkdir(parents=True, exist_ok=True)
+                    shutil.copy2(f, dest_file)
+                    print(f"Copied {rel}")
         else:
             print("Warning: common/audio_mastervolume folder not found in local repository")
 
