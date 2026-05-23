@@ -4367,7 +4367,7 @@ void processCommand(const std::vector<std::string>& cmd, const std::string& pack
                         // originating package folder, and swapTo<MainMenu> on the packages tab with
                         // the cursor positioned on the correct package entry.
                         triggerReturnToPackages.store(true, std::memory_order_release);
-                    } if (selection == "nx-ovlloader") {
+                    } if (selection == "nx-ovlloader" || selection == "ovlloader") {
                         if (requestOverlayExit()) {
                             exitingUltrahand.store(true, std::memory_order_release);
                             ult::launchingOverlay.store(true, std::memory_order_release);
