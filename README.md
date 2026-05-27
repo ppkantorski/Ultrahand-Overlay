@@ -101,14 +101,14 @@ See [libultrahand](https://github.com/ppkantorski/libultrahand) for full documen
 
 ### Quick Install (Recommended)
 
-Download the latest [`sdout.zip`](https://github.com/ppkantorski/Ultrahand-Overlay/releases/latest/download/sdout.zip) and extract it to the root of your SD card. It includes everything needed: `nx-ovlloader`, `ovlmenu.ovl`, language files, themes, sound packs, and the required folder structure. Launch Ultrahand with the default hotkey (`ZL+ZR+DDOWN`) or any Tesla-compatible combo.
+Download the latest [`sdout.zip`](https://github.com/ppkantorski/Ultrahand-Overlay/releases/latest/download/sdout.zip) and extract it to the root of your SD card. It includes everything needed: `nx-ovlloader`, `ovlmenu.ovl`, language files, themes, sound packs, and the required folder structure. Boot / reboot and launch Ultrahand with the default hotkey (`ZL+ZR+DDOWN`) or any Tesla-compatible combo.
 
 ### Manual Install
 
 1. Download and install the latest [nx-ovlloader](https://github.com/ppkantorski/nx-ovlloader).
 2. Place [`ovlmenu.ovl`](https://github.com/ppkantorski/Ultrahand-Overlay/releases/latest/download/ovlmenu.ovl) at `/switch/.overlays/ovlmenu.ovl`.
    > **Warning:** This will replace Tesla Menu if it is installed.
-3. Launch Ultrahand with the default hotkey (`ZL+ZR+DDOWN`) or any Tesla-compatible combo.
+3. Boot / reboot and launch Ultrahand with the default hotkey (`ZL+ZR+DDOWN`) or any Tesla-compatible combo.
 4. On first launch, Ultrahand creates `/config/ultrahand/` and generates a starter `package.ini` at `/switch/.packages/`.
 
 > If a package does not appear in the menu, try running *Fix Bit Archive* in Hekate.
