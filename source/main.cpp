@@ -4235,7 +4235,7 @@ static bool handleTriggerReturnToPackages(const std::string& packagePath) {
     inSubPackageMenu = false;
     inScriptMenu    = false;
     inSelectionMenu = false;
-    returningToMain        = false;
+    returningToMain        = true;
     returningToHiddenMain  = false;
     jumpItemName.clear();
     jumpItemValue.clear();
@@ -4248,7 +4248,6 @@ static bool handleTriggerReturnToPackages(const std::string& packagePath) {
         toPackages = true;
     }
 
-    pendingExitPackage.store(true, std::memory_order_release);
     tsl::swapTo<MainMenu>();
     return true;
 }
