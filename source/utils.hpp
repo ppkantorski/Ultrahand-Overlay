@@ -1072,7 +1072,7 @@ void addSelectionIsEmptyDrawer(auto& list) {
     list->addItem(warning);
 }
 
-bool applyPlaceholderReplacements(std::vector<std::string>& cmd, const std::string& hexPath, const std::string& iniPath, const std::string& listString, const std::string& listPath, const std::string& jsonString, const std::string& jsonPath);
+bool applyPlaceholderReplacements(std::vector<std::string>& cmd, const std::string& hexPath, const std::string& iniPath, const std::string& listString, const std::string& listPath, const std::string& jsonString, const std::string& jsonPath, const std::string& packagePath = "");
 
 std::string getFirstSectionText(const std::vector<std::vector<std::string>>& tableData, const std::string& packagePath) {
     std::string message;
@@ -1108,7 +1108,7 @@ std::string getFirstSectionText(const std::vector<std::vector<std::string>>& tab
             (!inEristaSection && !inMarikoSection)) {
 
             // Apply placeholder replacements if necessary
-            applyPlaceholderReplacements(cmd, hexPath, iniPath, listString, listPath, jsonString, jsonPath);
+            applyPlaceholderReplacements(cmd, hexPath, iniPath, listString, listPath, jsonString, jsonPath, packagePath);
 
             const size_t cmdSize = cmd.size();
 
@@ -1313,7 +1313,7 @@ static bool buildTableDrawerLines(
                 if (applyPlaceholderReplacements(
                     cmd, hexPath, iniPath,
                     listString, listPath,
-                    jsonString, jsonPath
+                    jsonString, jsonPath, packagePath
                 )) {
                     anyReplacementsMade = true;
                 }
@@ -2968,7 +2968,7 @@ static bool getPlaceholderContent(const std::string& placeholder, std::string& o
 bool applyPlaceholderReplacements(std::vector<std::string>& cmd, const std::string& hexPath, 
                                  const std::string& iniPath, const std::string& listString, 
                                  const std::string& listPath, const std::string& jsonString, 
-                                 const std::string& jsonPath) {
+                                 const std::string& jsonPath, const std::string& packagePath) {
     bool replacementsMade = false;
     
     std::vector<std::pair<std::string, std::function<std::string(const std::string&)>>> placeholders = {
@@ -3154,6 +3154,7 @@ bool applyPlaceholderReplacements(std::vector<std::string>& cmd, const std::stri
             removeQuotes(ovlPath);
             trim(ovlPath);
             if (ovlPath.empty()) return NULL_STR;
+            preprocessPath(ovlPath, packagePath);
             const auto& [result, _ovlName, version, _lib, _ams] = getOverlayInfo(ovlPath);
             return result != ResultSuccess ? NULL_STR : returnOrNull(version);
         }},
@@ -3251,7 +3252,7 @@ bool applyPlaceholderReplacementsToCommands(std::vector<std::vector<std::string>
         }
 
         // Apply placeholder replacements
-        applyPlaceholderReplacements(cmd, hexPath, iniPath, listString, listPath, jsonString, jsonPath);
+        applyPlaceholderReplacements(cmd, hexPath, iniPath, listString, listPath, jsonString, jsonPath, packagePath);
 
         // Handle special commands
         const size_t cmdSize = cmd.size();
@@ -3492,7 +3493,7 @@ bool interpretAndExecuteCommands(std::vector<std::vector<std::string>>&& command
         }
         
         if (hasPlaceholders) {
-            applyPlaceholderReplacements(cmd, hexPath, iniPath, listString, listPath, jsonString, jsonPath);
+            applyPlaceholderReplacements(cmd, hexPath, iniPath, listString, listPath, jsonString, jsonPath, packagePath);
         }
 
         #if USING_LOGGING_DIRECTIVE

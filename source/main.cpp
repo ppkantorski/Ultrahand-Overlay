@@ -3148,7 +3148,7 @@ public:
                     // Apply ALL placeholder replacements using the comprehensive function
                     // This handles nesting, recursion, and proper order automatically
                     if (!afterSource)
-                        applyPlaceholderReplacements(cmd, _hexFilePath, _iniFilePath, _listString, _listFilePath, _jsonString, _jsonFilePath);
+                        applyPlaceholderReplacements(cmd, _hexFilePath, _iniFilePath, _listString, _listFilePath, _jsonString, _jsonFilePath, filePath);
     
                     // Now handle source declarations
                     if (commandName == "ini_file") {
