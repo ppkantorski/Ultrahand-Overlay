@@ -36,6 +36,7 @@ namespace Payload {
             if (R_SUCCEEDED(rc)) {
                 rc = amsBpcSetRebootPayload(g_reboot_payload, IRAM_PAYLOAD_MAX_SIZE);
                 if (R_SUCCEEDED(rc)) {
+                    Payload::StageUsbPdTeardown();
                     spsmShutdown(true);
                 }
                 amsBpcExit();
@@ -143,6 +144,15 @@ namespace Payload {
             return false;
         }
 
+    }
+
+    void StageUsbPdTeardown() {
+        // Force console to handheld mode policy, which triggers USB-PD CC pin teardown.
+        // This signals the dock to cut its 5V rail before spsmShutdown fires the PMIC.
+        if (R_SUCCEEDED(ommInitialize())) {
+            (void)ommSetOperationModePolicy(OmmOperationModePolicy_Handheld);
+            ommExit();
+        }
     }
 
     HekateConfigList LoadHekateConfigList() {

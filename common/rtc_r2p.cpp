@@ -14,6 +14,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 #include "rtc_r2p.hpp"
+#include "payload.hpp"
 
 //#include <cstdio>
 
@@ -163,6 +164,10 @@ namespace Max77620Rtc {
 
         i2csessionClose(&session);
 
-        return ret && R_SUCCEEDED(spsmShutdown(true));
+        if (!ret)
+            return false;
+
+        Payload::StageUsbPdTeardown();
+        return R_SUCCEEDED(spsmShutdown(true));
     }
 }

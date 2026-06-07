@@ -4749,6 +4749,7 @@ void processCommand(const std::vector<std::string>& cmd, const std::string& pack
                 i2cExit();
                 splExit();
                 fsdevUnmountAll();
+                Payload::StageUsbPdTeardown();
                 spsmShutdown(SpsmShutdownMode_Reboot);
                 spsmExit();
                 return;
@@ -4812,10 +4813,9 @@ void processCommand(const std::vector<std::string>& cmd, const std::string& pack
                         powerOffAllControllers();
                     }
                 } else {
-                    splExit();
                     fsdevUnmountAll();
-                    spsmShutdown(SpsmShutdownMode_Normal);
-                    spsmExit();
+                    Payload::StageUsbPdTeardown();
+                    (void)spsmShutdown(SpsmShutdownMode_Normal);
                 }
                 return;
             }
