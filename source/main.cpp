@@ -494,7 +494,7 @@ static void handleWallpaperReload() {
 [[gnu::noinline]]
 static bool handleGoBackAfter() {
     if (goBackAfter.exchange(false, std::memory_order_acq_rel)) {
-        disableSound.store(true, std::memory_order_release);
+        suppressNextBackFeedback.store(true, std::memory_order_release);
         simulatedBack.store(true, std::memory_order_release);
         return true;
     }
