@@ -2956,6 +2956,40 @@ void updateGeneralPlaceholders() {
 // Returns true and sets `out` on success; returns false and sets `out` to
 // NULL_STR when either paren is absent.  Used by the lambdas below to
 // eliminate the repeated find/bounds-check/substr boilerplate.
+// CRC32 (ISO 3309 / ITU-T V.42) — table-driven Sarwate, no extra libs needed.
+// The 256-entry table is evaluated at compile time; the loop is branchless.
+static std::string crc32File(const std::string& path) {
+    struct Table {
+        uint32_t v[256];
+        constexpr Table() : v{} {
+            for (uint32_t i = 0; i < 256; ++i) {
+                uint32_t c = i;
+                for (int k = 0; k < 8; ++k)
+                    c = (c >> 1) ^ (0xEDB88320u & -(c & 1u));
+                v[i] = c;
+            }
+        }
+    };
+    static constexpr Table T{};
+
+    FILE* f = fopen(path.c_str(), "rb");
+    if (!f) return NULL_STR;
+
+    uint32_t crc = 0xFFFFFFFFu;
+    uint8_t buf[4096];
+    size_t n;
+    while ((n = fread(buf, 1, sizeof(buf), f)) > 0) {
+        for (size_t i = 0; i < n; ++i)
+            crc = (crc >> 8) ^ T.v[(crc ^ buf[i]) & 0xFFu];
+    }
+    fclose(f);
+
+    crc ^= 0xFFFFFFFFu;
+    char hex[9];
+    snprintf(hex, sizeof(hex), "%08X", crc);
+    return std::string(hex);
+}
+
 static bool getPlaceholderContent(const std::string& placeholder, std::string& out) {
     const size_t open = placeholder.find('(');
     if (open == std::string::npos) { out = NULL_STR; return false; }
@@ -3157,6 +3191,15 @@ bool applyPlaceholderReplacements(std::vector<std::string>& cmd, const std::stri
             preprocessPath(ovlPath, packagePath);
             const auto& [result, _ovlName, version, _lib, _ams] = getOverlayInfo(ovlPath);
             return result != ResultSuccess ? NULL_STR : returnOrNull(version);
+        }},
+        {"{crc32(", [&](const std::string& placeholder) {
+            std::string filePath;
+            if (!getPlaceholderContent(placeholder, filePath)) return NULL_STR;
+            removeQuotes(filePath);
+            trim(filePath);
+            if (filePath.empty()) return NULL_STR;
+            preprocessPath(filePath, packagePath);
+            return crc32File(filePath);
         }},
     };
 
