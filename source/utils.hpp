@@ -2302,7 +2302,8 @@ std::vector<std::vector<std::string>> getSourceReplacement(const std::vector<std
     bool inMarikoSection = false;
 
     std::vector<std::vector<std::string>> modifiedCommands;
-    std::string listString, listPath, jsonString, jsonPath, iniPath;
+    std::string listString, listPath, jsonString, jsonPath, iniPath, iniFilePath;
+    std::string hexFilePath;
     bool usingFileSource = false;
 
     std::string fileName = getNameFromPath(entry);
@@ -2347,34 +2348,51 @@ std::vector<std::vector<std::string>> getSourceReplacement(const std::vector<std
             (inMarikoSection && usingMariko) ||
             (!inEristaSection && !inMarikoSection))
         {
-            // Apply placeholder replacements if necessary
+            // Update source paths from this command before processing args.
+            // Done unconditionally (no .empty() guard) so sources can be redefined mid-section.
+            if (commandName == "file_source") {
+                usingFileSource = true;
+            } else if (commandName == "ini_file" && cmd.size() >= 2) {
+                iniFilePath = cmd[1];
+                preprocessPath(iniFilePath, packagePath);
+            } else if (commandName == "hex_file" && cmd.size() >= 2) {
+                hexFilePath = cmd[1];
+                preprocessPath(hexFilePath, packagePath);
+            } else if (commandName == "list_source" && cmd.size() >= 2) {
+                listString = cmd[1];
+                removeQuotes(listString);
+            } else if (commandName == "list_file_source" && cmd.size() >= 2) {
+                listPath = cmd[1];
+                preprocessPath(listPath, packagePath);
+            } else if (commandName == "ini_file_source" && cmd.size() >= 2) {
+                iniPath = cmd[1];
+                preprocessPath(iniPath, packagePath);
+            } else if (commandName == "json_source" && cmd.size() >= 2) {
+                jsonString = cmd[1];
+            } else if (commandName == "json_file_source" && cmd.size() >= 2) {
+                jsonPath = cmd[1];
+                preprocessPath(jsonPath, packagePath);
+            }
+
+            // Apply placeholder replacements to each arg
             for (const auto& arg : cmd) {
                 modifiedArg = arg;
 
-                if (commandName == "file_source") {
-                    usingFileSource = true;
-                }
-                else if (commandName == "list_source" && listString.empty()) {
-                    listString = cmd[1];
-                    removeQuotes(listString);
-                }
-                else if (commandName == "list_file_source" && listPath.empty()) {
-                    listPath = cmd[1];
-                    preprocessPath(listPath, packagePath);
-                }
-                else if (commandName == "ini_file_source" && iniPath.empty()) {
-                    iniPath = cmd[1];
-                    preprocessPath(iniPath, packagePath);
-                }
-                else if (commandName == "json_source" && jsonString.empty()) {
-                    jsonString = cmd[1];
-                }
-                else if (commandName == "json_file_source" && jsonPath.empty()) {
-                    jsonPath = cmd[1];
-                    preprocessPath(jsonPath, packagePath);
+                // {ini_file(...)} — section,key lookup against ini_file path
+                if (!iniFilePath.empty() && modifiedArg.find("{ini_file(") != std::string::npos) {
+                    applyReplaceIniPlaceholder(modifiedArg, "ini_file", iniFilePath);
                 }
 
-                // These three always apply
+                // {hex_file(...)} — hex lookup against hex_file path.
+                // replaceHexPlaceholder returns the full modified string (replacement done in-place),
+                // so we assign directly rather than extracting a value.
+                if (!hexFilePath.empty() && modifiedArg.find("{hex_file(") != std::string::npos) {
+                    if (isFileOrDirectory(hexFilePath)) {
+                        modifiedArg = replaceHexPlaceholder(modifiedArg, hexFilePath);
+                    }
+                }
+
+                // These always apply
                 replaceAllPlaceholders(modifiedArg, "{file_source}", entry);
                 replaceAllPlaceholders(modifiedArg, "{file_name}", fileName);
                 path = getParentDirNameFromPath(entry);
@@ -2382,11 +2400,11 @@ std::vector<std::vector<std::string>> getSourceReplacement(const std::vector<std
                 replaceAllPlaceholders(modifiedArg, "{folder_name}", path);
                 replaceAllPlaceholders(modifiedArg, "{index}", indexStr);
 
-                // {list_source(...)} block
+                // {list_source(...)} block — uses *_source path (index into current selection list)
                 if (modifiedArg.find("{list_source(") != std::string::npos) {
                     applyPlaceholderReplacement(modifiedArg, "*", indexStr);
                     startPos = modifiedArg.find("{list_source(");
-                    endPos   = modifiedArg.find(")}", startPos + 13);  // Find )}  after the opening
+                    endPos   = modifiedArg.find(")}", startPos + 13);
                     if (endPos != std::string::npos && endPos > startPos) {
                         const auto& listItems = stringToList(listString);
                         raw = (entryIndex < listItems.size()) ? listItems[entryIndex] : "";
@@ -2399,8 +2417,7 @@ std::vector<std::vector<std::string>> getSourceReplacement(const std::vector<std
                 if (modifiedArg.find("{list_file_source(") != std::string::npos) {
                     applyPlaceholderReplacement(modifiedArg, "*", indexStr);
                     startPos = modifiedArg.find("{list_file_source(");
-                    // Find the closing )}  AFTER the opening we just found
-                    endPos = modifiedArg.find(")}", startPos + 18);  // 18 = length of "{list_file_source("
+                    endPos = modifiedArg.find(")}", startPos + 18);
                     if (endPos != std::string::npos && endPos > startPos) {
                         raw = getEntryFromListFile(listPath, entryIndex);
                         replacement = returnOrNull(raw);
@@ -2408,19 +2425,17 @@ std::vector<std::vector<std::string>> getSourceReplacement(const std::vector<std
                     }
                 }
 
-                // {ini_file_source(...)} block - FIXED
+                // {ini_file_source(...)} block
                 if (modifiedArg.find("{ini_file_source(") != std::string::npos) {
                     applyPlaceholderReplacement(modifiedArg, "*", indexStr);
-                    // applyReplaceIniPlaceholder modifies modifiedArg in place, so we just call it
                     applyReplaceIniPlaceholder(modifiedArg, "ini_file_source", iniPath);
-                    // No additional replacement needed!
                 }
 
                 // {json_source(...)} block
                 if (modifiedArg.find("{json_source(") != std::string::npos) {
                     applyPlaceholderReplacement(modifiedArg, "*", indexStr);
                     startPos = modifiedArg.find("{json_source(");
-                    endPos   = modifiedArg.find(")}", startPos + 13);  // Find )}  after the opening
+                    endPos   = modifiedArg.find(")}", startPos + 13);
                     if (endPos != std::string::npos && endPos > startPos) {
                         raw = replaceJsonPlaceholder(
                             modifiedArg.substr(startPos, endPos - startPos + 2),
@@ -2432,12 +2447,11 @@ std::vector<std::vector<std::string>> getSourceReplacement(const std::vector<std
                     }
                 }
 
-
                 // {json_file_source(...)} block
                 if (modifiedArg.find("{json_file_source(") != std::string::npos) {
                     applyPlaceholderReplacement(modifiedArg, "*", indexStr);
                     startPos = modifiedArg.find("{json_file_source(");
-                    endPos   = modifiedArg.find(")}", startPos + 18);  // Find )}  after the opening
+                    endPos   = modifiedArg.find(")}", startPos + 18);
                     if (endPos != std::string::npos && endPos > startPos) {
                         raw = replaceJsonPlaceholder(
                             modifiedArg.substr(startPos, endPos - startPos + 2),
