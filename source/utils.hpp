@@ -3253,8 +3253,10 @@ bool applyPlaceholderReplacements(std::vector<std::string>& cmd, const std::stri
             const std::string inner = placeholder.substr(open + 1, close - open - 1);
             const size_t comma = inner.find(',');
             if (comma == std::string::npos) return NULL_STR;
-            const std::string value    = inner.substr(0, comma);
-            const std::string fallback = inner.substr(comma + 1);
+            std::string value    = inner.substr(0, comma);
+            std::string fallback = inner.substr(comma + 1);
+            removeQuotes(value);
+            removeQuotes(fallback);
             return (value == NULL_STR) ? fallback : value;
         }},
     };
