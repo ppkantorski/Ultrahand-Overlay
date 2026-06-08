@@ -3048,7 +3048,44 @@ bool applyPlaceholderReplacements(std::vector<std::string>& cmd, const std::stri
                                  const std::string& listPath, const std::string& jsonString, 
                                  const std::string& jsonPath, const std::string& packagePath) {
     bool replacementsMade = false;
-    
+
+    // Shared parse helpers for if_null / if_not_null / if_equal_to / if_not_equal_to
+    // parse2: extract (value, fallback) from a 2-arg placeholder interior
+    static const auto parse2 = [](const std::string& ph,
+                                   std::string& value, std::string& fallback) -> bool {
+        const size_t open  = ph.find('(');
+        const size_t close = ph.rfind(')');
+        if (open == std::string::npos || close == std::string::npos || close <= open + 1)
+            return false;
+        const std::string inner = ph.substr(open + 1, close - open - 1);
+        const size_t comma = inner.find(',');
+        if (comma == std::string::npos) return false;
+        value    = inner.substr(0, comma);
+        fallback = inner.substr(comma + 1);
+        removeQuotes(value);
+        removeQuotes(fallback);
+        return true;
+    };
+    // parse3: extract (needle, value, fallback) from a 3-arg placeholder interior
+    static const auto parse3 = [](const std::string& ph,
+                                   std::string& needle, std::string& value, std::string& fallback) -> bool {
+        const size_t open  = ph.find('(');
+        const size_t close = ph.rfind(')');
+        if (open == std::string::npos || close == std::string::npos || close <= open + 1)
+            return false;
+        const std::string inner  = ph.substr(open + 1, close - open - 1);
+        const size_t firstComma  = inner.find(',');
+        const size_t lastComma   = inner.rfind(',');
+        if (firstComma == std::string::npos || firstComma == lastComma) return false;
+        needle   = inner.substr(0, firstComma);
+        value    = inner.substr(firstComma + 1, lastComma - firstComma - 1);
+        fallback = inner.substr(lastComma + 1);
+        removeQuotes(needle);
+        removeQuotes(value);
+        removeQuotes(fallback);
+        return true;
+    };
+
     std::vector<std::pair<std::string, std::function<std::string(const std::string&)>>> placeholders = {
         {"{hex_file(", [&](const std::string& placeholder) { 
             if (hexPath.empty() || !isFileOrDirectory(hexPath)) return NULL_STR;
@@ -3245,19 +3282,29 @@ bool applyPlaceholderReplacements(std::vector<std::string>& cmd, const std::stri
             preprocessPath(filePath, packagePath);
             return crc32File(filePath);
         }},
-        {"{ifnull(", [](const std::string& placeholder) -> std::string {
-            const size_t open  = placeholder.find('(');
-            const size_t close = placeholder.rfind(')');
-            if (open == std::string::npos || close == std::string::npos || close <= open + 1)
-                return NULL_STR;
-            const std::string inner = placeholder.substr(open + 1, close - open - 1);
-            const size_t comma = inner.find(',');
-            if (comma == std::string::npos) return NULL_STR;
-            std::string value    = inner.substr(0, comma);
-            std::string fallback = inner.substr(comma + 1);
-            removeQuotes(value);
-            removeQuotes(fallback);
-            return (value == NULL_STR) ? fallback : value;
+        // {if_null(value,fallback)}       - return fallback if value == "null", else value
+        // {if_not_null(value,fallback)}   - return fallback if value != "null", else value
+        // {if_equal_to(needle,value,fallback)}     - return fallback if value == needle, else value
+        // {if_not_equal_to(needle,value,fallback)} - return fallback if value != needle, else value
+        {"{if_null(", [](const std::string& ph) -> std::string {
+            std::string v, fb;
+            if (!parse2(ph, v, fb)) return NULL_STR;
+            return (v == NULL_STR) ? fb : v;
+        }},
+        {"{if_not_null(", [](const std::string& ph) -> std::string {
+            std::string v, fb;
+            if (!parse2(ph, v, fb)) return NULL_STR;
+            return (v != NULL_STR) ? fb : v;
+        }},
+        {"{if_equal_to(", [](const std::string& ph) -> std::string {
+            std::string needle, v, fb;
+            if (!parse3(ph, needle, v, fb)) return NULL_STR;
+            return (v == needle) ? fb : v;
+        }},
+        {"{if_not_equal_to(", [](const std::string& ph) -> std::string {
+            std::string needle, v, fb;
+            if (!parse3(ph, needle, v, fb)) return NULL_STR;
+            return (v != needle) ? fb : v;
         }},
     };
 
