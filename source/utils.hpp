@@ -2322,6 +2322,13 @@ std::vector<std::vector<std::string>> getSourceReplacement(const std::vector<std
 
     const std::string indexStr = ult::to_string(entryIndex);
 
+    // Flags set in the tracking block; acted on after the arg loop has fully resolved modifiedCmd.
+    // This lets the arg loop's existing source-placeholder resolution (list_file_source, list_source,
+    // ini_file_source, etc.) handle all placeholder types inside json/list values uniformly,
+    // instead of duplicating that logic here with fragile manual find/replace.
+    bool captureJsonString = false;
+    bool captureListString = false;
+
     for (const auto& cmd : commands) {
         if (cmd.empty()) {
             continue;
@@ -2329,6 +2336,8 @@ std::vector<std::vector<std::string>> getSourceReplacement(const std::vector<std
 
         modifiedCmd.clear();
         commandName = cmd[0];
+        captureJsonString = false;
+        captureListString = false;
 
         if (commandName == "download") {
             isDownloadCommand.store(true, std::memory_order_release);
@@ -2358,16 +2367,9 @@ std::vector<std::vector<std::string>> getSourceReplacement(const std::vector<std
             } else if (commandName == "hex_file" && cmd.size() >= 2) {
                 hexFilePath = cmd[1];
                 preprocessPath(hexFilePath, packagePath);
-            } else if (commandName == "list" && cmd.size() >= 2) {
-                // Plain list declaration — resolve any placeholders in the value before storing,
-                // matching interpretAndExecuteCommands behaviour.
-                listString = cmd[1];
-                removeQuotes(listString);
-                if (!iniFilePath.empty() && listString.find("{ini_file(") != std::string::npos)
-                    applyReplaceIniPlaceholder(listString, "ini_file", iniFilePath);
-            } else if (commandName == "list_source" && cmd.size() >= 2) {
-                listString = cmd[1];
-                removeQuotes(listString);
+            } else if ((commandName == "list" || commandName == "list_source") && cmd.size() >= 2) {
+                // Signal: capture listString from modifiedCmd[1] after the arg loop resolves it.
+                captureListString = true;
             } else if (commandName == "list_file_source" && cmd.size() >= 2) {
                 listPath = cmd[1];
                 preprocessPath(listPath, packagePath);
@@ -2375,35 +2377,11 @@ std::vector<std::vector<std::string>> getSourceReplacement(const std::vector<std
                 iniPath = cmd[1];
                 preprocessPath(iniPath, packagePath);
             } else if ((commandName == "json" || commandName == "json_source") && cmd.size() >= 2) {
-                // Plain json/json_source declaration — resolve placeholders in the value before
-                // storing, matching interpretAndExecuteCommands where applyPlaceholderReplacements
-                // fires on the command line before jsonString is updated.
-                // Critically: {list_file_source(*)} and similar inside a json value must be
-                // resolved here or the stored string is broken JSON that fails to parse.
-                jsonString = cmd[1];
-                removeQuotes(jsonString);
-                if (!iniFilePath.empty() && jsonString.find("{ini_file(") != std::string::npos)
-                    applyReplaceIniPlaceholder(jsonString, "ini_file", iniFilePath);
-                if (!hexFilePath.empty() && jsonString.find("{hex_file(") != std::string::npos)
-                    jsonString = replaceHexPlaceholder(jsonString, hexFilePath);
-                if (!listPath.empty() && jsonString.find("{list_file_source(") != std::string::npos) {
-                    applyPlaceholderReplacement(jsonString, "*", indexStr);
-                    startPos = jsonString.find("{list_file_source(");
-                    endPos = jsonString.find(")}", startPos + 18);
-                    if (endPos != std::string::npos)
-                        jsonString.replace(startPos, endPos - startPos + 2,
-                            returnOrNull(getEntryFromListFile(listPath, entryIndex)));
-                }
-                if (!listString.empty() && jsonString.find("{list_source(") != std::string::npos) {
-                    applyPlaceholderReplacement(jsonString, "*", indexStr);
-                    startPos = jsonString.find("{list_source(");
-                    endPos = jsonString.find(")}", startPos + 13);
-                    if (endPos != std::string::npos) {
-                        const auto& items = stringToList(listString);
-                        jsonString.replace(startPos, endPos - startPos + 2,
-                            entryIndex < items.size() ? returnOrNull(items[entryIndex]) : NULL_STR);
-                    }
-                }
+                // Signal: capture jsonString from modifiedCmd[1] after the arg loop resolves it.
+                // The arg loop already handles {list_file_source(*)}, {list_source(*)},
+                // {ini_file_source(...)}, {json_source(...)}, {json_file_source(...)} uniformly,
+                // so no manual placeholder resolution is needed here.
+                captureJsonString = true;
             } else if (commandName == "json_file_source" && cmd.size() >= 2) {
                 jsonPath = cmd[1];
                 preprocessPath(jsonPath, packagePath);
@@ -2415,8 +2393,8 @@ std::vector<std::vector<std::string>> getSourceReplacement(const std::vector<std
             // applyPlaceholderReplacements, so set-ini-val writes are visible to subsequent
             // {ini_file(...)} reads in the same section. Resolving them here upfront would bake
             // in stale values read before any commands in the section have executed.
-            // They ARE resolved inside json/list dict values (in the tracking block above)
-            // because those values need to be valid JSON before being stored as jsonString.
+            // json/list dict values are captured from modifiedCmd[1] after this loop,
+            // so their placeholders are resolved here too — no special-casing needed.
             for (const auto& arg : cmd) {
                 modifiedArg = arg;
 
@@ -2492,6 +2470,30 @@ std::vector<std::vector<std::string>> getSourceReplacement(const std::vector<std
                 }
 
                 modifiedCmd.push_back(std::move(modifiedArg));
+            }
+
+            // After the arg loop has fully resolved source placeholders in modifiedCmd,
+            // capture json/list string values from the resolved modifiedCmd[1].
+            // {list_file_source(*)}, {list_source(*)}, {ini_file_source(...)}, etc. are
+            // already handled by the arg loop above.
+            // {ini_file(...)} and {hex_file(...)} are NOT in the arg loop (intentionally, to
+            // keep set-ini-val reads sequential in interpretAndExecuteCommands), so we apply
+            // them explicitly here on the captured value only — not on regular command args.
+            if (captureJsonString && modifiedCmd.size() >= 2) {
+                jsonString = modifiedCmd[1];
+                removeQuotes(jsonString);
+                if (!iniFilePath.empty() && jsonString.find("{ini_file(") != std::string::npos)
+                    applyReplaceIniPlaceholder(jsonString, "ini_file", iniFilePath);
+                if (!hexFilePath.empty() && jsonString.find("{hex_file(") != std::string::npos)
+                    jsonString = replaceHexPlaceholder(jsonString, hexFilePath);
+            }
+            if (captureListString && modifiedCmd.size() >= 2) {
+                listString = modifiedCmd[1];
+                removeQuotes(listString);
+                if (!iniFilePath.empty() && listString.find("{ini_file(") != std::string::npos)
+                    applyReplaceIniPlaceholder(listString, "ini_file", iniFilePath);
+                if (!hexFilePath.empty() && listString.find("{hex_file(") != std::string::npos)
+                    listString = replaceHexPlaceholder(listString, hexFilePath);
             }
 
             modifiedCommands.emplace_back(std::move(modifiedCmd));
@@ -3251,10 +3253,8 @@ bool applyPlaceholderReplacements(std::vector<std::string>& cmd, const std::stri
             const std::string inner = placeholder.substr(open + 1, close - open - 1);
             const size_t comma = inner.find(',');
             if (comma == std::string::npos) return NULL_STR;
-            std::string value    = inner.substr(0, comma);
-            std::string fallback = inner.substr(comma + 1);
-            removeQuotes(value);
-            removeQuotes(fallback);
+            const std::string value    = inner.substr(0, comma);
+            const std::string fallback = inner.substr(comma + 1);
             return (value == NULL_STR) ? fallback : value;
         }},
     };
