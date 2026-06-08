@@ -3049,41 +3049,138 @@ bool applyPlaceholderReplacements(std::vector<std::string>& cmd, const std::stri
                                  const std::string& jsonPath, const std::string& packagePath) {
     bool replacementsMade = false;
 
-    // Shared parse helpers for if_null / if_not_null / if_equal_to / if_not_equal_to
-    // parse2: extract (value, fallback) from a 2-arg placeholder interior
+    // Shared helpers for conditional placeholders.
+    //
+    // parse2: {if_xxx(VALUE, TRUE_FALLBACK [, FALSE_FALLBACK])}
+    //   value      = arg 1  (the subject, typically a resolved placeholder)
+    //   trueFb     = arg 2  (returned when condition is TRUE)
+    //   falseFb    = arg 3  (optional; returned when condition is FALSE; defaults to value)
     static const auto parse2 = [](const std::string& ph,
-                                   std::string& value, std::string& fallback) -> bool {
+                                   std::string& value, std::string& trueFb,
+                                   std::string& falseFb, bool& hasFalseFb) -> bool {
         const size_t open  = ph.find('(');
         const size_t close = ph.rfind(')');
         if (open == std::string::npos || close == std::string::npos || close <= open + 1)
             return false;
         const std::string inner = ph.substr(open + 1, close - open - 1);
-        const size_t comma = inner.find(',');
-        if (comma == std::string::npos) return false;
-        value    = inner.substr(0, comma);
-        fallback = inner.substr(comma + 1);
+        const size_t firstComma = inner.find(',');
+        if (firstComma == std::string::npos) return false;
+        const size_t lastComma  = inner.rfind(',');
+        value = inner.substr(0, firstComma);
         removeQuotes(value);
-        removeQuotes(fallback);
+        if (firstComma == lastComma) {
+            // 2-arg form: no false fallback
+            trueFb = inner.substr(firstComma + 1);
+            removeQuotes(trueFb);
+            hasFalseFb = false;
+        } else {
+            // 3-arg form: false fallback present
+            trueFb  = inner.substr(firstComma + 1, lastComma - firstComma - 1);
+            falseFb = inner.substr(lastComma + 1);
+            removeQuotes(trueFb);
+            removeQuotes(falseFb);
+            hasFalseFb = true;
+        }
         return true;
     };
-    // parse3: extract (needle, value, fallback) from a 3-arg placeholder interior
+    // parse3: {if_xxx(VALUE, COMPARE_VALUE, TRUE_FALLBACK [, FALSE_FALLBACK])}
+    //   value      = arg 1  (the subject)
+    //   needle     = arg 2  (what to compare against)
+    //   trueFb     = arg 3  (returned when condition is TRUE)
+    //   falseFb    = arg 4  (optional; returned when condition is FALSE; defaults to value)
     static const auto parse3 = [](const std::string& ph,
-                                   std::string& needle, std::string& value, std::string& fallback) -> bool {
+                                   std::string& value, std::string& needle,
+                                   std::string& trueFb, std::string& falseFb,
+                                   bool& hasFalseFb) -> bool {
         const size_t open  = ph.find('(');
         const size_t close = ph.rfind(')');
         if (open == std::string::npos || close == std::string::npos || close <= open + 1)
             return false;
-        const std::string inner  = ph.substr(open + 1, close - open - 1);
-        const size_t firstComma  = inner.find(',');
-        const size_t lastComma   = inner.rfind(',');
-        if (firstComma == std::string::npos || firstComma == lastComma) return false;
-        needle   = inner.substr(0, firstComma);
-        value    = inner.substr(firstComma + 1, lastComma - firstComma - 1);
-        fallback = inner.substr(lastComma + 1);
-        removeQuotes(needle);
+        const std::string inner = ph.substr(open + 1, close - open - 1);
+        const size_t c1 = inner.find(',');         // end of value
+        if (c1 == std::string::npos) return false;
+        const size_t c2 = inner.find(',', c1 + 1); // end of needle
+        if (c2 == std::string::npos) return false;
+        const size_t cl = inner.rfind(',');         // start of false_fb (if any)
+        value  = inner.substr(0, c1);
+        needle = inner.substr(c1 + 1, c2 - c1 - 1);
         removeQuotes(value);
-        removeQuotes(fallback);
+        removeQuotes(needle);
+        if (cl == c2) {
+            // 3-arg form: no false fallback
+            trueFb = inner.substr(c2 + 1);
+            removeQuotes(trueFb);
+            hasFalseFb = false;
+        } else {
+            // 4-arg form: false fallback present
+            trueFb  = inner.substr(c2 + 1, cl - c2 - 1);
+            falseFb = inner.substr(cl + 1);
+            removeQuotes(trueFb);
+            removeQuotes(falseFb);
+            hasFalseFb = true;
+        }
         return true;
+    };
+    // compareVersions: alphanumeric version-aware comparison.
+    //   Separators: '.' and '_' are neutral (extra = pre-release, sorts lower).
+    //               '-' introduces pre-release labels  -> sorts LOWER than bare release.
+    //               '+' introduces build/revision labels -> sorts HIGHER than bare release.
+    //   Segments that are both pure digits are compared numerically (so "10" > "9").
+    //   Non-digit segments are compared lexicographically.
+    //   Returns -1 if a < b, 0 if a == b, +1 if a > b.
+    //   Examples: "2.2.4" > "2.0.1",  "1.10.0" > "1.9.0",
+    //             "2.0.1-rc" < "2.0.1",  "2.0.1+r23" > "2.0.1",
+    //             "2.0.1+r23" > "2.0.1-rc"
+    static const auto compareVersions = [](const std::string& a, const std::string& b) -> int {
+        static const auto isSep = [](char c) {
+            return c == '.' || c == '-' || c == '_' || c == '+';
+        };
+        // sepTier: '+ '= build metadata (sorts higher), '-'= pre-release (sorts lower),
+        //          '.'/'_'/' ' = neutral (extra segments = pre-release = lower)
+        static const auto sepTier = [](char c) -> int {
+            if (c == '+') return  1;
+            if (c == '-') return -1;
+            return -1; // '.', '_', or no separator -> pre-release convention
+        };
+        static const auto isAllDigits = [](const std::string& s, size_t start, size_t end) {
+            for (size_t i = start; i < end; ++i)
+                if (!std::isdigit(static_cast<unsigned char>(s[i]))) return false;
+            return start < end;
+        };
+        size_t ai = 0, bi = 0;
+        const size_t alen = a.size(), blen = b.size();
+        char aSep = 0, bSep = 0; // separator that introduced the current segment
+        while (true) {
+            // Skip to start of next segment, recording which separator we crossed
+            while (ai < alen && isSep(a[ai])) { aSep = a[ai]; ++ai; }
+            while (bi < blen && isSep(b[bi])) { bSep = b[bi]; ++bi; }
+            if (ai >= alen && bi >= blen) break;
+            // One side exhausted: the other has extra segments.
+            // The separator that introduced those extra segments determines sort order.
+            if (ai >= alen) return -sepTier(bSep); // b has extra: tier > 0 means b > a -> -1
+            if (bi >= blen) return  sepTier(aSep); // a has extra: tier > 0 means a > b -> +1
+            // Both have segments. If they crossed different separator tiers, tier wins.
+            if (ai > 0 && bi > 0) { // not the very first segment
+                const int ta = sepTier(aSep), tb = sepTier(bSep);
+                if (ta != tb) return (ta > tb) ? 1 : -1;
+            }
+            // Find end of current segment
+            size_t ae = ai; while (ae < alen && !isSep(a[ae])) ++ae;
+            size_t be = bi; while (be < blen && !isSep(b[be])) ++be;
+            if (isAllDigits(a, ai, ae) && isAllDigits(b, bi, be)) {
+                const long va = std::strtol(a.c_str() + ai, nullptr, 10);
+                const long vb = std::strtol(b.c_str() + bi, nullptr, 10);
+                if (va < vb) return -1;
+                if (va > vb) return  1;
+            } else {
+                const int cmp = a.compare(ai, ae - ai, b, bi, be - bi);
+                if (cmp < 0) return -1;
+                if (cmp > 0) return  1;
+            }
+            ai = ae;
+            bi = be;
+        }
+        return 0;
     };
 
     std::vector<std::pair<std::string, std::function<std::string(const std::string&)>>> placeholders = {
@@ -3282,29 +3379,63 @@ bool applyPlaceholderReplacements(std::vector<std::string>& cmd, const std::stri
             preprocessPath(filePath, packagePath);
             return crc32File(filePath);
         }},
-        // {if_null(value,fallback)}       - return fallback if value == "null", else value
-        // {if_not_null(value,fallback)}   - return fallback if value != "null", else value
-        // {if_equal_to(needle,value,fallback)}     - return fallback if value == needle, else value
-        // {if_not_equal_to(needle,value,fallback)} - return fallback if value != needle, else value
+        // Conditional placeholders -- inner args are fully resolved before these fire.
+        // The FALSE_FALLBACK is optional in all forms.  When omitted, the false branch
+        // returns VALUE unchanged.  When present, it is the last comma-delimited arg.
+        //
+        // {if_null(VALUE, TRUE_FALLBACK [, FALSE_FALLBACK])}
+        // {if_!null(VALUE, TRUE_FALLBACK [, FALSE_FALLBACK])}
+        //   "null" is the literal string returned by unresolved/missing placeholders.
+        //
+        // {if_==(VALUE, COMPARE_VALUE, TRUE_FALLBACK [, FALSE_FALLBACK])}
+        // {if_!=(VALUE, COMPARE_VALUE, TRUE_FALLBACK [, FALSE_FALLBACK])}
+        //   Exact string equality after removeQuotes on all args.
+        //
+        // {if_>(VALUE, COMPARE_VALUE, TRUE_FALLBACK [, FALSE_FALLBACK])}
+        // {if_<(VALUE, COMPARE_VALUE, TRUE_FALLBACK [, FALSE_FALLBACK])}
+        // {if_>=(VALUE, COMPARE_VALUE, TRUE_FALLBACK [, FALSE_FALLBACK])}
+        // {if_<=(VALUE, COMPARE_VALUE, TRUE_FALLBACK [, FALSE_FALLBACK])}
+        //   Version-aware comparison: numeric segments compared as integers,
+        //   '-' suffix = pre-release (lower), '+' suffix = build metadata (higher).
         {"{if_null(", [](const std::string& ph) -> std::string {
-            std::string v, fb;
-            if (!parse2(ph, v, fb)) return NULL_STR;
-            return (v == NULL_STR) ? fb : v;
+            std::string v, tFb, fFb; bool hasFb;
+            if (!parse2(ph, v, tFb, fFb, hasFb)) return NULL_STR;
+            return (v == NULL_STR) ? tFb : (hasFb ? fFb : v);
         }},
-        {"{if_not_null(", [](const std::string& ph) -> std::string {
-            std::string v, fb;
-            if (!parse2(ph, v, fb)) return NULL_STR;
-            return (v != NULL_STR) ? fb : v;
+        {"{if_!null(", [](const std::string& ph) -> std::string {
+            std::string v, tFb, fFb; bool hasFb;
+            if (!parse2(ph, v, tFb, fFb, hasFb)) return NULL_STR;
+            return (v != NULL_STR) ? tFb : (hasFb ? fFb : v);
         }},
-        {"{if_equal_to(", [](const std::string& ph) -> std::string {
-            std::string needle, v, fb;
-            if (!parse3(ph, needle, v, fb)) return NULL_STR;
-            return (v == needle) ? fb : v;
+        {"{if_==(", [](const std::string& ph) -> std::string {
+            std::string v, needle, tFb, fFb; bool hasFb;
+            if (!parse3(ph, v, needle, tFb, fFb, hasFb)) return NULL_STR;
+            return (v == needle) ? tFb : (hasFb ? fFb : v);
         }},
-        {"{if_not_equal_to(", [](const std::string& ph) -> std::string {
-            std::string needle, v, fb;
-            if (!parse3(ph, needle, v, fb)) return NULL_STR;
-            return (v != needle) ? fb : v;
+        {"{if_!=(", [](const std::string& ph) -> std::string {
+            std::string v, needle, tFb, fFb; bool hasFb;
+            if (!parse3(ph, v, needle, tFb, fFb, hasFb)) return NULL_STR;
+            return (v != needle) ? tFb : (hasFb ? fFb : v);
+        }},
+        {"{if_>(", [](const std::string& ph) -> std::string {
+            std::string v, needle, tFb, fFb; bool hasFb;
+            if (!parse3(ph, v, needle, tFb, fFb, hasFb)) return NULL_STR;
+            return (compareVersions(v, needle) > 0) ? tFb : (hasFb ? fFb : v);
+        }},
+        {"{if_<(", [](const std::string& ph) -> std::string {
+            std::string v, needle, tFb, fFb; bool hasFb;
+            if (!parse3(ph, v, needle, tFb, fFb, hasFb)) return NULL_STR;
+            return (compareVersions(v, needle) < 0) ? tFb : (hasFb ? fFb : v);
+        }},
+        {"{if_>=(", [](const std::string& ph) -> std::string {
+            std::string v, needle, tFb, fFb; bool hasFb;
+            if (!parse3(ph, v, needle, tFb, fFb, hasFb)) return NULL_STR;
+            return (compareVersions(v, needle) >= 0) ? tFb : (hasFb ? fFb : v);
+        }},
+        {"{if_<=(", [](const std::string& ph) -> std::string {
+            std::string v, needle, tFb, fFb; bool hasFb;
+            if (!parse3(ph, v, needle, tFb, fFb, hasFb)) return NULL_STR;
+            return (compareVersions(v, needle) <= 0) ? tFb : (hasFb ? fFb : v);
         }},
     };
 
