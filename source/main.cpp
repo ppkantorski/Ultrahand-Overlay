@@ -3294,18 +3294,24 @@ public:
                         }
                         afterSource = true;
                     } else if (commandName == "ini_file_source") {
-                        sourceType = INI_FILE_STR;
                         if (currentSection == GLOBAL_STR) {
+                            sourceType = INI_FILE_STR;
                             iniPath = cmd[1];
                             preprocessPath(iniPath, filePath);
+                            parseSectionsFromIniPattern(iniPath, filesList, maxItemsLimit);
+                            iniPath.clear();
                         } else if (currentSection == ON_STR) {
+                            sourceTypeOn = INI_FILE_STR;
                             iniPathOn = cmd[1];
                             preprocessPath(iniPathOn, filePath);
-                            sourceTypeOn = INI_FILE_STR;
+                            parseSectionsFromIniPattern(iniPathOn, filesListOn, maxItemsLimit);
+                            iniPathOn.clear();
                         } else if (currentSection == OFF_STR) {
+                            sourceTypeOff = INI_FILE_STR;
                             iniPathOff = cmd[1];
                             preprocessPath(iniPathOff, filePath);
-                            sourceTypeOff = INI_FILE_STR;
+                            parseSectionsFromIniPattern(iniPathOff, filesListOff, maxItemsLimit);
+                            iniPathOff.clear();
                         }
                         afterSource = true;
                     } else if (commandName == "json_source") {
@@ -3373,7 +3379,7 @@ public:
         
     
         if (commandMode == DEFAULT_STR || commandMode == OPTION_STR) {
-            if (sourceType == FILE_STR) {
+            if (sourceType == FILE_STR || sourceType == INI_FILE_STR) {
                 selectedItemsList = std::move(filesList);
                 filesList.shrink_to_fit();
             }
@@ -3381,10 +3387,6 @@ public:
                 selectedItemsList = (sourceType == LIST_STR) ? stringToList(listString) : readListFromFile(listPath, maxItemsLimit);
                 listString = "";
                 listPath = "";
-            }
-            else if (sourceType == INI_FILE_STR) {
-                selectedItemsList = parseSectionsFromIniSource(iniPath, maxItemsLimit);
-                iniPath.clear();
             }
             else if (sourceType == JSON_STR || sourceType == JSON_FILE_STR) {
                 populateSelectedItemsListFromJson(sourceType, (sourceType == JSON_STR) ? jsonString : jsonPath, jsonKey, selectedItemsList);
@@ -3394,7 +3396,7 @@ public:
             applyItemsLimit(selectedItemsList);
 
         } else if (commandMode == TOGGLE_STR) {
-            if (sourceTypeOn == FILE_STR) {
+            if (sourceTypeOn == FILE_STR || sourceTypeOn == INI_FILE_STR) {
                 selectedItemsListOn = std::move(filesListOn);
                 filesListOn.shrink_to_fit();
             }
@@ -3403,10 +3405,6 @@ public:
                 listStringOn = "";
                 listPathOn = "";
             }
-            else if (sourceTypeOn == INI_FILE_STR) {
-                selectedItemsListOn = parseSectionsFromIniSource(iniPathOn, maxItemsLimit);
-                iniPathOn = "";
-            }
             else if (sourceTypeOn == JSON_STR || sourceTypeOn == JSON_FILE_STR) {
                 populateSelectedItemsListFromJson(sourceTypeOn, (sourceTypeOn == JSON_STR) ? jsonStringOn : jsonPathOn, jsonKeyOn, selectedItemsListOn);
                 jsonPathOff = "";
@@ -3414,7 +3412,7 @@ public:
             }
             applyItemsLimit(selectedItemsListOn);
 
-            if (sourceTypeOff == FILE_STR) {
+            if (sourceTypeOff == FILE_STR || sourceTypeOff == INI_FILE_STR) {
                 selectedItemsListOff = std::move(filesListOff);
                 filesListOff.shrink_to_fit();
             }
@@ -3422,10 +3420,6 @@ public:
                 selectedItemsListOff = (sourceTypeOff == LIST_STR) ? stringToList(listStringOff) : readListFromFile(listPathOff, maxItemsLimit);
                 listStringOff = "";
                 listPathOff = "";
-            }
-            else if (sourceTypeOff == INI_FILE_STR) {
-                selectedItemsListOff = parseSectionsFromIniSource(iniPathOff, maxItemsLimit);
-                iniPathOff = "";
             }
             else if (sourceTypeOff == JSON_STR || sourceTypeOff == JSON_FILE_STR) {
                 populateSelectedItemsListFromJson(sourceTypeOff, (sourceTypeOff == JSON_STR) ? jsonStringOff : jsonPathOff, jsonKeyOff, selectedItemsListOff);
@@ -5190,8 +5184,8 @@ bool drawCommandsMenu(
                             else if (cmd[0] == "ini_file_source") {
                                 std::string iniPath = cmd[1];
                                 preprocessPath(iniPath, packagePath);
-                                entryList = parseSectionsFromIniSource(iniPath);
-                                break;
+                                parseSectionsFromIniPattern(iniPath, entryList);
+                                // don't break -- continue to accumulate from further ini_file_source lines
                             }
                         }
                     
@@ -6618,7 +6612,7 @@ public:
 
             FILE* packageFileOut = fopen((PACKAGE_PATH + PACKAGE_FILENAME).c_str(), "w");
             if (packageFileOut) {
-                constexpr const char packageContent[] = "[*Reboot To]\n[*Boot Entry]\nini_file_source /bootloader/hekate_ipl.ini\nfilter config\nreboot boot '{ini_file_source(*)}'\n[hekate - \uE073]\nreboot HEKATE\n[hekate UMS - \uE073\uE08D]\nreboot UMS\n\n[Commands]\n[Shutdown - ]\n;hold=true\nshutdown\n";
+                constexpr const char packageContent[] = "[*Reboot To]\n[*Boot Entry]\nini_file_source /bootloader/hekate_ipl.ini\nfilter config\nreboot boot '{ini_file_source(*)}'\n[*INI Entry]\nini_file_source /bootloader/ini/*.ini\nfilter config\nreboot ini '{ini_file_source(*)}'\n[hekate - \uE073]\nreboot HEKATE\n[hekate UMS - \uE073\uE08D]\nreboot UMS\n\n[Commands]\n[Shutdown - ]\n;hold=true\nshutdown\n";
                 fwrite(packageContent, sizeof(packageContent) - 1, 1, packageFileOut);
                 fclose(packageFileOut);
             }

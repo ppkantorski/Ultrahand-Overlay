@@ -2052,34 +2052,7 @@ inline void applyPlaceholderReplacement(std::string& input, const std::string& p
     input.replace(pos, placeholder.length(), replacement);
 }
 
-/**
- * @brief Returns INI section names for ini_file_source (single path or wildcard merge).
- *
- * Single-file paths use parseSectionsFromIni unchanged. Wildcard paths enumerate matching
- * files and merge section names (skips empty and [config], deduplicates by first occurrence).
- */
-inline std::vector<std::string> parseSectionsFromIniSource(const std::string& iniPathPattern, size_t maxItemsLimit = 0) {
-    if (iniPathPattern.find('*') == std::string::npos) {
-        return parseSectionsFromIni(iniPathPattern);
-    }
 
-    std::vector<std::string> merged;
-    const auto files = getFilesListByWildcards(iniPathPattern, maxItemsLimit);
-
-    for (const auto& filePath : files) {
-        for (const auto& sectionName : parseSectionsFromIni(filePath)) {
-            if (sectionName.empty() || sectionName == "config") {
-                continue;
-            }
-            if (std::find(merged.begin(), merged.end(), sectionName) != merged.end()) {
-                continue;
-            }
-            merged.push_back(sectionName);
-        }
-    }
-
-    return merged;
-}
 
 
 void applyReplaceIniPlaceholder(std::string& arg, const std::string& commandName, const std::string& iniPath) {
@@ -2149,7 +2122,7 @@ void applyReplaceIniPlaceholder(std::string& arg, const std::string& commandName
                     
                     // Load section names only once when needed
                     if (!sectionsLoaded) {
-                        sectionNames = parseSectionsFromIniSource(iniPath);
+                        sectionNames = parseSectionsFromIniPattern(iniPath);
                         sectionsLoaded = true;
                     }
                     
