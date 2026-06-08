@@ -2358,6 +2358,13 @@ std::vector<std::vector<std::string>> getSourceReplacement(const std::vector<std
             } else if (commandName == "hex_file" && cmd.size() >= 2) {
                 hexFilePath = cmd[1];
                 preprocessPath(hexFilePath, packagePath);
+            } else if (commandName == "list" && cmd.size() >= 2) {
+                // Plain list declaration — resolve any placeholders in the value before storing,
+                // matching interpretAndExecuteCommands behaviour.
+                listString = cmd[1];
+                removeQuotes(listString);
+                if (!iniFilePath.empty() && listString.find("{ini_file(") != std::string::npos)
+                    applyReplaceIniPlaceholder(listString, "ini_file", iniFilePath);
             } else if (commandName == "list_source" && cmd.size() >= 2) {
                 listString = cmd[1];
                 removeQuotes(listString);
@@ -2367,30 +2374,51 @@ std::vector<std::vector<std::string>> getSourceReplacement(const std::vector<std
             } else if (commandName == "ini_file_source" && cmd.size() >= 2) {
                 iniPath = cmd[1];
                 preprocessPath(iniPath, packagePath);
-            } else if (commandName == "json_source" && cmd.size() >= 2) {
+            } else if ((commandName == "json" || commandName == "json_source") && cmd.size() >= 2) {
+                // Plain json/json_source declaration — resolve placeholders in the value before
+                // storing, matching interpretAndExecuteCommands where applyPlaceholderReplacements
+                // fires on the command line before jsonString is updated.
+                // Critically: {list_file_source(*)} and similar inside a json value must be
+                // resolved here or the stored string is broken JSON that fails to parse.
                 jsonString = cmd[1];
+                removeQuotes(jsonString);
+                if (!iniFilePath.empty() && jsonString.find("{ini_file(") != std::string::npos)
+                    applyReplaceIniPlaceholder(jsonString, "ini_file", iniFilePath);
+                if (!hexFilePath.empty() && jsonString.find("{hex_file(") != std::string::npos)
+                    jsonString = replaceHexPlaceholder(jsonString, hexFilePath);
+                if (!listPath.empty() && jsonString.find("{list_file_source(") != std::string::npos) {
+                    applyPlaceholderReplacement(jsonString, "*", indexStr);
+                    startPos = jsonString.find("{list_file_source(");
+                    endPos = jsonString.find(")}", startPos + 18);
+                    if (endPos != std::string::npos)
+                        jsonString.replace(startPos, endPos - startPos + 2,
+                            returnOrNull(getEntryFromListFile(listPath, entryIndex)));
+                }
+                if (!listString.empty() && jsonString.find("{list_source(") != std::string::npos) {
+                    applyPlaceholderReplacement(jsonString, "*", indexStr);
+                    startPos = jsonString.find("{list_source(");
+                    endPos = jsonString.find(")}", startPos + 13);
+                    if (endPos != std::string::npos) {
+                        const auto& items = stringToList(listString);
+                        jsonString.replace(startPos, endPos - startPos + 2,
+                            entryIndex < items.size() ? returnOrNull(items[entryIndex]) : NULL_STR);
+                    }
+                }
             } else if (commandName == "json_file_source" && cmd.size() >= 2) {
                 jsonPath = cmd[1];
                 preprocessPath(jsonPath, packagePath);
             }
 
-            // Apply placeholder replacements to each arg
+            // Apply placeholder replacements to each arg.
+            // NOTE: {ini_file(...)} and {hex_file(...)} are intentionally NOT resolved here for
+            // regular command args. interpretAndExecuteCommands resolves them sequentially via
+            // applyPlaceholderReplacements, so set-ini-val writes are visible to subsequent
+            // {ini_file(...)} reads in the same section. Resolving them here upfront would bake
+            // in stale values read before any commands in the section have executed.
+            // They ARE resolved inside json/list dict values (in the tracking block above)
+            // because those values need to be valid JSON before being stored as jsonString.
             for (const auto& arg : cmd) {
                 modifiedArg = arg;
-
-                // {ini_file(...)} — section,key lookup against ini_file path
-                if (!iniFilePath.empty() && modifiedArg.find("{ini_file(") != std::string::npos) {
-                    applyReplaceIniPlaceholder(modifiedArg, "ini_file", iniFilePath);
-                }
-
-                // {hex_file(...)} — hex lookup against hex_file path.
-                // replaceHexPlaceholder returns the full modified string (replacement done in-place),
-                // so we assign directly rather than extracting a value.
-                if (!hexFilePath.empty() && modifiedArg.find("{hex_file(") != std::string::npos) {
-                    if (isFileOrDirectory(hexFilePath)) {
-                        modifiedArg = replaceHexPlaceholder(modifiedArg, hexFilePath);
-                    }
-                }
 
                 // These always apply
                 replaceAllPlaceholders(modifiedArg, "{file_source}", entry);
@@ -3214,6 +3242,20 @@ bool applyPlaceholderReplacements(std::vector<std::string>& cmd, const std::stri
             if (filePath.empty()) return NULL_STR;
             preprocessPath(filePath, packagePath);
             return crc32File(filePath);
+        }},
+        {"{ifnull(", [](const std::string& placeholder) -> std::string {
+            const size_t open  = placeholder.find('(');
+            const size_t close = placeholder.rfind(')');
+            if (open == std::string::npos || close == std::string::npos || close <= open + 1)
+                return NULL_STR;
+            const std::string inner = placeholder.substr(open + 1, close - open - 1);
+            const size_t comma = inner.find(',');
+            if (comma == std::string::npos) return NULL_STR;
+            std::string value    = inner.substr(0, comma);
+            std::string fallback = inner.substr(comma + 1);
+            removeQuotes(value);
+            removeQuotes(fallback);
+            return (value == NULL_STR) ? fallback : value;
         }},
     };
 
