@@ -4467,6 +4467,40 @@ void executeIniCommands(const std::string &iniPath, const std::string &section, 
     }
 }
 
+// ---------------------------------------------------------------------------
+// ipcDispatch — open a service via smGetServiceOriginal (non-blocking), send
+// a void->void command, close the session, and return the dispatch Result.
+// Returns a failed Result immediately if the service is not registered.
+// ---------------------------------------------------------------------------
+static inline Result ipcDispatch(const char* svcName, u32 enumCmd) {
+    Handle handle = INVALID_HANDLE;
+    Result rc = smGetServiceOriginal(&handle, smEncodeName(svcName));
+    if (R_FAILED(rc)) return rc;
+    Service srv = {};
+    serviceCreate(&srv, handle);
+    rc = serviceDispatch(&srv, enumCmd);
+    serviceClose(&srv);
+    return rc;
+}
+
+// ---------------------------------------------------------------------------
+// ipcPollExit — poll pmdmnt every 50 ms for up to 200 ms waiting for a
+// process to disappear. Returns true as soon as the process is gone.
+// ---------------------------------------------------------------------------
+static inline bool ipcPollExit(u64 programId) {
+    constexpr u64 kInterval = 50'000'000ULL;
+    constexpr u64 kTimeout  = 200'000'000ULL;
+    u64 elapsed = 0;
+    while (elapsed < kTimeout) {
+        u64 pid = 0;
+        if (R_FAILED(pmdmntGetProcessId(&pid, programId)) || pid == 0)
+            return true;
+        svcSleepThread(kInterval);
+        elapsed += kInterval;
+    }
+    return false;
+}
+
 // Main processCommand function
 void processCommand(const std::vector<std::string>& cmd, const std::string& packagePath = "", const std::string& selectedCommand = "") {
     const std::string& commandName = cmd[0];
@@ -4728,62 +4762,28 @@ void processCommand(const std::vector<std::string>& cmd, const std::string& pack
             break;
             
         case 'i':
-            if (commandName == "ipc_exists") {
-                // ipc_exists <SERVICE_NAME>
-                // Sets commandSuccess true if the service is currently registered,
-                // false if not. Uses smGetServiceOriginal so it never blocks.
+            if (commandName == "ipc_exists" || commandName == "!ipc_exists") {
+                // ipc_exists <SERVICE_NAME>  — success when registered.
+                // !ipc_exists <SERVICE_NAME> — success when NOT registered.
+                // smGetServiceOriginal never blocks on an unregistered name.
                 if (cmdSize >= 2) {
                     Handle handle = INVALID_HANDLE;
-                    const Result rc = smGetServiceOriginal(&handle, smEncodeName(cmd[1].c_str()));
-                    if (R_SUCCEEDED(rc)) {
-                        svcCloseHandle(handle);
-                        commandSuccess.store(true, std::memory_order_release);
-                    } else {
-                        commandSuccess.store(false, std::memory_order_release);
-                    }
-                }
-                return;
-            }
-            if (commandName == "!ipc_exists") {
-                // !ipc_exists <SERVICE_NAME>  — inverted: success when NOT registered.
-                if (cmdSize >= 2) {
-                    Handle handle = INVALID_HANDLE;
-                    const Result rc = smGetServiceOriginal(&handle, smEncodeName(cmd[1].c_str()));
-                    if (R_SUCCEEDED(rc)) {
-                        svcCloseHandle(handle);
-                        commandSuccess.store(false, std::memory_order_release);
-                    } else {
-                        commandSuccess.store(true, std::memory_order_release);
-                    }
+                    const bool registered = R_SUCCEEDED(
+                        smGetServiceOriginal(&handle, smEncodeName(cmd[1].c_str())));
+                    if (registered) svcCloseHandle(handle);
+                    const bool invert = (commandName[0] == '!');
+                    commandSuccess.store(registered != invert, std::memory_order_release);
                 }
                 return;
             }
             if (commandName == "ipc_exec") {
                 // ipc_exec <SERVICE_NAME> <ENUM_CMD>
-                // Sends a void->void IPC command to a service. commandSuccess is
-                // true if the dispatch succeeded, false if the service is not
-                // registered or the module rejected the command.
-                // smGetServiceOriginal is used so an unregistered name returns
-                // immediately rather than blocking.
+                // Sends a void->void IPC command. Success = dispatch accepted.
                 if (cmdSize >= 3) {
                     const u32 enumCmd = static_cast<u32>(ult::stoi(cmd[2]));
-
-                    Handle handle = INVALID_HANDLE;
-                    Result rc = smGetServiceOriginal(&handle, smEncodeName(cmd[1].c_str()));
-                    if (R_FAILED(rc)) {
-                        commandSuccess.store(false, std::memory_order_release);
-                        return;
-                    }
-                    Service srv = {};
-                    serviceCreate(&srv, handle);
-
-                    rc = serviceDispatch(&srv, enumCmd);
-                    serviceClose(&srv);
-
-                    // serviceDispatch is synchronous: the module has already handled
-                    // the command and replied before this line. R_SUCCEEDED means it
-                    // was accepted; no polling needed.
-                    commandSuccess.store(R_SUCCEEDED(rc), std::memory_order_release);
+                    commandSuccess.store(
+                        R_SUCCEEDED(ipcDispatch(cmd[1].c_str(), enumCmd)),
+                        std::memory_order_release);
                 } else {
                     commandSuccess.store(false, std::memory_order_release);
                 }
@@ -4809,6 +4809,104 @@ void processCommand(const std::vector<std::string>& cmd, const std::string& pack
             }
             if (commandName.compare(0, 7, "mirror_") == 0) {
                 handleMirrorCommand(cmd, packagePath);
+                return;
+            }
+            if (commandName == "module") {
+                // module start <TID> — launch a sysmodule by program ID.
+                // module stop  <TID> — stop a sysmodule, graceful-first with
+                //                      force-kill fallback for dynamic modules.
+                // Refuses start/stop of static modules with no graceful contract.
+                // <TID>: bare 16-hex-char folder name or 0x-prefixed program ID.
+                if (cmdSize >= 3) {
+                    const std::string& subcmd = cmd[1];
+                    const char* tidCStr = cmd[2].c_str();
+                    if (cmd[2].size() > 2 && tidCStr[0] == '0' &&
+                        (tidCStr[1] == 'x' || tidCStr[1] == 'X'))
+                        tidCStr += 2;
+                    const u64 programId = static_cast<u64>(
+                        std::strtoull(tidCStr, nullptr, 16));
+                    if (programId == 0) {
+                        commandSuccess.store(false, std::memory_order_release);
+                        return;
+                    }
+
+                    // Read toolbox.json — safe defaults if absent.
+                    bool needReboot  = true;
+                    bool hasGraceful = false;
+                    char gracefulSvc[16] = {};
+                    u32  gracefulCmd = 0;
+                    {
+                        char tbPath[FS_MAX_PATH];
+                        std::snprintf(tbPath, sizeof(tbPath),
+                            "/atmosphere/contents/%016lX/toolbox.json", programId);
+                        FILE* fp = std::fopen(tbPath, "rb");
+                        if (fp) {
+                            std::fseek(fp, 0, SEEK_END);
+                            const long sz = std::ftell(fp);
+                            if (sz > 0 && sz <= 4096) {
+                                std::fseek(fp, 0, SEEK_SET);
+                                char tbBuf[4096];
+                                if (std::fread(tbBuf, 1, sz, fp) == static_cast<size_t>(sz)) {
+                                    tbBuf[sz] = '\0';
+                                    cJSON* tb = cJSON_ParseWithLength(tbBuf, sz);
+                                    if (tb) {
+                                        cJSON* ri = cJSON_GetObjectItem(tb, "requires_reboot");
+                                        if (ri && cJSON_IsBool(ri))
+                                            needReboot = static_cast<bool>(cJSON_IsTrue(ri));
+                                        cJSON* si = cJSON_GetObjectItem(tb, "shutdown_service");
+                                        cJSON* ci = cJSON_GetObjectItem(tb, "shutdown_cmd");
+                                        if (si && cJSON_IsString(si) && ci && cJSON_IsNumber(ci)) {
+                                            const size_t svcLen = std::strlen(si->valuestring);
+                                            if (svcLen > 0 && svcLen <= 8 && ci->valueint >= 0) {
+                                                std::memcpy(gracefulSvc, si->valuestring, svcLen);
+                                                gracefulSvc[svcLen] = '\0';
+                                                gracefulCmd = static_cast<u32>(ci->valueint);
+                                                hasGraceful = true;
+                                            }
+                                        }
+                                        cJSON_Delete(tb);
+                                    }
+                                }
+                            }
+                            std::fclose(fp);
+                        }
+                    }
+
+                    // Static modules with no graceful contract cannot be toggled.
+                    if (needReboot && !hasGraceful) {
+                        commandSuccess.store(false, std::memory_order_release);
+                        return;
+                    }
+
+                    if (subcmd == "start") {
+                        pmshellInitialize();
+                        const NcmProgramLocation loc{
+                            .program_id = programId,
+                            .storageID  = NcmStorageId_None,
+                        };
+                        u64 pid = 0;
+                        const bool ok = R_SUCCEEDED(pmshellLaunchProgram(0, &loc, &pid));
+                        pmshellExit();
+                        commandSuccess.store(ok, std::memory_order_release);
+
+                    } else if (subcmd == "stop") {
+                        bool stopped = false;
+                        if (hasGraceful &&
+                            R_SUCCEEDED(ipcDispatch(gracefulSvc, gracefulCmd)))
+                            stopped = ipcPollExit(programId);
+                        if (!stopped && !needReboot) {
+                            pmshellInitialize();
+                            stopped = R_SUCCEEDED(pmshellTerminateProgram(programId));
+                            pmshellExit();
+                        }
+                        commandSuccess.store(stopped, std::memory_order_release);
+
+                    } else {
+                        commandSuccess.store(false, std::memory_order_release);
+                    }
+                } else {
+                    commandSuccess.store(false, std::memory_order_release);
+                }
                 return;
             }
             break;
