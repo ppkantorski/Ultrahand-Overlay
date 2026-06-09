@@ -4727,6 +4727,70 @@ void processCommand(const std::vector<std::string>& cmd, const std::string& pack
             }
             break;
             
+        case 'i':
+            if (commandName == "ipc_exists") {
+                // ipc_exists <SERVICE_NAME>
+                // Sets commandSuccess true if the service is currently registered,
+                // false if not. Uses smGetServiceOriginal so it never blocks.
+                if (cmdSize >= 2) {
+                    Handle handle = INVALID_HANDLE;
+                    const Result rc = smGetServiceOriginal(&handle, smEncodeName(cmd[1].c_str()));
+                    if (R_SUCCEEDED(rc)) {
+                        svcCloseHandle(handle);
+                        commandSuccess.store(true, std::memory_order_release);
+                    } else {
+                        commandSuccess.store(false, std::memory_order_release);
+                    }
+                }
+                return;
+            }
+            if (commandName == "!ipc_exists") {
+                // !ipc_exists <SERVICE_NAME>  — inverted: success when NOT registered.
+                if (cmdSize >= 2) {
+                    Handle handle = INVALID_HANDLE;
+                    const Result rc = smGetServiceOriginal(&handle, smEncodeName(cmd[1].c_str()));
+                    if (R_SUCCEEDED(rc)) {
+                        svcCloseHandle(handle);
+                        commandSuccess.store(false, std::memory_order_release);
+                    } else {
+                        commandSuccess.store(true, std::memory_order_release);
+                    }
+                }
+                return;
+            }
+            if (commandName == "ipc_exec") {
+                // ipc_exec <SERVICE_NAME> <ENUM_CMD>
+                // Sends a void->void IPC command to a service. commandSuccess is
+                // true if the dispatch succeeded, false if the service is not
+                // registered or the module rejected the command.
+                // smGetServiceOriginal is used so an unregistered name returns
+                // immediately rather than blocking.
+                if (cmdSize >= 3) {
+                    const u32 enumCmd = static_cast<u32>(ult::stoi(cmd[2]));
+
+                    Handle handle = INVALID_HANDLE;
+                    Result rc = smGetServiceOriginal(&handle, smEncodeName(cmd[1].c_str()));
+                    if (R_FAILED(rc)) {
+                        commandSuccess.store(false, std::memory_order_release);
+                        return;
+                    }
+                    Service srv = {};
+                    serviceCreate(&srv, handle);
+
+                    rc = serviceDispatch(&srv, enumCmd);
+                    serviceClose(&srv);
+
+                    // serviceDispatch is synchronous: the module has already handled
+                    // the command and replied before this line. R_SUCCEEDED means it
+                    // was accepted; no polling needed.
+                    commandSuccess.store(R_SUCCEEDED(rc), std::memory_order_release);
+                } else {
+                    commandSuccess.store(false, std::memory_order_release);
+                }
+                return;
+            }
+            break;
+
         case 'l':
             if (commandName == "logging") {
                 interpreterLogging.store(true, std::memory_order_release);
