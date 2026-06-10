@@ -92,7 +92,7 @@ static const std::array<std::string_view, 6> commandGroupings = {DEFAULT_STR, "s
 
 constexpr std::string_view SYSTEM_PATTERN = ";system=";
 constexpr std::string_view RAM_SIZE_GB_PATTERN = ";ram_size_gb=";
-constexpr std::string_view STATE_PATTERN = ";state=";
+constexpr std::string_view DEVICE_STATE_PATTERN = ";device_state=";
 constexpr std::string_view HOS_VERSION_PATTERN = ";hos_version=";
 constexpr std::string_view AMS_VERSION_PATTERN = ";ams_version=";
 constexpr std::string_view MODE_PATTERN = ";mode=";
@@ -100,6 +100,9 @@ constexpr std::string_view GROUPING_PATTERN = ";grouping=";
 constexpr std::string_view FOOTER_PATTERN = ";footer=";
 constexpr std::string_view FOOTER_HIGHLIGHT_PATTERN = ";footer_highlight=";
 constexpr std::string_view HOLD_PATTERN = ";hold=";
+
+constexpr std::string_view VISIBILITY_CONDITION_PATTERN = ";visibility_condition=";
+constexpr std::string_view TOGGLE_STATE_CONDITION_PATTERN = ";toggle_state_condition=";
 
 constexpr std::string_view MINI_PATTERN = ";mini=";
 constexpr std::string_view SELECTION_MINI_PATTERN = ";selection_mini=";
@@ -136,7 +139,7 @@ constexpr std::string_view ON_EVERY_TICK_PATTERN = ";on_every_tick=";
 
 constexpr size_t SYSTEM_PATTERN_LEN = SYSTEM_PATTERN.size();
 constexpr size_t RAM_SIZE_GB_PATTERN_LEN = RAM_SIZE_GB_PATTERN.size();
-constexpr size_t STATE_PATTERN_LEN = STATE_PATTERN.size();
+constexpr size_t DEVICE_STATE_PATTERN_LEN = DEVICE_STATE_PATTERN.size();
 constexpr size_t HOS_VERSION_PATTERN_LEN = HOS_VERSION_PATTERN.size();
 constexpr size_t AMS_VERSION_PATTERN_LEN = AMS_VERSION_PATTERN.size();
 constexpr size_t MODE_PATTERN_LEN = MODE_PATTERN.size();
@@ -144,6 +147,8 @@ constexpr size_t GROUPING_PATTERN_LEN = GROUPING_PATTERN.size();
 constexpr size_t FOOTER_PATTERN_LEN = FOOTER_PATTERN.size();
 constexpr size_t FOOTER_HIGHLIGHT_PATTERN_LEN = FOOTER_HIGHLIGHT_PATTERN.size();
 constexpr size_t HOLD_PATTERN_LEN = HOLD_PATTERN.size();
+constexpr size_t VISIBILITY_CONDITION_PATTERN_LEN = VISIBILITY_CONDITION_PATTERN.size();
+constexpr size_t TOGGLE_STATE_CONDITION_PATTERN_LEN = TOGGLE_STATE_CONDITION_PATTERN.size();
 constexpr size_t MINI_PATTERN_LEN = MINI_PATTERN.size();
 constexpr size_t SELECTION_MINI_PATTERN_LEN = SELECTION_MINI_PATTERN.size();
 constexpr size_t PROGRESS_PATTERN_LEN = PROGRESS_PATTERN.size();
@@ -189,8 +194,6 @@ static std::string lastCommandMode;
 static bool lastCommandIsHold;
 static bool lastFooterHighlight;
 static bool lastFooterHighlightDefined; 
-static bool lastToggleTargetState = false;
-static bool lastToggleHasState = false;
 
 static std::unordered_map<std::string, std::string> selectedFooterDict;
 
@@ -363,6 +366,7 @@ bool handleRunningInterpreter(uint64_t& keysDown, uint64_t& keysHeld) {
 
 
 static u64 holdStartTick = 0;
+static u64 holdDurationMs = 0;
 static std::string lastSelectedListItemFooter;
 static std::vector<std::vector<std::string>> storedCommands;
 static bool holdRumbleFired[3] = {false, false, false}; // guards for the ~33%, ~66%, ~100% rumble pulses
@@ -398,13 +402,6 @@ bool processHold(uint64_t keysDown, uint64_t keysHeld, u64& holdStartTick, bool&
 
                 lastSelectedListItem->setValue(lastSelectedListItemFooter, highlightParam);
                 lastSelectedListItemFooter.clear();
-
-                if (lastCommandMode == TOGGLE_STR) {
-                    // lastToggleTargetState holds the post-onClick (i.e. new) state;
-                    // on cancel we revert to the original, which is its negation.
-                    static_cast<tsl::elm::ToggleListItem*>(lastSelectedListItem)
-                        ->setState(!lastToggleTargetState);
-                }
             } else {
                 lastSelectedListItem->setValue("", true);
             }
@@ -431,7 +428,7 @@ bool processHold(uint64_t keysDown, uint64_t keysHeld, u64& holdStartTick, bool&
     
     // Update hold progress
     const u64 elapsedMs = armTicksToNs(armGetSystemTick() - holdStartTick) / 1000000;
-    const int percentage = std::min(100, static_cast<int>((elapsedMs * 100) / ult::holdDurationMs));
+    const int percentage = std::min(100, static_cast<int>((elapsedMs * 100) / holdDurationMs));
     displayPercentage.store(percentage, std::memory_order_release);
     
     // Threshold-crossing rumble pulses — fired at ~33%, ~66%, ~100% of the hold.
@@ -561,8 +558,7 @@ static void handleInterpreterCompletion(const std::string& packageConfigIniPath)
                 lastSelectedListItem->setValue(finalState);
                 static_cast<tsl::elm::ToggleListItem*>(lastSelectedListItem)
                     ->setState(finalState == CAPITAL_ON_STR);
-                if (!lastToggleHasState)
-                    setIniFileValue(packageConfigIniPath, lastKeyName, FOOTER_STR, finalState);
+                setIniFileValue(packageConfigIniPath, lastKeyName, FOOTER_STR, finalState);
 
                 lastKeyName.clear();
                 nextToggleState.clear();
@@ -617,25 +613,20 @@ static bool handleTriggerReturnToPackages(const std::string& packagePath);
 // Returns true when a hold is in progress so the caller can return early.
 [[gnu::noinline]]
 static bool handleCommandHold(uint64_t keysDown, uint64_t keysHeld, const std::string& cmdPath) {
-    bool isHolding = lastCommandIsHold;
+    bool isHolding = (lastCommandIsHold && runningInterpreter.load(std::memory_order_acquire));
     if (!isHolding) return false;
-    processHold(keysDown, keysHeld, holdStartTick, isHolding, [&cmdPath]() {
+    const bool isToggleHold = (lastCommandMode == TOGGLE_STR);
+    processHold(keysDown, keysHeld, holdStartTick, isHolding, [&cmdPath, isToggleHold]() {
         displayPercentage.store(-1, std::memory_order_release);
         lastCommandIsHold = false;
         lastSelectedListItem->setValue(INPROGRESS_SYMBOL);
-        triggerEnterFeedback();
-
-        if (lastCommandMode == TOGGLE_STR && lastSelectedListItem) {
-            static_cast<tsl::elm::ToggleListItem*>(lastSelectedListItem)->setState(lastToggleTargetState);
-            if (!lastToggleHasState) {
-                const std::string configPath = cmdPath + "config.ini";
-                setIniFileValue(configPath, lastKeyName, FOOTER_STR, lastToggleTargetState ? CAPITAL_ON_STR : CAPITAL_OFF_STR);
-            }
-        }
-
+        if (isToggleHold)
+            nextToggleState == CAPITAL_ON_STR ? triggerOnFeedback() : triggerOffFeedback();
+        else
+            triggerEnterFeedback();
         executeInterpreterCommands(std::move(storedCommands), cmdPath, lastKeyName);
         lastRunningInterpreter.store(true, std::memory_order_release);
-    }, nullptr, true);
+    }, isToggleHold ? []() { nextToggleState.clear(); } : std::function<void()>(nullptr), true);
     return true;
 }
 
@@ -1775,9 +1766,6 @@ public:
             useLaunchCombos = getBoolValue("launch_combos", true); // TRUE_STR default
             createToggleListItem(list, LAUNCH_COMBOS, useLaunchCombos, "launch_combos");
 
-            useHapticFeedback = getBoolValue("haptic_feedback", false); // FALSE_STR default
-            createToggleListItem(list, HAPTIC_FEEDBACK, useHapticFeedback, "haptic_feedback");
-
             useAutoNTPSync = getBoolValue("auto_ntp_sync", true); // FALSE_STR default
             createToggleListItem(list, AUTO_NTP_SYNC, useAutoNTPSync, "auto_ntp_sync");
 
@@ -1788,28 +1776,38 @@ public:
             rightAlignmentState = useRightAlignment = getBoolValue("right_alignment"); // FALSE_STR default
             createToggleListItem(list, RIGHT_SIDE_MODE, useRightAlignment, "right_alignment");
 
-            addHeader(list, INPUT);
+
+            addHeader(list, INPUT_SETTINGS);
+            useHapticFeedback = getBoolValue("haptic_feedback", false); // FALSE_STR default
+            createToggleListItem(list, HAPTIC_FEEDBACK, useHapticFeedback, "haptic_feedback");
+
+            useStickNavigation = getBoolValue("stick_navigation", true);
+            createToggleListItem(list, STICK_NAVIGATION, useStickNavigation, "stick_navigation");
             std::vector<std::string> holdLabels = {"0.5s", "1.0s", "1.5s", "2.0s", "2.5s", "3.0s", "3.5s", "4.0s", "4.5s", "5.0s"};
-            auto* holdTrackbar = new tsl::elm::NamedStepTrackBarV2(
-                HOLD_TIME,
+            auto* holdDurationTrackbar = new tsl::elm::NamedStepTrackBarV2(
+                HOLD_DURATION,
                 "",
                 holdLabels,
                 nullptr, nullptr, {}, "",
                 false,
                 false
             );
-            holdTrackbar->setSimpleCallback([this](s16 /*value*/, s16 index) {
+            holdDurationTrackbar->setSimpleCallback([this](s16 /*value*/, s16 index) {
                 u32 newVal = (index + 1) * 500;
-                ult::holdDurationMs = newVal;
-                setUltrahandConfig("hold_time", std::to_string(newVal));
+                holdDurationMs = newVal;
+                setUltrahandConfig("hold_duration", std::to_string(newVal));
             });
-            u32 currentProgress = (ult::holdDurationMs / 500);
-            if (currentProgress > 0) currentProgress--;
-            if (currentProgress > 9) currentProgress = 9;
-            holdTrackbar->setProgress(static_cast<u8>(currentProgress));
-            holdTrackbar->disableClickAnimation();
-            list->addItem(holdTrackbar);
-
+            {
+                auto it = ultrahandSection.find("hold_duration");
+                const u32 storedMs = (it != ultrahandSection.end() && !it->second.empty())
+                    ? static_cast<u32>(std::max(500, std::min(ult::stoi(it->second), 5000)))
+                    : 3000u;
+                holdDurationMs = storedMs;
+                const u8 progress = static_cast<u8>(std::min((storedMs / 500u) - 1u, 9u));
+                holdDurationTrackbar->setProgress(progress);
+                holdDurationTrackbar->disableClickAnimation();
+            }
+            list->addItem(holdDurationTrackbar);
 
             addHeader(list, MENU_SETTINGS);
             hidePackages = getBoolValue("hide_packages", false); // FALSE_STR default
@@ -1827,10 +1825,10 @@ public:
 
             usePageSwap = getBoolValue("page_swap", false); // FALSE_STR default
             createToggleListItem(list, PAGE_SWAP, usePageSwap, "page_swap", false, true);
-            usePageRecall = getBoolValue("page_recall", true); // TRUE_STR default
-            createToggleListItem(list, PAGE_RECALL, usePageRecall, "page_recall");
-            useLaunchRecall = getBoolValue("launch_recall", true); // TRUE_STR default
-            createToggleListItem(list, LAUNCH_RECALL, useLaunchRecall, "launch_recall");
+            //usePageRecall = getBoolValue("page_recall", true); // TRUE_STR default
+            //createToggleListItem(list, PAGE_RECALL, usePageRecall, "page_recall");
+            //useLaunchRecall = getBoolValue("launch_recall", true); // TRUE_STR default
+            //createToggleListItem(list, LAUNCH_RECALL, useLaunchRecall, "launch_recall");
 
             hideOverlayVersions = getBoolValue("hide_overlay_versions", false); // FALSE_STR default
             createToggleListItem(list, OVERLAY_VERSIONS, hideOverlayVersions, "hide_overlay_versions", true, true);
@@ -3084,12 +3082,6 @@ private:
     bool isHold = false;
     bool isMini = false;
 
-    std::string toggleStateMode = "";
-    std::string toggleStatePath = "";
-    std::string toggleStateArg = "";
-    std::string toggleStateArg2 = "";
-    std::string toggleStateArg3 = "";
-
     size_t maxItemsLimit = 250;     // 0 = uncapped, any other value = max size
     
     // Helper function to apply size limit to any vector
@@ -3162,6 +3154,12 @@ public:
                 (!inEristaSection && inMarikoSection && usingMariko) || 
                 (!inEristaSection && !inMarikoSection)) {
                 
+                // Menu-item directives are resolved at render time; skip them here.
+                if (commandName.compare(0, VISIBILITY_CONDITION_PATTERN_LEN, VISIBILITY_CONDITION_PATTERN) == 0 ||
+                    commandName.compare(0, TOGGLE_STATE_CONDITION_PATTERN_LEN, TOGGLE_STATE_CONDITION_PATTERN) == 0) {
+                    continue;
+                }
+                
                 // Optimized pattern matching with bounds checking
                 if (commandName.size() > MODE_PATTERN_LEN && 
                            commandName.compare(0, MODE_PATTERN_LEN, MODE_PATTERN) == 0) {
@@ -3189,25 +3187,6 @@ public:
                         currentSection = ON_STR;
                     else if (commandName == "off:")
                         currentSection = OFF_STR;
-                    else if (commandName == "toggle_state" && cmd.size() >= 2) {
-                        toggleStateMode = cmd[1];
-                        if (cmd.size() >= 3) {
-                            toggleStatePath = cmd[2];
-                            preprocessPath(toggleStatePath, filePath);
-                        }
-                        if (cmd.size() >= 4) {
-                            toggleStateArg = cmd[3];
-                            removeQuotes(toggleStateArg);
-                        }
-                        if (cmd.size() >= 5) {
-                            toggleStateArg2 = cmd[4];
-                            removeQuotes(toggleStateArg2);
-                        }
-                        if (cmd.size() >= 6) {
-                            toggleStateArg3 = cmd[5];
-                            removeQuotes(toggleStateArg3);
-                        }
-                    }
                 }
     
                 if (cmd.size() > 1) {
@@ -3807,32 +3786,8 @@ public:
                 toggleListItem->m_shortHoldKey = SCRIPT_KEY;
     
                 // Use const iterators for better performance
-                bool toggleStateOn = false;
-                if (!toggleStateMode.empty()) {
-                    if (toggleStateMode == "file_exists") {
-                        toggleStateOn = ult::isFileOrDirectory(toggleStatePath);
-                    } else if (toggleStateMode == "has_line") {
-                        toggleStateOn = isLineExistInIni(toggleStatePath, toggleStateArg);
-                    } else if (toggleStateMode == "hex_check") {
-                        uint32_t offset = 0;
-                        if (isValidNumber(toggleStateArg)) {
-                            offset = std::stoul(toggleStateArg, nullptr, 0); // Handles 0x prefix
-                        }
-                        toggleStateOn = checkHexValue(toggleStatePath, offset, toggleStateArg2);
-                    } else if (toggleStateMode == "ini_val") {
-                        // toggle_state ini_val <path> <section> <key> <value>
-                        std::string currentVal = parseValueFromIniSection(toggleStatePath, toggleStateArg, toggleStateArg2);
-                        removeQuotes(currentVal);
-                        toggleStateOn = (currentVal == toggleStateArg3);
-                    }
-                } else {
-                    toggleStateOn = std::find(selectedItemsListOn.cbegin(), selectedItemsListOn.cend(), selectedItem) != selectedItemsListOn.cend();
-                }
+                const bool toggleStateOn = std::find(selectedItemsListOn.cbegin(), selectedItemsListOn.cend(), selectedItem) != selectedItemsListOn.cend();
                 toggleListItem->setState(toggleStateOn);
-                if (isHold) {
-                    toggleListItem->disableClickAnimation();
-                    toggleListItem->enableTouchHolding();
-                }
     
                 toggleListItem->setStateChangedListener([this, i, toggleListItem, selectedItem, itemName](bool state) {
                     if (runningInterpreter.load(std::memory_order_acquire)) {
@@ -3903,20 +3858,6 @@ public:
                     
                     if (usingProgress)
                         toggleListItem->setValue(INPROGRESS_SYMBOL);
-
-                    if (isHold && !lastCommandIsHold) {
-                        toggleListItem->setState(!state);
-
-                        lastSelectedListItemFooter = toggleListItem->getValue();
-                        lastSelectedListItem = toggleListItem;
-                        holdStartTick = armGetSystemTick();
-                        storedCommands = std::move(modifiedCmds);
-                        lastCommandMode = commandMode;
-                        lastCommandIsHold = true;
-                        lastKeyName = specificKey;
-                        lastToggleTargetState = state;
-                        return;
-                    }
 
                     nextToggleState = !state ? CAPITAL_OFF_STR : CAPITAL_ON_STR;
                     runningInterpreter.store(true, release);
@@ -4520,20 +4461,11 @@ bool drawCommandsMenu(
         sourceTypeOn = DEFAULT_STR;
         sourceTypeOff = DEFAULT_STR;
         
-        std::string toggleStateMode = "";
-        std::string toggleStatePath = "";
-        std::string toggleStateArg = "";
-        std::string toggleStateArg2 = "";
-        std::string toggleStateArg3 = "";
-        
-        std::string toggleVisibilityMode = "";
-        std::string toggleVisibilityPath = "";
-        std::string toggleVisibilityArg = "";
-        std::string toggleVisibilityArg2 = "";
-        std::string toggleVisibilityArg3 = "";
-        
         
         bool isSlot = false;
+        bool skipVisibility = false;
+        bool toggleStateConditionSet = false;
+        bool toggleStateConditionResult = false;
 
         if (drawLocation.empty() || (currentPage == drawLocation) || (optionName.front() == '@')) {
             
@@ -4788,27 +4720,6 @@ bool drawCommandsMenu(
             
                 commandName = cmd[0];
                 
-                if (commandName == "toggle_visibility" && cmd.size() >= 2) {
-                    toggleVisibilityMode = cmd[1];
-                    if (cmd.size() >= 3) {
-                        toggleVisibilityPath = cmd[2];
-                        preprocessPath(toggleVisibilityPath, packagePath);
-                    }
-                    if (cmd.size() >= 4) {
-                        toggleVisibilityArg = cmd[3];
-                        removeQuotes(toggleVisibilityArg);
-                    }
-                    if (cmd.size() >= 5) {
-                        toggleVisibilityArg2 = cmd[4];
-                        removeQuotes(toggleVisibilityArg2);
-                    }
-                    if (cmd.size() >= 6) {
-                        toggleVisibilityArg3 = cmd[5];
-                        removeQuotes(toggleVisibilityArg3);
-                    }
-                    continue;
-                }
-
                 // Quick check for section markers
                 if (commandName.length() == 7) {
                     if ((commandName[0] == 'e' || commandName[0] == 'E') && 
@@ -4845,8 +4756,8 @@ bool drawCommandsMenu(
                                         commandSystem = commandSystems[0];
                                     continue;
                                 }
-                                if (commandName.compare(0, STATE_PATTERN_LEN, STATE_PATTERN) == 0) {
-                                    commandState = commandName.substr(STATE_PATTERN_LEN);
+                                if (commandName.compare(0, DEVICE_STATE_PATTERN_LEN, DEVICE_STATE_PATTERN) == 0) {
+                                    commandState = commandName.substr(DEVICE_STATE_PATTERN_LEN);
                                     continue;
                                 }
 
@@ -4940,6 +4851,14 @@ bool drawCommandsMenu(
                                 
                             case 't':
                                 if (parseBoolFlag(commandName, TOP_PIVOT_PATTERN, usingTopPivot)) continue;
+                                if (commandName.compare(0, TOGGLE_STATE_CONDITION_PATTERN_LEN, TOGGLE_STATE_CONDITION_PATTERN) == 0) {
+                                    std::string conditionStr = commandName.substr(TOGGLE_STATE_CONDITION_PATTERN_LEN);
+                                    for (size_t j = 1; j < cmd.size(); ++j)
+                                        conditionStr += " " + cmd[j];
+                                    toggleStateConditionResult = evaluateMenuCondition(conditionStr, packagePath);
+                                    toggleStateConditionSet = true;
+                                    continue;
+                                }
                                 break;
                                 
                             case 'b':
@@ -5009,6 +4928,17 @@ bool drawCommandsMenu(
                                 }
                                 if (parseBoolFlag(commandName, UNLOCKED_PATTERN, unlockedTrackbar)) continue;
                                 break;
+                                
+                            case 'v':
+                                if (commandName.compare(0, VISIBILITY_CONDITION_PATTERN_LEN, VISIBILITY_CONDITION_PATTERN) == 0) {
+                                    std::string conditionStr = commandName.substr(VISIBILITY_CONDITION_PATTERN_LEN);
+                                    for (size_t j = 1; j < cmd.size(); ++j)
+                                        conditionStr += " " + cmd[j];
+                                    if (!skipVisibility && !evaluateMenuCondition(conditionStr, packagePath))
+                                        skipVisibility = true;
+                                    continue;
+                                }
+                                break;
                         }
                         
                         // If we got here, it's a `;` command that didn't match any pattern
@@ -5016,48 +4946,6 @@ bool drawCommandsMenu(
                         continue;
                     }
                     
-                    // Parse toggle_state and toggle_visibility independently of commandMode
-                    // so they work regardless of order relative to ;mode=toggle
-                    if (commandName == "toggle_state" && cmd.size() >= 2) {
-                        toggleStateMode = cmd[1];
-                        if (cmd.size() >= 3) {
-                            toggleStatePath = cmd[2];
-                            preprocessPath(toggleStatePath, packagePath);
-                        }
-                        if (cmd.size() >= 4) {
-                            toggleStateArg = cmd[3];
-                            removeQuotes(toggleStateArg);
-                        }
-                        if (cmd.size() >= 5) {
-                            toggleStateArg2 = cmd[4];
-                            removeQuotes(toggleStateArg2);
-                        }
-                        if (cmd.size() >= 6) {
-                            toggleStateArg3 = cmd[5];
-                            removeQuotes(toggleStateArg3);
-                        }
-                        continue;
-                    } else if (commandName == "toggle_visibility" && cmd.size() >= 2) {
-                        toggleVisibilityMode = cmd[1];
-                        if (cmd.size() >= 3) {
-                            toggleVisibilityPath = cmd[2];
-                            preprocessPath(toggleVisibilityPath, packagePath);
-                        }
-                        if (cmd.size() >= 4) {
-                            toggleVisibilityArg = cmd[3];
-                            removeQuotes(toggleVisibilityArg);
-                        }
-                        if (cmd.size() >= 5) {
-                            toggleVisibilityArg2 = cmd[4];
-                            removeQuotes(toggleVisibilityArg2);
-                        }
-                        if (cmd.size() >= 6) {
-                            toggleVisibilityArg3 = cmd[5];
-                            removeQuotes(toggleVisibilityArg3);
-                        }
-                        continue;
-                    }
-
                     if (commandMode == TOGGLE_STR) {
                         if (commandName.compare(0, 3, "on:") == 0)
                             currentSection = ON_STR;
@@ -5065,7 +4953,6 @@ bool drawCommandsMenu(
                             currentSection = OFF_STR;
                         
                         if (currentSection == GLOBAL_STR) {
-
                             commandsOn.push_back(cmd);
                             commandsOff.push_back(cmd);
                         } else if (currentSection == ON_STR) {
@@ -5104,62 +4991,57 @@ bool drawCommandsMenu(
             }
 
             
-            // Skip config.ini for toggles with toggle_state — external source is the single source of truth.
-            // Non-toggle modes (option/slot/dropdown) always use config.ini regardless of toggle_state.
-            if (commandMode != TOGGLE_STR || toggleStateMode.empty()) {
-                if (isFile(packageConfigIniPath)) {
-                    packageConfigData = getParsedDataFromIniFile(packageConfigIniPath);
-                    
-                    bool shouldSaveINI = false;
-                    
-                    // Only sync footer if pattern was provided
-                    shouldSaveINI |= syncIniValue(packageConfigData, packageConfigIniPath, optionName, FOOTER_STR, commandFooter);
-                    
-                    // Always try to load footer_highlight from config.ini if it exists
-                    auto optionIt = packageConfigData.find(optionName);
-                    if (optionIt != packageConfigData.end()) {
-                        auto footerHighlightIt = optionIt->second.find(FOOTER_HIGHLIGHT_STR);
-                        if (footerHighlightIt != optionIt->second.end() && !footerHighlightIt->second.empty()) {
-                            // Load the non-empty value from config.ini
-                            commandFooterHighlight = (footerHighlightIt->second == TRUE_STR);
-                            commandFooterHighlightDefined = true;
-                        }
+            if (isFile(packageConfigIniPath)) {
+                packageConfigData = getParsedDataFromIniFile(packageConfigIniPath);
+                
+                bool shouldSaveINI = false;
+                
+                // Only sync footer if pattern was provided
+                shouldSaveINI |= syncIniValue(packageConfigData, packageConfigIniPath, optionName, FOOTER_STR, commandFooter);
+                
+                // Always try to load footer_highlight from config.ini if it exists
+                auto optionIt = packageConfigData.find(optionName);
+                if (optionIt != packageConfigData.end()) {
+                    auto footerHighlightIt = optionIt->second.find(FOOTER_HIGHLIGHT_STR);
+                    if (footerHighlightIt != optionIt->second.end() && !footerHighlightIt->second.empty()) {
+                        // Load the non-empty value from config.ini
+                        commandFooterHighlight = (footerHighlightIt->second == TRUE_STR);
+                        commandFooterHighlightDefined = true;
                     }
-                    
-                    // Only write footer_highlight back if it was defined in package INI but missing/empty in config
-                    if (commandFooterHighlightDefined && optionIt != packageConfigData.end()) {
-                        auto it = optionIt->second.find(FOOTER_HIGHLIGHT_STR);
-                        if (it == optionIt->second.end() || it->second.empty()) {
-                            packageConfigData[optionName][FOOTER_HIGHLIGHT_STR] = commandFooterHighlight ? TRUE_STR : FALSE_STR;
-                            shouldSaveINI = true;
-                        }
-                    }
-                    
-                    // Save all changes in one batch write
-                    if (shouldSaveINI)
-                        saveIniFileData(packageConfigIniPath, packageConfigData);
-                    packageConfigData.clear();
-                } else { // write default data if settings are not loaded
-                    // Load any existing data first (might be empty if file doesn't exist)
-                    packageConfigData = getParsedDataFromIniFile(packageConfigIniPath);
-                    
-                    // Only add footer if pattern was provided
-                    if (!commandFooter.empty() && commandFooter != NULL_STR) {
-                        packageConfigData[optionName][FOOTER_STR] = commandFooter;
-                    }
-                    // Only add footer_highlight if it was defined in package INI
-                    if (commandFooterHighlightDefined) {
-                        packageConfigData[optionName][FOOTER_HIGHLIGHT_STR] = commandFooterHighlight ? TRUE_STR : FALSE_STR;
-                    }
-                    
-                    // Save the config file once
-                    if ((!commandFooter.empty() && commandFooter != NULL_STR) || commandFooterHighlightDefined) {
-                        saveIniFileData(packageConfigIniPath, packageConfigData);
-                    }
-                    packageConfigData.clear();
                 }
+                
+                // Only write footer_highlight back if it was defined in package INI but missing/empty in config
+                if (commandFooterHighlightDefined && optionIt != packageConfigData.end()) {
+                    auto it = optionIt->second.find(FOOTER_HIGHLIGHT_STR);
+                    if (it == optionIt->second.end() || it->second.empty()) {
+                        packageConfigData[optionName][FOOTER_HIGHLIGHT_STR] = commandFooterHighlight ? TRUE_STR : FALSE_STR;
+                        shouldSaveINI = true;
+                    }
+                }
+                
+                // Save all changes in one batch write
+                if (shouldSaveINI)
+                    saveIniFileData(packageConfigIniPath, packageConfigData);
+                packageConfigData.clear();
+            } else { // write default data if settings are not loaded
+                // Load any existing data first (might be empty if file doesn't exist)
+                packageConfigData = getParsedDataFromIniFile(packageConfigIniPath);
+                
+                // Only add footer if pattern was provided
+                if (!commandFooter.empty() && commandFooter != NULL_STR) {
+                    packageConfigData[optionName][FOOTER_STR] = commandFooter;
+                }
+                // Only add footer_highlight if it was defined in package INI
+                if (commandFooterHighlightDefined) {
+                    packageConfigData[optionName][FOOTER_HIGHLIGHT_STR] = commandFooterHighlight ? TRUE_STR : FALSE_STR;
+                }
+                
+                // Save the config file once
+                if ((!commandFooter.empty() && commandFooter != NULL_STR) || commandFooterHighlightDefined) {
+                    saveIniFileData(packageConfigIniPath, packageConfigData);
+                }
+                packageConfigData.clear();
             }
-
             
             
             // Get Option name and footer
@@ -5203,25 +5085,6 @@ bool drawCommandsMenu(
                 skipSystem = true;
             }
             
-            bool skipVisibility = false;
-            if (!toggleVisibilityMode.empty()) {
-                if (toggleVisibilityMode == "file_exists") {
-                    skipVisibility = !isFileOrDirectory(toggleVisibilityPath);
-                } else if (toggleVisibilityMode == "has_line") {
-                    skipVisibility = !isLineExistInIni(toggleVisibilityPath, toggleVisibilityArg);
-                } else if (toggleVisibilityMode == "hex_check") {
-                    uint32_t offset = 0;
-                    if (isValidNumber(toggleVisibilityArg)) {
-                        offset = static_cast<uint32_t>(std::strtoul(toggleVisibilityArg.c_str(), nullptr, 0));
-                    }
-                    skipVisibility = !checkHexValue(toggleVisibilityPath, offset, toggleVisibilityArg2);
-                } else if (toggleVisibilityMode == "ini_val") {
-                    std::string currentVal = parseValueFromIniSection(toggleVisibilityPath, toggleVisibilityArg, toggleVisibilityArg2);
-                    removeQuotes(currentVal);
-                    skipVisibility = (currentVal != toggleVisibilityArg3);
-                }
-            }
-
             if (!skipSection && !skipSystem && !skipVisibility) { // for skipping the drawing of sections
                 if (commandMode == TABLE_STR) {
                     if (useHeaderIndent) {
@@ -5715,25 +5578,15 @@ bool drawCommandsMenu(
                     } else if (commandMode == TOGGLE_STR) {
                         cleanOptionName = optionName;
 
+                        auto* toggleListItem = new tsl::elm::ToggleListItem(cleanOptionName, false, ON, OFF, isMini, true);
+                        toggleListItem->enableShortHoldKey();
+                        toggleListItem->m_shortHoldKey = SCRIPT_KEY;
+
                         // Set the initial state of the toggle item
-                        if (!toggleStateMode.empty()) {
-                            if (toggleStateMode == "file_exists") {
-                                toggleStateOn = isFileOrDirectory(toggleStatePath);
-                            } else if (toggleStateMode == "has_line") {
-                                toggleStateOn = isLineExistInIni(toggleStatePath, toggleStateArg);
-                            } else if (toggleStateMode == "hex_check") {
-                                uint32_t offset = 0;
-                                if (isValidNumber(toggleStateArg)) {
-                                    offset = std::stoul(toggleStateArg, nullptr, 0); // Handles 0x prefix
-                                }
-                                toggleStateOn = checkHexValue(toggleStatePath, offset, toggleStateArg2);
-                            } else if (toggleStateMode == "ini_val") {
-                                // toggle_state ini_val <path> <section> <key> <value>
-                                std::string currentVal = parseValueFromIniSection(toggleStatePath, toggleStateArg, toggleStateArg2);
-                                removeQuotes(currentVal);
-                                toggleStateOn = (currentVal == toggleStateArg3);
-                            }
-                        } else if (!pathPatternOn.empty()){
+                        if (toggleStateConditionSet) {
+                            toggleStateOn = toggleStateConditionResult;
+                        }
+                        else if (!pathPatternOn.empty()){
                             toggleStateOn = isFileOrDirectory(pathPatternOn);
                         }
                         else {
@@ -5746,10 +5599,7 @@ bool drawCommandsMenu(
                             
                             toggleStateOn = (footer == CAPITAL_ON_STR);
                         }
-
-                        auto* toggleListItem = new tsl::elm::ToggleListItem(cleanOptionName, false, ON, OFF, isMini, true);
-                        toggleListItem->enableShortHoldKey();
-                        toggleListItem->m_shortHoldKey = SCRIPT_KEY;
+                        
 
                         toggleListItem->setState(toggleStateOn);
 
@@ -5758,47 +5608,52 @@ bool drawCommandsMenu(
                             toggleListItem->enableTouchHolding();
                         }
                         
-                        const bool hasToggleState = !toggleStateMode.empty();
-                        toggleListItem->setStateChangedListener([i, usingProgress, toggleListItem, commandsOn, commandsOff, keyName = originalOptionName, packagePath, packageConfigIniPath,
-                            pathPatternOn, pathPatternOff, isHold, commandMode, hasToggleState](bool state) {
+                        toggleListItem->setStateChangedListener([i, usingProgress, isHold, toggleListItem, commandsOn, commandsOff, keyName = originalOptionName, packagePath,
+                            pathPatternOn, pathPatternOff](bool state) {
                             if (runningInterpreter.load(std::memory_order_acquire)) {
                                 return;
                             }
                             
                             tsl::Overlay::get()->getCurrentGui()->requestFocus(toggleListItem, tsl::FocusDirection::None);
-                            
-                            auto modifiedCmds = state ? getSourceReplacement(commandsOn, pathPatternOn, i, packagePath) :
-                                getSourceReplacement(commandsOff, pathPatternOff, i, packagePath);
 
-                            if (isHold && !lastCommandIsHold) {
-                                lastToggleTargetState = state;
-                                lastToggleHasState = hasToggleState;
+                            if (isHold) {
+                                // Hold-to-toggle: defer execution until hold completes.
+                                // onClick already flipped m_state to `state` (the new state).
+                                // Revert m_state back to old (!state) while runningInterpreter is still false,
+                                // then immediately overwrite the display with INPROGRESS_SYMBOL.
                                 toggleListItem->setState(!state);
+                                toggleListItem->setValue(INPROGRESS_SYMBOL);
 
-                                lastSelectedListItemFooter = toggleListItem->getValue();
+                                // Store old ON/OFF for cancel restoration, with correct highlight.
+                                lastSelectedListItemFooter = !state ? CAPITAL_ON_STR : CAPITAL_OFF_STR;
+                                lastFooterHighlight = !state;      // ON=true → highlight false; OFF=false → highlight true
+                                lastFooterHighlightDefined = true;
+
                                 lastSelectedListItem = toggleListItem;
                                 holdStartTick = armGetSystemTick();
-                                storedCommands = std::move(modifiedCmds);
-                                lastCommandMode = commandMode;
+                                storedCommands = state ? getSourceReplacement(commandsOn, pathPatternOn, i, packagePath)
+                                                       : getSourceReplacement(commandsOff, pathPatternOff, i, packagePath);
+                                lastCommandMode = TOGGLE_STR;
                                 lastCommandIsHold = true;
                                 lastKeyName = keyName;
+                                // Pre-set nextToggleState so handleInterpreterCompletion commits correctly on success.
+                                nextToggleState = state ? CAPITAL_ON_STR : CAPITAL_OFF_STR;
+
+                                runningInterpreter.store(true, release);
                                 return;
                             }
-
+                            
                             if (usingProgress)
                                 toggleListItem->setValue(INPROGRESS_SYMBOL);
-                            
-                            nextToggleState = state ? CAPITAL_ON_STR : CAPITAL_OFF_STR;
-                            lastToggleHasState = hasToggleState;
-                            if (!hasToggleState)
-                                setIniFileValue(packageConfigIniPath, keyName, FOOTER_STR, nextToggleState);
-                            
+                            nextToggleState = !state ? CAPITAL_OFF_STR : CAPITAL_ON_STR;
                             lastKeyName = keyName;
                             runningInterpreter.store(true, release);
                             lastRunningInterpreter.store(true, release);
                             lastSelectedListItem = toggleListItem;
                             
-                            executeInterpreterCommands(std::move(modifiedCmds), packagePath, keyName);
+                            executeInterpreterCommands(std::move(state ? getSourceReplacement(commandsOn, pathPatternOn, i, packagePath) :
+                                getSourceReplacement(commandsOff, pathPatternOff, i, packagePath)), packagePath, keyName);
+                            
                         });
 
                         // Set the script key listener (for SCRIPT_KEY)
@@ -6130,7 +5985,8 @@ public:
                         //    triggerNavigationFeedback();
                         //}
                         // Ensure pkgPageCursors has an entry for this nesting level
-                        if (usePageRecall) {
+                        //if (usePageRecall) {
+                        {
                             while (pkgPageCursors.size() <= static_cast<size_t>(nestedLayer))
                                 pkgPageCursors.emplace_back("", "");
                             // Save cursor for the page we're leaving; restore cursor for the page we're entering
@@ -6172,7 +6028,8 @@ public:
 
             if (nestedMenuCount == 0) {
                 inPackageMenu = false;
-                if (usePageRecall) pkgPageCursors.clear(); // returning to main menu: discard all package page cursors
+                //if (usePageRecall) pkgPageCursors.clear();
+                pkgPageCursors.clear(); // returning to main menu: discard all package page cursors
                 if (!inHiddenMode.load(std::memory_order_acquire))
                     returningToMain = true;
                 else
@@ -6192,7 +6049,8 @@ public:
             if (nestedMenuCount > 0) {
                 nestedMenuCount--;
                 // Discard page cursors for the level we just left
-                if (usePageRecall && (pkgPageCursors.size() > static_cast<size_t>(nestedMenuCount + 1)))
+                //if (usePageRecall && (pkgPageCursors.size() > static_cast<size_t>(nestedMenuCount + 1)))
+                if (pkgPageCursors.size() > static_cast<size_t>(nestedMenuCount + 1))
                     pkgPageCursors.resize(nestedMenuCount + 1);
                 if (lastPackageMenu == "subPackageMenu") {
                     returningToSubPackage = true;
@@ -6230,7 +6088,8 @@ public:
                 if (nestedMenuCount > 0)
                     nestedMenuCount--;
                 // Discard page cursors for the level we just left
-                if (usePageRecall && pkgPageCursors.size() > static_cast<size_t>(nestedMenuCount + 1))
+                //if (usePageRecall && pkgPageCursors.size() > static_cast<size_t>(nestedMenuCount + 1))
+                if (pkgPageCursors.size() > static_cast<size_t>(nestedMenuCount + 1))
                     pkgPageCursors.resize(nestedMenuCount + 1);
                 
                 jumpItemName = returnTo.option;
@@ -7211,7 +7070,7 @@ public:
      */
     virtual bool handleInput(uint64_t keysDown, uint64_t keysHeld, touchPosition touchInput, JoystickPosition leftJoyStick, JoystickPosition rightJoyStick) override {
         
-        if (handleCommandHold(keysDown, keysHeld, PACKAGE_PATH)) return true;
+        if (handleCommandHold(keysDown, keysHeld, packageIniPath)) return true;
 
         if (ult::launchingOverlay.load(acquire)) return true;
 
@@ -7349,7 +7208,8 @@ public:
                                                      : (usePageSwap ? PACKAGES_STR : OVERLAYS_STR);
                             
                             // Save cursor for the page we're leaving; restore cursor for the page we're entering
-                            if (usePageRecall) {
+                            //if (usePageRecall) {
+                            {
                                 if (onLeftPage) {
                                     mainMenuLeftItem  = s_lastFocusedItemText;
                                     jumpItemName      = mainMenuRightItem;
@@ -7534,11 +7394,13 @@ void initializeSettingsAndDirectories() {
     ensureDefault("haptic_feedback",          FALSE_STR);
     ensureDefault("auto_ntp_sync",            TRUE_STR);
     ensureDefault("swipe_to_open",            TRUE_STR);
+    ensureDefault("stick_navigation",          TRUE_STR);
     ensureDefault("opaque_screenshots",       TRUE_STR);
     ensureDefault("silence_notifications",    FALSE_STR);
     ensureDefault("notifications",            TRUE_STR);
     ensureDefault("notifications_hotkey",     TRUE_STR);
     ensureDefault("max_notifications",        "3");
+    ensureDefault("hold_duration",            "3000");
     ensureDefault("hide_clock",               FALSE_STR);
     ensureDefault("hide_battery",             TRUE_STR);
     ensureDefault("hide_pcb_temp",            TRUE_STR);
@@ -7549,7 +7411,6 @@ void initializeSettingsAndDirectories() {
     ensureDefault("extended_widget_backdrop", FALSE_STR);
     ensureDefault("datetime_format",          DEFAULT_DT_FORMAT);
     ensureDefault(DEFAULT_LANG_STR,           "en");
-    ensureDefault("hold_time",                "3000");
 
     // Launcher-only keys (variables also set by parseOverlaySettings where accessible,
     // the rest are static to main.cpp so setDefaultValue is still needed here)
@@ -7572,8 +7433,8 @@ void initializeSettingsAndDirectories() {
     setDefaultValue("package_titles",         FALSE_STR, usePackageTitles);
     setDefaultValue("package_versions",       TRUE_STR,  usePackageVersions);
     setDefaultValue("page_swap",              FALSE_STR, usePageSwap);        // also set by parseOverlaySettings
-    setDefaultValue("page_recall",            TRUE_STR,  usePageRecall);
-    setDefaultValue("launch_recall",          TRUE_STR,  useLaunchRecall);
+    //setDefaultValue("page_recall",            TRUE_STR,  usePageRecall);
+    //setDefaultValue("launch_recall",          TRUE_STR,  useLaunchRecall);
     setDefaultValue("right_alignment",        FALSE_STR, useRightAlignment);  // also set by parseOverlaySettings
     setDefaultValue("startup_notification",   TRUE_STR,  useStartupNotification);
 
@@ -7585,13 +7446,12 @@ void initializeSettingsAndDirectories() {
         toPackages = (sec["to_packages"] == TRUE_STR);
     }
 
+    // Load numeric Ultrahand-only settings that aren't handled by parseOverlaySettings
+    ult::useStickNavigation = (sec.at("stick_navigation") != ult::FALSE_STR);
+    holdDurationMs = static_cast<u64>(std::max(500, std::min(ult::stoi(sec.at("hold_duration")), 5000)));
+
     if (needsUpdate)
         saveIniFileData(ULTRAHAND_CONFIG_INI_PATH, iniData);
-
-    int holdParsed = std::atoi(sec["hold_time"].c_str());
-    if (holdParsed < 500) holdParsed = 500;
-    if (holdParsed > 10000) holdParsed = 10000;
-    ult::holdDurationMs = static_cast<u32>(holdParsed);
 
     // Sync combo and set initial menu page (run once)
     updateMenuCombos = copyTeslaKeyComboToUltrahand();
@@ -7646,21 +7506,22 @@ public:
         // All side-effect work was intentionally deferred from main() to here so it
         // only runs when the feature is actually enabled.  initializeSettingsAndDirectories()
         // has already run, so we drive toPackages directly instead of going through the INI.
-        if (isComboReturnFrom && !ult::useLaunchRecall) {
-            comboReturnOverlayFilename.clear();
-            comboReturnOverlayMode.clear();
-            setUltrahandConfig(IN_HIDDEN_OVERLAY_STR, FALSE_STR);
-        }
+        //if (isComboReturnFrom && !ult::useLaunchRecall) {
+        //    comboReturnOverlayFilename.clear();
+        //    comboReturnOverlayMode.clear();
+        //    setUltrahandConfig(IN_HIDDEN_OVERLAY_STR, FALSE_STR);
+        //}
         if (isComboReturnPackage) {
-            if (ult::useLaunchRecall) {
+            //if (ult::useLaunchRecall) {
+            {
                 // Apply the tab-switch and hidden-mode effects that main() used to write
                 // into the INI.  toPackages is set directly since initializeSettingsAndDirectories()
                 // already ran.  The hidden-package INI flag is still written so createUI() sees it.
                 toPackages = true;
                 if (parseValueFromIniSection(PACKAGES_INI_FILEPATH, comboReturnPackageName, HIDE_STR) == TRUE_STR)
                     setUltrahandConfig(IN_HIDDEN_PACKAGE_STR, TRUE_STR);
-            } else {
-                comboReturnPackageName.clear();
+            //} else {
+            //    comboReturnPackageName.clear();
             }
         }
 

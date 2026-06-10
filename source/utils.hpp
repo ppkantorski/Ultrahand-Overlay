@@ -39,6 +39,8 @@ static std::atomic<bool> triggerExit(false);
 std::atomic<bool> exitingUltrahand{false};
 std::atomic<bool> isDownloadCommand{false};
 std::atomic<bool> commandSuccess{false};
+inline void setCommandFailed();
+inline void setCommandResult(bool result);
 std::atomic<bool> refreshPage{false};
 std::atomic<bool> refreshPackage{false};
 std::atomic<bool> skipJumpReset{false};
@@ -850,7 +852,7 @@ void powerOffAllControllers() {
     // Initialize Bluetooth manager
     rc = btmInitialize();
     if (R_FAILED(rc)) {
-        commandSuccess.store(false, std::memory_order_release);
+        setCommandFailed();
         return;
     }
     
@@ -861,18 +863,18 @@ void powerOffAllControllers() {
             g_addresses[i] = connected_devices[i].address;
         }
     } else {
-        commandSuccess.store(false, std::memory_order_release);
+        setCommandFailed();
     }
     
     if (R_SUCCEEDED(rc)) {
         for (int i = 0; i != g_connected_count; ++i) {
             rc = btmHidDisconnect(g_addresses[i]);
             if (R_FAILED(rc)) {
-                commandSuccess.store(false, std::memory_order_release);
+                setCommandFailed();
             }
         }
     } else {
-        commandSuccess.store(false, std::memory_order_release);
+        setCommandFailed();
     }
     
     // Exit Bluetooth manager
@@ -1827,98 +1829,6 @@ void drawDevImage(tsl::gfx::Renderer* renderer) {
  * safety conditions and ensure that certain operations are not performed on sensitive
  * directories.
  */
-
-/**
- * @brief Checks if a file contains a line that exactly matches the given content.
- *
- * Lines are compared after stripping trailing CR/LF, so both CRLF and LF files
- * work. Lines longer than the internal read buffer are skipped (never match).
- *
- * @param filePath The path to the file.
- * @param line The exact line content to search for.
- * @return true if a matching line exists, false otherwise.
- */
-inline bool isLineExistInIni(const std::string& filePath, const std::string& line) {
-    if (!ult::isFile(filePath)) return false;
-    FILE* file = fopen(filePath.c_str(), "r");
-    if (!file) return false;
-
-    char buffer[1024];
-    bool found = false;
-    bool skipUntilNewline = false;
-    while (fgets(buffer, sizeof(buffer), file)) {
-        size_t len = strlen(buffer);
-        const bool hasNewline = (len > 0 && buffer[len - 1] == '\n');
-
-        if (skipUntilNewline) {
-            // Previous chunk was a partial read of a line longer than the buffer; skip the remainder.
-            skipUntilNewline = !hasNewline;
-            continue;
-        }
-        if (!hasNewline && !feof(file)) {
-            // Line is longer than the buffer — skip the rest and don't compare.
-            skipUntilNewline = true;
-            continue;
-        }
-
-        // Strip trailing CR/LF.
-        while (len > 0 && (buffer[len - 1] == '\n' || buffer[len - 1] == '\r')) {
-            buffer[--len] = '\0';
-        }
-
-        if (line.size() == len && std::memcmp(buffer, line.c_str(), len) == 0) {
-            found = true;
-            break;
-        }
-    }
-    fclose(file);
-    return found;
-}
-
-/**
- * @brief Checks if a hex value matches at a specific offset.
- *
- * The expected hex string must contain only hex digits (after removing spaces)
- * and have an even length; otherwise the function returns false.
- *
- * @param filePath The path to the file.
- * @param offset The byte offset to check at.
- * @param expectedHex The expected hex value (string of hex characters, optional spaces).
- * @return true if the bytes at offset match expectedHex, false otherwise.
- */
-inline bool checkHexValue(const std::string& filePath, uint32_t offset, std::string expectedHex) {
-    if (!ult::isFile(filePath)) return false;
-
-    // Remove spaces and validate length and characters before opening the file.
-    expectedHex.erase(std::remove(expectedHex.begin(), expectedHex.end(), ' '), expectedHex.end());
-    if (expectedHex.empty() || expectedHex.length() % 2 != 0) return false;
-    for (char c : expectedHex) {
-        if (!std::isxdigit(static_cast<unsigned char>(c))) return false;
-    }
-
-    FILE* file = fopen(filePath.c_str(), "rb");
-    if (!file) return false;
-
-    if (fseek(file, static_cast<long>(offset), SEEK_SET) != 0) {
-        fclose(file);
-        return false;
-    }
-
-    const size_t len = expectedHex.length() / 2;
-    std::vector<unsigned char> buffer(len);
-    const size_t readLen = fread(buffer.data(), 1, len, file);
-    fclose(file);
-
-    if (readLen < len) return false;
-
-    for (size_t i = 0; i < len; ++i) {
-        unsigned int byte = 0;
-        if (sscanf(expectedHex.c_str() + i * 2, "%2x", &byte) != 1) return false;
-        if (buffer[i] != static_cast<unsigned char>(byte)) return false;
-    }
-    return true;
-}
-
 
 bool isDangerousCombination(const std::string& originalPath) {
     // Early exit: Check for double wildcards first (cheapest check)
@@ -3559,8 +3469,12 @@ bool applyPlaceholderReplacements(std::vector<std::string>& cmd, const std::stri
 
 
 
-// forward declarartion
+// forward declarations
 void processCommand(const std::vector<std::string>& cmd, const std::string& packagePath, const std::string& selectedCommand);
+inline bool txtLineExists(const std::string& filePath, const std::string& line);
+inline bool hexValMatches(const std::string& filePath, uint32_t offset, std::string expectedHex);
+inline bool moduleExists(u64 programId);
+inline bool moduleIsActive(u64 programId);
 
 
 /**
@@ -4166,7 +4080,9 @@ void handleMirrorCommand(const std::vector<std::string>& cmd, const std::string&
     
     // Determine operation type using string_view to avoid string creation
     const std::string_view commandName = cmd[0];
-    const std::string operation = (commandName == "mirror_copy" || commandName == "mirror_cp") ? "copy" : "delete";
+    const std::string operation =
+        (commandName == "mirror-copy" || commandName == "mirror-cp" ||
+         commandName == "mirror_copy" || commandName == "mirror_cp") ? "copy" : "delete";
     
     if (sourcePath.find('*') == std::string::npos) {
         // Single directory mirror
@@ -4380,7 +4296,7 @@ void handleIniCommands(const std::vector<std::string>& cmd, const std::string& p
         removeQuotes(desiredValue);
         
         if (!ult::isFile(sourcePath))
-            commandSuccess.store(false, std::memory_order_release);
+            setCommandFailed();
 
         // desiredSection here is the pattern key
         addKeyToMatchingSections(sourcePath, desiredSection, desiredKey, desiredValue);
@@ -4392,7 +4308,7 @@ void handleIniCommands(const std::vector<std::string>& cmd, const std::string& p
         removeQuotes(desiredKey);
         
         if (!ult::isFile(sourcePath))
-            commandSuccess.store(false, std::memory_order_release);
+            setCommandFailed();
 
         // desiredSection here is the pattern key
         removeKeyFromMatchingSections(sourcePath, desiredSection, desiredKey);
@@ -4543,6 +4459,9 @@ inline std::string getUnquoted(const std::vector<std::string>& cmd, size_t index
 inline void setCommandFailed() {
     commandSuccess.store(false, std::memory_order_release);
 }
+inline void setCommandResult(bool result) {
+    commandSuccess.store(result, std::memory_order_release);
+}
 
 void executeCommands(std::vector<std::vector<std::string>> commands) {
     interpretAndExecuteCommands(std::move(commands), "", "");
@@ -4576,6 +4495,31 @@ static inline Result ipcDispatch(const char* svcName, u32 enumCmd) {
 }
 
 // ---------------------------------------------------------------------------
+// Parse a TID string (bare 16-hex-char or 0x-prefixed) to u64.
+// Returns 0 on empty / invalid input.
+static inline u64 parseTid(const std::string& s) {
+    if (s.empty()) return 0;
+    const char* p = s.c_str();
+    if (s.size() > 2 && p[0] == '0' && (p[1] == 'x' || p[1] == 'X')) p += 2;
+    return static_cast<u64>(std::strtoull(p, nullptr, 16));
+}
+
+// Returns true when the module's content folder exists under /atmosphere/contents/.
+// This is true whether the module is currently running or not.
+inline bool moduleExists(u64 programId) {
+    if (programId == 0) return false;
+    char path[FS_MAX_PATH];
+    std::snprintf(path, sizeof(path), "/atmosphere/contents/%016lX", programId);
+    return isDirectory(path);
+}
+
+// Returns true when the module is currently running (has an active process ID).
+inline bool moduleIsActive(u64 programId) {
+    if (programId == 0) return false;
+    u64 pid = 0;
+    return R_SUCCEEDED(pmdmntGetProcessId(&pid, programId)) && pid != 0;
+}
+
 // ipcPollExit — poll pmdmnt every 50 ms for up to 200 ms waiting for a
 // process to disappear. Returns true as soon as the process is gone.
 // ---------------------------------------------------------------------------
@@ -4795,7 +4739,7 @@ void processCommand(const std::vector<std::string>& cmd, const std::string& pack
             
         case 'f':
             if (commandName == "force_failure") {
-                commandSuccess.store(false, std::memory_order_release);
+                setCommandFailed();
                 return;
             } if (commandName == "flag") {
                 if (cmdSize >= 3) {
@@ -4854,22 +4798,20 @@ void processCommand(const std::vector<std::string>& cmd, const std::string& pack
             break;
             
         case 'i':
-            if (commandName == "ipc_exists" || commandName == "!ipc_exists") {
-                // ipc_exists <SERVICE_NAME>  — success when registered.
-                // !ipc_exists <SERVICE_NAME> — success when NOT registered.
+            if (commandName == "ipc_exists") {
+                // ipc_exists <SERVICE_NAME>  — success when service is registered.
                 // smGetServiceOriginal never blocks on an unregistered name.
                 if (cmdSize >= 2) {
                     Handle handle = INVALID_HANDLE;
                     const bool registered = R_SUCCEEDED(
                         smGetServiceOriginal(&handle, smEncodeName(cmd[1].c_str())));
                     if (registered) svcCloseHandle(handle);
-                    const bool invert = (commandName[0] == '!');
-                    commandSuccess.store(registered != invert, std::memory_order_release);
+                    setCommandResult(registered);
                 }
                 return;
             }
-            if (commandName == "ipc_exec") {
-                // ipc_exec <SERVICE_NAME> <ENUM_CMD>
+            if (commandName == "ipc-exec") {
+                // ipc-exec <SERVICE_NAME> <ENUM_CMD>
                 // Sends a void->void IPC command. Success = dispatch accepted.
                 if (cmdSize >= 3) {
                     const u32 enumCmd = static_cast<u32>(ult::stoi(cmd[2]));
@@ -4877,7 +4819,7 @@ void processCommand(const std::vector<std::string>& cmd, const std::string& pack
                         R_SUCCEEDED(ipcDispatch(cmd[1].c_str(), enumCmd)),
                         std::memory_order_release);
                 } else {
-                    commandSuccess.store(false, std::memory_order_release);
+                    setCommandFailed();
                 }
                 return;
             }
@@ -4899,8 +4841,56 @@ void processCommand(const std::vector<std::string>& cmd, const std::string& pack
                 handleMoveCommand(cmd, packagePath);
                 return;
             }
-            if (commandName.compare(0, 7, "mirror_") == 0) {
+            // legacy support for `mirror_`
+            if ((commandName.compare(0, 7, "mirror_") == 0) || (commandName.compare(0, 7, "mirror-") == 0)) {
                 handleMirrorCommand(cmd, packagePath);
+                return;
+            }
+            if (commandName == "matching_txt_line") {
+                // [!]matching_txt_line <path> <line...>
+                if (cmdSize >= 3) {
+                    std::string path = cmd[1];
+                    preprocessPath(path, packagePath);
+                    std::string line = getUnquoted(cmd, 2);
+                    for (size_t i = 3; i < cmdSize; ++i) { line += ' '; line += getUnquoted(cmd, i); }
+                    const bool match = txtLineExists(path, line);
+                    setCommandResult(match);
+                } else { setCommandFailed(); }
+                return;
+            }
+            if (commandName == "matching_hex_val") {
+                // [!]matching_hex_val <path> <offset> <hex>
+                if (cmdSize >= 4) {
+                    std::string path = cmd[1];
+                    preprocessPath(path, packagePath);
+                    const uint32_t offset = static_cast<uint32_t>(
+                        isValidNumber(cmd[2]) ? std::strtoul(cmd[2].c_str(), nullptr, 0) : 0u);
+                    const bool match = hexValMatches(path, offset, getUnquoted(cmd, 3));
+                    setCommandResult(match);
+                } else { setCommandFailed(); }
+                return;
+            }
+            if (commandName == "matching_ini_val") {
+                // [!]matching_ini_val <path> <section> <key> <value...>
+                if (cmdSize >= 5) {
+                    std::string path = cmd[1];
+                    preprocessPath(path, packagePath);
+                    std::string expected = getUnquoted(cmd, 4);
+                    for (size_t i = 5; i < cmdSize; ++i) { expected += ' '; expected += getUnquoted(cmd, i); }
+                    std::string actual = parseValueFromIniSection(path, getUnquoted(cmd, 2), getUnquoted(cmd, 3));
+                    removeQuotes(actual);
+                    setCommandResult(actual == expected);
+                } else { setCommandFailed(); }
+                return;
+            }
+            if (commandName == "module_exists") {
+                const bool exists = cmdSize >= 2 && moduleExists(parseTid(cmd[1]));
+                setCommandResult(exists);
+                return;
+            }
+            if (commandName == "module_is_active") {
+                const bool active = cmdSize >= 2 && moduleIsActive(parseTid(cmd[1]));
+                setCommandResult(active);
                 return;
             }
             if (commandName == "module") {
@@ -4918,7 +4908,7 @@ void processCommand(const std::vector<std::string>& cmd, const std::string& pack
                     const u64 programId = static_cast<u64>(
                         std::strtoull(tidCStr, nullptr, 16));
                     if (programId == 0) {
-                        commandSuccess.store(false, std::memory_order_release);
+                        setCommandFailed();
                         return;
                     }
 
@@ -4966,7 +4956,7 @@ void processCommand(const std::vector<std::string>& cmd, const std::string& pack
 
                     // Static modules with no graceful contract cannot be toggled.
                     if (needReboot && !hasGraceful) {
-                        commandSuccess.store(false, std::memory_order_release);
+                        setCommandFailed();
                         return;
                     }
 
@@ -4979,7 +4969,7 @@ void processCommand(const std::vector<std::string>& cmd, const std::string& pack
                         u64 pid = 0;
                         const bool ok = R_SUCCEEDED(pmshellLaunchProgram(0, &loc, &pid));
                         pmshellExit();
-                        commandSuccess.store(ok, std::memory_order_release);
+                        setCommandResult(ok);
 
                     } else if (subcmd == "stop") {
                         bool stopped = false;
@@ -4991,13 +4981,13 @@ void processCommand(const std::vector<std::string>& cmd, const std::string& pack
                             stopped = R_SUCCEEDED(pmshellTerminateProgram(programId));
                             pmshellExit();
                         }
-                        commandSuccess.store(stopped, std::memory_order_release);
+                        setCommandResult(stopped);
 
                     } else {
-                        commandSuccess.store(false, std::memory_order_release);
+                        setCommandFailed();
                     }
                 } else {
-                    commandSuccess.store(false, std::memory_order_release);
+                    setCommandFailed();
                 }
                 return;
             }
@@ -5048,6 +5038,14 @@ void processCommand(const std::vector<std::string>& cmd, const std::string& pack
                                             alignment,
                                             splitStr);
                 }
+                return;
+            }
+            if (commandName == "ntp-sync") {
+                // ntp-sync <url>  — on-demand clock sync; checks internet access internally
+                if (cmdSize >= 2) {
+                    std::string url = getUnquoted(cmd, 1);
+                    setCommandResult(ult::syncNtp(url));
+                } else { setCommandFailed(); }
                 return;
             }
             break;
@@ -5104,11 +5102,7 @@ void processCommand(const std::vector<std::string>& cmd, const std::string& pack
                 if (cmdSize >= 2) {
                     std::string sourcePath = cmd[1];
                     preprocessPath(sourcePath, packagePath);
-                    if (ult::isFileOrDirectory(sourcePath)) {
-                        commandSuccess.store(true, std::memory_order_release);
-                    } else {
-                        commandSuccess.store(false, std::memory_order_release);
-                    }
+                    setCommandResult(ult::isFileOrDirectory(sourcePath));
                 }
             }
             if (commandName == "pchtxt2ips") {
@@ -5412,20 +5406,263 @@ void processCommand(const std::vector<std::string>& cmd, const std::string& pack
             break;
 
         case '!':
+            if (commandName == "!ipc_exists") {
+                // !ipc_exists <SERVICE_NAME> — success when NOT registered.
+                if (cmdSize >= 2) {
+                    Handle handle = INVALID_HANDLE;
+                    const bool registered = R_SUCCEEDED(
+                        smGetServiceOriginal(&handle, smEncodeName(cmd[1].c_str())));
+                    if (registered) svcCloseHandle(handle);
+                    setCommandResult(!registered);
+                }
+                return;
+            }
+            if (commandName == "!matching_txt_line") {
+                // !matching_txt_line <path> <line...>
+                if (cmdSize >= 3) {
+                    std::string path = cmd[1];
+                    preprocessPath(path, packagePath);
+                    std::string line = getUnquoted(cmd, 2);
+                    for (size_t i = 3; i < cmdSize; ++i) { line += ' '; line += getUnquoted(cmd, i); }
+                    setCommandResult(!txtLineExists(path, line));
+                } else { setCommandFailed(); }
+                return;
+            }
+            if (commandName == "!matching_hex_val") {
+                // !matching_hex_val <path> <offset> <hex>
+                if (cmdSize >= 4) {
+                    std::string path = cmd[1];
+                    preprocessPath(path, packagePath);
+                    const uint32_t offset = static_cast<uint32_t>(
+                        isValidNumber(cmd[2]) ? std::strtoul(cmd[2].c_str(), nullptr, 0) : 0u);
+                    setCommandResult(!hexValMatches(path, offset, getUnquoted(cmd, 3)));
+                } else { setCommandFailed(); }
+                return;
+            }
+            if (commandName == "!matching_ini_val") {
+                // !matching_ini_val <path> <section> <key> <value...>
+                if (cmdSize >= 5) {
+                    std::string path = cmd[1];
+                    preprocessPath(path, packagePath);
+                    std::string expected = getUnquoted(cmd, 4);
+                    for (size_t i = 5; i < cmdSize; ++i) { expected += ' '; expected += getUnquoted(cmd, i); }
+                    std::string actual = parseValueFromIniSection(path, getUnquoted(cmd, 2), getUnquoted(cmd, 3));
+                    removeQuotes(actual);
+                    setCommandResult(actual != expected);
+                } else { setCommandFailed(); }
+                return;
+            }
+            if (commandName == "!module_exists") {
+                setCommandResult(cmdSize >= 2 && !moduleExists(parseTid(cmd[1])));
+                return;
+            }
+            if (commandName == "!module_is_active") {
+                setCommandResult(cmdSize >= 2 && !moduleIsActive(parseTid(cmd[1])));
+                return;
+            }
             if (commandName == "!path_exists") {
                 if (cmdSize >= 2) {
                     std::string sourcePath = cmd[1];
                     preprocessPath(sourcePath, packagePath);
-                    if (ult::isFileOrDirectory(sourcePath)) {
-                        commandSuccess.store(false, std::memory_order_release);
-                    } else {
-                        commandSuccess.store(true, std::memory_order_release);
-                    }
+                    setCommandResult(!ult::isFileOrDirectory(sourcePath));
                 }
+                return;
             }
     }
 }
 
+
+
+// ---------------------------------------------------------------------------
+// Menu condition helpers
+//
+// Backing checks and the evaluator for the ;visibility_condition= and
+// ;toggle_state_condition= option directives. A condition is a single string
+// of the form "<mode> <args...>" with these modes:
+//
+//   path_exists       <path>
+//   ipc_exists        <service_name>
+//   module_exists     <TID>
+//   module_is_active  <TID>
+//   matching_txt_line <path> <line>
+//   matching_hex_val  <path> <offset> <hex>
+//   matching_ini_val  <path> <section> <key> <value>
+//
+// Prefix any mode with ! to negate: !path_exists, !module_exists, etc.
+//
+// The final free-text field (line / value) keeps any embedded spaces.
+// ---------------------------------------------------------------------------
+
+// Returns true when an exact line (trailing CR/LF stripped) exists in a file.
+// Full-line comparison: a target that is only a substring of a longer line does
+// not match. Lines longer than the read buffer are skipped, not partially
+// compared.
+inline bool txtLineExists(const std::string& filePath, const std::string& line) {
+    if (!isFile(filePath)) return false;
+    FILE* file = fopen(filePath.c_str(), "r");
+    if (!file) return false;
+
+    char buffer[1024];
+    bool found = false;
+    bool skipUntilNewline = false;
+    while (fgets(buffer, sizeof(buffer), file)) {
+        size_t len = std::strlen(buffer);
+        const bool hasNewline = (len > 0 && buffer[len - 1] == '\n');
+
+        if (skipUntilNewline) {
+            // Previous chunk was a partial read of an over-long line; skip the rest.
+            skipUntilNewline = !hasNewline;
+            continue;
+        }
+        if (!hasNewline && !feof(file)) {
+            // Line is longer than the buffer; skip the remainder and do not compare.
+            skipUntilNewline = true;
+            continue;
+        }
+
+        // Strip trailing CR/LF.
+        while (len > 0 && (buffer[len - 1] == '\n' || buffer[len - 1] == '\r')) {
+            buffer[--len] = '\0';
+        }
+
+        if (line.size() == len && std::memcmp(buffer, line.c_str(), len) == 0) {
+            found = true;
+            break;
+        }
+    }
+    fclose(file);
+    return found;
+}
+
+// Returns true when the bytes at offset match expectedHex. The hex string is
+// validated (even length, hex digits only, spaces ignored) before the file is
+// opened, so malformed input simply returns false.
+inline bool hexValMatches(const std::string& filePath, uint32_t offset, std::string expectedHex) {
+    if (!isFile(filePath)) return false;
+
+    // Strip spaces in-place, then validate length and characters.
+    size_t w = 0;
+    for (size_t r = 0; r < expectedHex.size(); ++r) {
+        if (expectedHex[r] != ' ') expectedHex[w++] = expectedHex[r];
+    }
+    expectedHex.resize(w);
+    if (expectedHex.empty() || (expectedHex.size() % 2) != 0) return false;
+    for (size_t i = 0; i < expectedHex.size(); ++i) {
+        if (!std::isxdigit(static_cast<unsigned char>(expectedHex[i]))) return false;
+    }
+
+    FILE* file = fopen(filePath.c_str(), "rb");
+    if (!file) return false;
+
+    if (fseek(file, static_cast<long>(offset), SEEK_SET) != 0) {
+        fclose(file);
+        return false;
+    }
+
+    const size_t len = expectedHex.size() / 2;
+    std::vector<unsigned char> buffer(len);
+    const size_t readLen = fread(buffer.data(), 1, len, file);
+    fclose(file);
+
+    if (readLen < len) return false;
+
+    for (size_t i = 0; i < len; ++i) {
+        unsigned int byte = 0;
+        if (std::sscanf(expectedHex.c_str() + i * 2, "%2x", &byte) != 1) return false;
+        if (buffer[i] != static_cast<unsigned char>(byte)) return false;
+    }
+    return true;
+}
+
+// Evaluates a "<mode> <args...>" condition string. Returns true when satisfied.
+// Used by both ;visibility_condition= (true -> shown) and
+// ;toggle_state_condition= (true -> ON). An empty condition returns true; an
+// unknown mode or missing argument returns false.
+inline bool evaluateMenuCondition(std::string condition, const std::string& packagePath) {
+    removeQuotes(condition);
+    replacePlaceholdersInArg(condition, generalPlaceholders);
+
+    size_t pos = 0;
+    const size_t end = condition.size();
+
+    // Pull the next space-delimited token starting at pos.
+    auto nextToken = [&]() -> std::string {
+        while (pos < end && condition[pos] == ' ') ++pos;
+        const size_t start = pos;
+        while (pos < end && condition[pos] != ' ') ++pos;
+        return condition.substr(start, pos - start);
+    };
+    // The remaining text after pos, leading spaces trimmed (free-text field).
+    auto remainder = [&]() -> std::string {
+        while (pos < end && condition[pos] == ' ') ++pos;
+        std::string rest = condition.substr(pos);
+        removeQuotes(rest);
+        return rest;
+    };
+
+    std::string mode = nextToken();
+    if (mode.empty()) return true;
+
+    const bool negate = !mode.empty() && mode[0] == '!';
+    if (negate) mode.erase(0, 1);
+    if (mode.empty()) return true;
+
+    if (mode == "path_exists") {
+        std::string path = nextToken();
+        if (path.empty()) return false;
+        preprocessPath(path, packagePath);
+        return negate ^ isFileOrDirectory(path);
+    }
+    if (mode == "ipc_exists") {
+        const std::string service = nextToken();
+        if (service.empty()) return false;
+        Handle handle = INVALID_HANDLE;
+        const bool registered = R_SUCCEEDED(
+            smGetServiceOriginal(&handle, smEncodeName(service.c_str())));
+        if (registered) svcCloseHandle(handle);
+        return negate ^ registered;
+    }
+    if (mode == "module_exists") {
+        const std::string tid = nextToken();
+        if (tid.empty()) return false;
+        return negate ^ moduleExists(parseTid(tid));
+    }
+    if (mode == "module_is_active") {
+        const std::string tid = nextToken();
+        if (tid.empty()) return false;
+        return negate ^ moduleIsActive(parseTid(tid));
+    }
+    if (mode == "matching_txt_line") {
+        std::string path = nextToken();
+        const std::string line = remainder();
+        if (path.empty() || line.empty()) return false;
+        preprocessPath(path, packagePath);
+        return negate ^ txtLineExists(path, line);
+    }
+    if (mode == "matching_hex_val") {
+        std::string path = nextToken();
+        const std::string offsetStr = nextToken();
+        const std::string hex = remainder();
+        if (path.empty() || offsetStr.empty() || hex.empty()) return false;
+        preprocessPath(path, packagePath);
+        uint32_t offset = 0;
+        if (isValidNumber(offsetStr))
+            offset = static_cast<uint32_t>(std::strtoul(offsetStr.c_str(), nullptr, 0));
+        return negate ^ hexValMatches(path, offset, hex);
+    }
+    if (mode == "matching_ini_val") {
+        std::string path = nextToken();
+        const std::string section = nextToken();
+        const std::string key = nextToken();
+        const std::string expected = remainder();
+        if (path.empty() || section.empty() || key.empty()) return false;
+        preprocessPath(path, packagePath);
+        std::string currentVal = parseValueFromIniSection(path, section, key);
+        removeQuotes(currentVal);
+        return negate ^ (currentVal == expected);
+    }
+    return negate ^ false;
+}
 
 
 // Thread information structure
@@ -5599,7 +5836,7 @@ void executeInterpreterCommands(std::vector<std::vector<std::string>>&& commands
     const int result = threadCreate(&interpreterThread, backgroundInterpreter, workData, nullptr, stackSize, 0x2B, -2);
     if (result != 0) {
         // Handle thread creation failure
-        commandSuccess.store(false, std::memory_order_release);
+        setCommandFailed();
         clearInterpreterFlags();
         runningInterpreter.store(false, std::memory_order_release);
         
