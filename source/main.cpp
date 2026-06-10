@@ -1761,23 +1761,15 @@ public:
                 auto it = ultrahandSection.find(key);
                 return (it != ultrahandSection.end()) ? (it->second == TRUE_STR) : defaultValue;
             };
-            
-            addHeader(list, FEATURES);
+
+            addHeader(list, INPUT_SETTINGS);
+
             useLaunchCombos = getBoolValue("launch_combos", true); // TRUE_STR default
             createToggleListItem(list, LAUNCH_COMBOS, useLaunchCombos, "launch_combos");
 
-            useAutoNTPSync = getBoolValue("auto_ntp_sync", true); // FALSE_STR default
-            createToggleListItem(list, AUTO_NTP_SYNC, useAutoNTPSync, "auto_ntp_sync");
-
-            useOpaqueScreenshots = getBoolValue("opaque_screenshots", true); // TRUE_STR default
-            createToggleListItem(list, OPAQUE_SCREENSHOTS, useOpaqueScreenshots, "opaque_screenshots");
             useSwipeToOpen = getBoolValue("swipe_to_open", true); // TRUE_STR default
             createToggleListItem(list, SWIPE_TO_OPEN, useSwipeToOpen, "swipe_to_open");
-            rightAlignmentState = useRightAlignment = getBoolValue("right_alignment"); // FALSE_STR default
-            createToggleListItem(list, RIGHT_SIDE_MODE, useRightAlignment, "right_alignment");
 
-
-            addHeader(list, INPUT_SETTINGS);
             useHapticFeedback = getBoolValue("haptic_feedback", false); // FALSE_STR default
             createToggleListItem(list, HAPTIC_FEEDBACK, useHapticFeedback, "haptic_feedback");
 
@@ -1808,6 +1800,17 @@ public:
                 holdDurationTrackbar->disableClickAnimation();
             }
             list->addItem(holdDurationTrackbar);
+
+            addHeader(list, FEATURE_SETTINGS);
+
+            useOpaqueScreenshots = getBoolValue("opaque_screenshots", true); // TRUE_STR default
+            createToggleListItem(list, OPAQUE_SCREENSHOTS, useOpaqueScreenshots, "opaque_screenshots");
+
+            rightAlignmentState = useRightAlignment = getBoolValue("right_alignment"); // FALSE_STR default
+            createToggleListItem(list, RIGHT_SIDE_MODE, useRightAlignment, "right_alignment");
+
+            useAutoNTPSync = getBoolValue("auto_ntp_sync", true); // FALSE_STR default
+            createToggleListItem(list, NTP_SYNC_DOWNLOADS, useAutoNTPSync, "auto_ntp_sync");
 
             addHeader(list, MENU_SETTINGS);
             hidePackages = getBoolValue("hide_packages", false); // FALSE_STR default
