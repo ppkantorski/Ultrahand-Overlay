@@ -4785,10 +4785,6 @@ bool drawCommandsMenu(
                                         commandSystem = commandSystems[0];
                                     continue;
                                 }
-                                if (commandName.compare(0, DEVICE_STATE_PATTERN_LEN, DEVICE_STATE_PATTERN) == 0) {
-                                    commandState = commandName.substr(DEVICE_STATE_PATTERN_LEN);
-                                    continue;
-                                }
 
                                 if (parseBoolFlag(commandName, SCROLLABLE_PATTERN, isScrollableTable)) continue;
 
@@ -4809,7 +4805,12 @@ bool drawCommandsMenu(
                                     continue;
                                 }
                                 break;
-                                
+                            case 'd':
+                                if (commandName.compare(0, DEVICE_STATE_PATTERN_LEN, DEVICE_STATE_PATTERN) == 0) {
+                                    commandState = commandName.substr(DEVICE_STATE_PATTERN_LEN);
+                                    continue;
+                                }
+                                break;
                             case 'm':
                                 if (commandName.compare(0, MODE_PATTERN_LEN, MODE_PATTERN) == 0) {
                                     commandMode = commandName.substr(MODE_PATTERN_LEN);
