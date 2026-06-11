@@ -3186,6 +3186,59 @@ bool applyPlaceholderReplacements(std::vector<std::string>& cmd, const std::stri
         return 0;
     };
 
+    // parseNum: true when the whole token parses as a number (int or float).
+    // Leading/trailing spaces are tolerated; inf/nan and non-numeric tokens are
+    // rejected up front so they fall through to lexicographic comparison.
+    static const auto parseNum = [](const std::string& s, double& out) -> bool {
+        const char* c = s.c_str();
+        while (*c == ' ' || *c == '\t') ++c;
+        const char afterSign = (*c == '+' || *c == '-') ? c[1] : *c;
+        if (!((afterSign >= '0' && afterSign <= '9') || afterSign == '.'))
+            return false;
+        char* end = nullptr;
+        out = std::strtod(c, &end);
+        if (end == c) return false;
+        while (*end == ' ' || *end == '\t') ++end;
+        return *end == '\0';
+    };
+    // compareAlnum: numeric compare when both sides are numbers, else
+    // lexicographic. Returns -1 / 0 / +1.
+    static const auto compareAlnum = [](const std::string& a, const std::string& b) -> int {
+        double na, nb;
+        if (parseNum(a, na) && parseNum(b, nb))
+            return (na < nb) ? -1 : (na > nb ? 1 : 0);
+        const int c = a.compare(b);
+        return (c < 0) ? -1 : (c > 0 ? 1 : 0);
+    };
+
+    // Shared {if_...} resolvers. Each placeholder entry below is a thin forwarder
+    // into one of these, so the parse + fallback boilerplate is emitted once
+    // rather than duplicated per operator.
+    //   ifNull   : parse2; true-branch when (value == null) matches wantNull
+    //   ifEqual  : parse3; true-branch when (value == compare) matches wantEqual
+    //   ifCompare: parse3; true-branch when rel(cmp(value, compare)) holds
+    static const auto ifNull = [](const std::string& ph, bool wantNull) -> std::string {
+        std::string v, tFb, fFb; bool hasFb;
+        if (!parse2(ph, v, tFb, fFb, hasFb)) return NULL_STR;
+        return ((v == NULL_STR) == wantNull) ? tFb : (hasFb ? fFb : v);
+    };
+    static const auto ifEqual = [](const std::string& ph, bool wantEqual) -> std::string {
+        std::string v, needle, tFb, fFb; bool hasFb;
+        if (!parse3(ph, v, needle, tFb, fFb, hasFb)) return NULL_STR;
+        return ((v == needle) == wantEqual) ? tFb : (hasFb ? fFb : v);
+    };
+    static const auto ifCompare = [](const std::string& ph,
+                                     int  (*cmp)(const std::string&, const std::string&),
+                                     bool (*rel)(int)) -> std::string {
+        std::string v, needle, tFb, fFb; bool hasFb;
+        if (!parse3(ph, v, needle, tFb, fFb, hasFb)) return NULL_STR;
+        return rel(cmp(v, needle)) ? tFb : (hasFb ? fFb : v);
+    };
+    static const auto relGt = [](int c) { return c >  0; };
+    static const auto relLt = [](int c) { return c <  0; };
+    static const auto relGe = [](int c) { return c >= 0; };
+    static const auto relLe = [](int c) { return c <= 0; };
+
     std::vector<std::pair<std::string, std::function<std::string(const std::string&)>>> placeholders = {
         {"{hex_file(", [&](const std::string& placeholder) { 
             if (hexPath.empty() || !isFileOrDirectory(hexPath)) return NULL_STR;
@@ -3398,48 +3451,28 @@ bool applyPlaceholderReplacements(std::vector<std::string>& cmd, const std::stri
         // {if_<(VALUE, COMPARE_VALUE, TRUE_FALLBACK [, FALSE_FALLBACK])}
         // {if_>=(VALUE, COMPARE_VALUE, TRUE_FALLBACK [, FALSE_FALLBACK])}
         // {if_<=(VALUE, COMPARE_VALUE, TRUE_FALLBACK [, FALSE_FALLBACK])}
+        //   When both values parse as numbers they are compared numerically
+        //   (as floats, so "9" < "10" and "1.5" > "1.05"); otherwise they are
+        //   compared lexicographically, byte by byte and case-sensitive.
+        //
+        // {if_version_>(VALUE, COMPARE_VALUE, TRUE_FALLBACK [, FALSE_FALLBACK])}
+        // {if_version_<(VALUE, COMPARE_VALUE, TRUE_FALLBACK [, FALSE_FALLBACK])}
+        // {if_version_>=(VALUE, COMPARE_VALUE, TRUE_FALLBACK [, FALSE_FALLBACK])}
+        // {if_version_<=(VALUE, COMPARE_VALUE, TRUE_FALLBACK [, FALSE_FALLBACK])}
         //   Version-aware comparison: numeric segments compared as integers,
         //   '-' suffix = pre-release (lower), '+' suffix = build metadata (higher).
-        {"{if_null(", [](const std::string& ph) -> std::string {
-            std::string v, tFb, fFb; bool hasFb;
-            if (!parse2(ph, v, tFb, fFb, hasFb)) return NULL_STR;
-            return (v == NULL_STR) ? tFb : (hasFb ? fFb : v);
-        }},
-        {"{if_!null(", [](const std::string& ph) -> std::string {
-            std::string v, tFb, fFb; bool hasFb;
-            if (!parse2(ph, v, tFb, fFb, hasFb)) return NULL_STR;
-            return (v != NULL_STR) ? tFb : (hasFb ? fFb : v);
-        }},
-        {"{if_==(", [](const std::string& ph) -> std::string {
-            std::string v, needle, tFb, fFb; bool hasFb;
-            if (!parse3(ph, v, needle, tFb, fFb, hasFb)) return NULL_STR;
-            return (v == needle) ? tFb : (hasFb ? fFb : v);
-        }},
-        {"{if_!=(", [](const std::string& ph) -> std::string {
-            std::string v, needle, tFb, fFb; bool hasFb;
-            if (!parse3(ph, v, needle, tFb, fFb, hasFb)) return NULL_STR;
-            return (v != needle) ? tFb : (hasFb ? fFb : v);
-        }},
-        {"{if_>(", [](const std::string& ph) -> std::string {
-            std::string v, needle, tFb, fFb; bool hasFb;
-            if (!parse3(ph, v, needle, tFb, fFb, hasFb)) return NULL_STR;
-            return (compareVersions(v, needle) > 0) ? tFb : (hasFb ? fFb : v);
-        }},
-        {"{if_<(", [](const std::string& ph) -> std::string {
-            std::string v, needle, tFb, fFb; bool hasFb;
-            if (!parse3(ph, v, needle, tFb, fFb, hasFb)) return NULL_STR;
-            return (compareVersions(v, needle) < 0) ? tFb : (hasFb ? fFb : v);
-        }},
-        {"{if_>=(", [](const std::string& ph) -> std::string {
-            std::string v, needle, tFb, fFb; bool hasFb;
-            if (!parse3(ph, v, needle, tFb, fFb, hasFb)) return NULL_STR;
-            return (compareVersions(v, needle) >= 0) ? tFb : (hasFb ? fFb : v);
-        }},
-        {"{if_<=(", [](const std::string& ph) -> std::string {
-            std::string v, needle, tFb, fFb; bool hasFb;
-            if (!parse3(ph, v, needle, tFb, fFb, hasFb)) return NULL_STR;
-            return (compareVersions(v, needle) <= 0) ? tFb : (hasFb ? fFb : v);
-        }},
+        {"{if_null(",       [](const std::string& ph) { return ifNull(ph, true);  }},
+        {"{if_!null(",      [](const std::string& ph) { return ifNull(ph, false); }},
+        {"{if_==(",         [](const std::string& ph) { return ifEqual(ph, true);  }},
+        {"{if_!=(",         [](const std::string& ph) { return ifEqual(ph, false); }},
+        {"{if_>(",          [](const std::string& ph) { return ifCompare(ph, compareAlnum,    relGt); }},
+        {"{if_<(",          [](const std::string& ph) { return ifCompare(ph, compareAlnum,    relLt); }},
+        {"{if_>=(",         [](const std::string& ph) { return ifCompare(ph, compareAlnum,    relGe); }},
+        {"{if_<=(",         [](const std::string& ph) { return ifCompare(ph, compareAlnum,    relLe); }},
+        {"{if_version_>(",  [](const std::string& ph) { return ifCompare(ph, compareVersions, relGt); }},
+        {"{if_version_<(",  [](const std::string& ph) { return ifCompare(ph, compareVersions, relLt); }},
+        {"{if_version_>=(", [](const std::string& ph) { return ifCompare(ph, compareVersions, relGe); }},
+        {"{if_version_<=(", [](const std::string& ph) { return ifCompare(ph, compareVersions, relLe); }},
     };
 
     updateGeneralPlaceholders();
@@ -5161,6 +5194,8 @@ void processCommand(const std::vector<std::string>& cmd, const std::string& pack
                         refreshPackage.store(true, std::memory_order_release);
                     else if (refreshPattern == "wallpaper")
                         refreshWallpaperNow.store(true, std::memory_order_release);
+                    else if (refreshPattern == "combos")
+                        ult::refreshCombos.store(true, std::memory_order_release);
                 }
                 return;
             }

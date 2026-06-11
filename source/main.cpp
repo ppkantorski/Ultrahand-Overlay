@@ -5946,6 +5946,9 @@ public:
         if (ult::refreshWallpaperNow.exchange(false, std::memory_order_acq_rel))
             handleWallpaperReload();
     
+        if (ult::refreshCombos.exchange(false, std::memory_order_acq_rel))
+            tsl::hlp::loadEntryKeyCombos();
+
         if (handleGoBackAfter()) return true;
     
         if (!returningToPackage && !isTouching) {
@@ -7136,6 +7139,9 @@ public:
         
         if (ult::refreshWallpaperNow.exchange(false, std::memory_order_acq_rel))
             handleWallpaperReload();
+
+        if (ult::refreshCombos.exchange(false, std::memory_order_acq_rel))
+            tsl::hlp::loadEntryKeyCombos();
 
         if (handleGoBackAfter()) return true;
     
