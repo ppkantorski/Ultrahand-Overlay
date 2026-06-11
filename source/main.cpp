@@ -3039,6 +3039,30 @@ private:
 
 // Set to globals for reduced lambda overhead
 
+struct ReturnContext {
+    std::string packagePath;
+    std::string sectionName;
+    std::string currentPage;
+    std::string packageName;
+    std::string pageHeader;
+    std::string option;
+    size_t nestedLayer = 0;
+
+    void clear() {
+        packagePath.clear();
+        sectionName.clear();
+        currentPage.clear();
+        packageName.clear();
+        pageHeader.clear();
+        option.clear();
+        nestedLayer = 0;
+    }
+};
+
+static std::stack<ReturnContext> returnContextStack;
+
+class PackageMenu; // forward declaration
+
 /**
  * @brief The `SelectionOverlay` class manages the selection overlay functionality.
  *
@@ -4018,6 +4042,39 @@ public:
                 allowSlide.exchange(false, std::memory_order_acq_rel);
                 unlockedSlide.exchange(false, std::memory_order_acq_rel);
                 inSelectionMenu = false;
+
+                // If refresh-return was requested and we have a return context,
+                // swap to a fresh PackageMenu (redraw) and jump to the originating item.
+                // Only acts here, in SelectionOverlay — the flag is ignored everywhere else.
+                if (refreshReturnAfter.exchange(false, std::memory_order_acq_rel) && !returnContextStack.empty()) {
+                    const ReturnContext returnTo = returnContextStack.top();
+                    returnContextStack.pop();
+
+                    jumpItemName  = returnTo.option;
+                    jumpItemValue = "";
+                    jumpItemExactMatch.store(true, std::memory_order_release);
+                    skipJumpReset.store(true, std::memory_order_release);
+
+                    inSubPackageMenu = false;
+                    inPackageMenu    = false;
+                    returningToPackage = true;
+                    lastMenu = "packageMenu";
+
+                    tsl::swapTo<PackageMenu>(
+                        SwapDepth(2),
+                        returnTo.packagePath,
+                        returnTo.sectionName,
+                        returnTo.currentPage,
+                        returnTo.packageName,
+                        returnTo.nestedLayer,
+                        returnTo.pageHeader
+                    );
+                    return true;
+                }
+
+                // Normal back: discard the return context pushed at entry and goBack.
+                if (!returnContextStack.empty())
+                    returnContextStack.pop();
                 
                 // Determine return destination
                 if (filePath == PACKAGE_PATH) {
@@ -4149,25 +4206,6 @@ std::vector<std::vector<std::string>> gatherPromptCommands(
 
 
 // For returning with menu redrawing
-struct ReturnContext {
-    std::string packagePath;
-    std::string sectionName;
-    std::string currentPage;
-    std::string packageName;
-    std::string pageHeader;
-    std::string option;
-    size_t nestedLayer = 0;
-
-    void clear() {
-        packagePath.clear();
-        sectionName.clear();
-        currentPage.clear();
-        packageName.clear();
-        pageHeader.clear();
-        option.clear();
-        nestedLayer = 0;
-    }
-};
 
 
 struct CommandSettings {
@@ -4236,8 +4274,6 @@ static CommandSettings parseCommandSettings(std::vector<std::vector<std::string>
 }
 
 
-static std::stack<ReturnContext> returnContextStack;
-
 // Shared handler for the bare `exit` command.  Drains returnContextStack to
 // find the originating package, resets all navigation state, and swaps
 // directly to MainMenu on the packages tab with the cursor on that package.
@@ -4294,8 +4330,6 @@ static bool handleTriggerReturnToPackages(const std::string& packagePath) {
     return true;
 }
 
-
-class PackageMenu; // forwarding
 
 // returns if there are or are not cickable items.
 bool drawCommandsMenu(
@@ -5410,7 +5444,8 @@ bool drawCommandsMenu(
                         listItem->disableClickAnimation();
                     } else {
                         listItem->setClickListener([commands, keyName = originalOptionName, cleanOptionName, dropdownSection, packagePath, packageName,
-                            footer, lastSection, listItem, lastPackageHeader, commandMode, showWidget, i](uint64_t keys) {
+                            footer, lastSection, listItem, lastPackageHeader, commandMode, showWidget, i,
+                            currentPage, nestedLayer, pageHeader](uint64_t keys) {
                             
                             if (runningInterpreter.load(acquire))
                                 return false;
@@ -5463,6 +5498,17 @@ bool drawCommandsMenu(
                                     }
 
                                     //tsl::shiftItemFocus(listItem);
+
+                                    returnContextStack.push({
+                                        .packagePath = packagePath,
+                                        .sectionName = dropdownSection,
+                                        .currentPage = currentPage,
+                                        .packageName = packageName,
+                                        .pageHeader  = pageHeader,
+                                        .option      = cleanOptionName,
+                                        .nestedLayer = nestedLayer
+                                    });
+                                    refreshReturnAfter.store(false, std::memory_order_release);
 
                                     tsl::changeTo<SelectionOverlay>(packagePath, keyName, newKey, lastPackageHeader, commands, showWidget);
                                 }

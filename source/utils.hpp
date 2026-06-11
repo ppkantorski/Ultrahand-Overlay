@@ -48,6 +48,7 @@ std::atomic<bool> interpreterLogging{false};
 
 
 std::atomic<bool> goBackAfter{false};
+std::atomic<bool> refreshReturnAfter{false};
 std::atomic<bool> triggerReturnToPackages{false};
 
 std::atomic<bool> usingErista{util::IsErista()};
@@ -5161,6 +5162,10 @@ void processCommand(const std::vector<std::string>& cmd, const std::string& pack
                     else if (refreshPattern == "wallpaper")
                         refreshWallpaperNow.store(true, std::memory_order_release);
                 }
+                return;
+            }
+            if (commandName == "refresh-return") {
+                refreshReturnAfter.store(true, std::memory_order_release);
                 return;
             }
             if (cmdSize > 1 && commandName == "refresh-to") {
