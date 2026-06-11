@@ -3155,7 +3155,6 @@ public:
         std::string filterEntry;
         std::vector<std::string> matchedFiles, tempFiles;
 
-        bool afterSource = false;
         
         for (auto& cmd : selectionCommands) {
 
@@ -3217,10 +3216,11 @@ public:
                 }
     
                 if (cmd.size() > 1) {
-                    // Apply ALL placeholder replacements using the comprehensive function
-                    // This handles nesting, recursion, and proper order automatically
-                    if (!afterSource)
-                        applyPlaceholderReplacements(cmd, _hexFilePath, _iniFilePath, _listString, _listFilePath, _jsonString, _jsonFilePath, filePath);
+                    // Apply ALL placeholder replacements using the comprehensive function.
+                    // Runs unconditionally — including on _source commands — so any accumulated
+                    // variable placeholder (ini_file, hex_file, json, list, if_*, math, etc.)
+                    // can be used to compose a _source path or value.
+                    applyPlaceholderReplacements(cmd, _hexFilePath, _iniFilePath, _listString, _listFilePath, _jsonString, _jsonFilePath, filePath);
     
                     // Now handle source declarations
                     if (commandName == "ini_file") {
@@ -3286,8 +3286,6 @@ public:
                         if (currentSection == GLOBAL_STR) {
                             pathPattern = cmd[1];
                             preprocessPath(pathPattern, filePath);
-                            updateGeneralPlaceholders();
-                            replacePlaceholdersInArg(pathPattern, generalPlaceholders);
                             // Get files directly, avoid storing in intermediate variable
                             tempFiles.clear();
                             tempFiles = getFilesListByWildcards(pathPattern, maxItemsLimit);
@@ -3313,7 +3311,6 @@ public:
                                               std::make_move_iterator(tempFiles.end()));
                             sourceTypeOff = FILE_STR;
                         }
-                        afterSource = true;
                     } else if (commandName == "json_file_source") {
                         sourceType = JSON_FILE_STR;
                         if (currentSection == GLOBAL_STR) {
@@ -3334,7 +3331,6 @@ public:
                             if (cmd.size() > 2)
                                 jsonKeyOff = cmd[2];
                         }
-                        afterSource = true;
                     } else if (commandName == "list_file_source") {
                         sourceType = LIST_FILE_STR;
                         if (currentSection == GLOBAL_STR) {
@@ -3349,7 +3345,6 @@ public:
                             preprocessPath(listPathOff, filePath);
                             sourceTypeOff = LIST_FILE_STR;
                         }
-                        afterSource = true;
                     } else if (commandName == "list_source") {
                         sourceType = LIST_STR;
                         if (currentSection == GLOBAL_STR) {
@@ -3364,7 +3359,6 @@ public:
                             removeQuotes(listStringOff);
                             sourceTypeOff = LIST_STR;
                         }
-                        afterSource = true;
                     } else if (commandName == "ini_file_source") {
                         if (currentSection == GLOBAL_STR) {
                             sourceType = INI_FILE_STR;
@@ -3385,7 +3379,6 @@ public:
                             parseSectionsFromIniPattern(iniPathOff, filesListOff, maxItemsLimit);
                             iniPathOff.clear();
                         }
-                        afterSource = true;
                     } else if (commandName == "json_source") {
                         sourceType = JSON_STR;
                         if (currentSection == GLOBAL_STR) {
@@ -3412,7 +3405,6 @@ public:
                                 removeQuotes(jsonKeyOff);
                             }
                         }
-                        afterSource = true;
                     }
                 }
 
