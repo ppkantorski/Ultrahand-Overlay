@@ -13,7 +13,7 @@
  *   of the project's documentation and must remain intact.
  *
  *  Licensed under GPLv2
- *  Copyright (c) 2024 ppkantorski
+ *  Copyright (c) 2023-2026 ppkantorski
  ********************************************************************************/
 
 #pragma once
@@ -23,18 +23,12 @@
 #include <payload.hpp> // Studious Pancake
 #include <util.hpp> // Studious Pancake
 
-#if NO_FSTREAM_DIRECTIVE
 #include <stdio.h>
-#else
-#include <fstream>
-#endif
-
 #include <fnmatch.h>
 #include <numeric>
 #include <queue>
 #include <mutex>
 #include <condition_variable>
-//#include <sys/statvfs.h>
 
 
 using namespace ult;
@@ -42,27 +36,46 @@ using namespace ult;
 static std::atomic<bool> abortCommand(false);
 static std::atomic<bool> triggerExit(false);
 
-static bool exitingUltrahand = false;
+std::atomic<bool> exitingUltrahand{false};
+std::atomic<bool> isDownloadCommand{false};
+std::atomic<bool> commandSuccess{false};
+inline void setCommandFailed();
+inline void setCommandResult(bool result);
+std::atomic<bool> refreshPage{false};
+std::atomic<bool> refreshPackage{false};
+std::atomic<bool> skipJumpReset{false};
+std::atomic<bool> interpreterLogging{false};
 
-bool isDownloadCommand = false;
-bool commandSuccess = false;
-bool refreshPage = false;
-bool refreshPackage = false;
-bool interpreterLogging = false;
 
-bool usingErista = util::IsErista();
-bool usingMariko = util::IsMariko();
+std::atomic<bool> goBackAfter{false};
+std::atomic<bool> refreshReturnAfter{false};
+std::atomic<bool> triggerReturnToPackages{false};
+
+std::atomic<bool> usingErista{util::IsErista()};
+std::atomic<bool> usingMariko{util::IsMariko()};
 
 // Device info globals
 static char amsVersion[12];
 static char hosVersion[12];
-static std::string memoryType;
+
+//static std::string memoryType;
 static std::string memoryVendor = UNAVAILABLE_SELECTION;
 static std::string memoryModel = UNAVAILABLE_SELECTION;
 static std::string memorySize = UNAVAILABLE_SELECTION;
+static std::string hekateVersion = UNAVAILABLE_SELECTION;
+static std::string ovlloaderVersion = UNAVAILABLE_SELECTION; 
 static uint32_t cpuSpeedo0, cpuSpeedo2, socSpeedo0; // CPU, GPU, SOC
 static uint32_t cpuIDDQ, gpuIDDQ, socIDDQ;
 static bool usingEmunand = true;
+static bool is8GBEnabled = false;
+
+
+// For persistent versions and colors across nested packages (when not specified)
+std::string packageRootLayerTitle;
+std::string packageRootLayerName;
+std::string packageRootLayerVersion;
+std::string packageRootLayerColor;
+
 
 /**
  * @brief Ultrahand-Overlay Configuration Paths
@@ -82,6 +95,160 @@ static bool usingEmunand = true;
  * and directories.
  */
 
+std::vector<std::string> getOverlayNames() {
+    std::vector<std::string> names;
+    const auto iniData = ult::getParsedDataFromIniFile(ult::OVERLAYS_INI_FILEPATH);
+    for (const auto& [sectionName, _] : iniData) {
+        names.push_back(sectionName);
+    }
+    return names;
+}
+
+std::vector<std::string> getPackageNames() {
+    std::vector<std::string> names;
+    const auto iniData = ult::getParsedDataFromIniFile(ult::PACKAGES_INI_FILEPATH);
+    for (const auto& [sectionName, _] : iniData) {
+        names.push_back(sectionName);
+    }
+    return names;
+}
+
+
+
+void removeKeyComboFromOthers(const std::string& keyCombo, const std::string& currentOverlay) {
+    // Declare variables once for reuse across both scopes
+    std::string existingCombo;
+    std::string comboListStr;
+    std::vector<std::string> comboList;
+    bool modified;
+    std::string newComboStr;
+    
+    // Process overlays first
+    {
+        auto overlaysIniData = ult::getParsedDataFromIniFile(ult::OVERLAYS_INI_FILEPATH);
+        bool overlaysModified = false;
+        
+        const auto overlayNames = getOverlayNames();
+        
+        for (const auto& overlayName : overlayNames) {
+            auto overlayIt = overlaysIniData.find(overlayName);
+            if (overlayIt == overlaysIniData.end()) continue; // Skip if overlay not in INI
+            
+            auto& overlaySection = overlayIt->second;
+            
+            // 1. Remove from main key_combo field if it matches
+            auto keyComboIt = overlaySection.find("key_combo");
+            if (keyComboIt != overlaySection.end()) {
+                existingCombo = keyComboIt->second;
+                if (!existingCombo.empty() && tsl::hlp::comboStringToKeys(existingCombo) == tsl::hlp::comboStringToKeys(keyCombo)) {
+                    overlaySection["key_combo"] = "";
+                    overlaysModified = true;
+                }
+            }
+            
+            // 2. Remove from mode_combos list - clear ALL instances of this combo
+            auto modeCombosIt = overlaySection.find("mode_combos");
+            if (modeCombosIt != overlaySection.end()) {
+                comboListStr = modeCombosIt->second;
+            } else {
+                comboListStr = "";
+            }
+            
+            comboList = splitIniList(comboListStr);
+            modified = false;
+            
+            for (size_t i = 0; i < comboList.size(); ++i) {
+                if (!comboList[i].empty() && tsl::hlp::comboStringToKeys(comboList[i]) == tsl::hlp::comboStringToKeys(keyCombo)) {
+                    comboList[i] = "";  // Clear ALL instances
+                    modified = true;
+                }
+            }
+            
+            // Only update if something was actually removed
+            if (modified) {
+                newComboStr = "(" + joinIniList(comboList) + ")";
+                overlaySection["mode_combos"] = newComboStr;
+                overlaysModified = true;
+            }
+        }
+        
+        // Write back if modified, then clear memory
+        if (overlaysModified) {
+            ult::saveIniFileData(ult::OVERLAYS_INI_FILEPATH, overlaysIniData);
+        }
+        // overlaysIniData automatically cleared when scope ends
+    }
+    
+    // Process packages second (overlays INI data is already cleared)
+    {
+        auto packagesIniData = ult::getParsedDataFromIniFile(ult::PACKAGES_INI_FILEPATH);
+        bool packagesModified = false;
+        
+        auto packageNames = getPackageNames();
+        
+        for (const auto& packageName : packageNames) {
+            auto packageIt = packagesIniData.find(packageName);
+            if (packageIt == packagesIniData.end()) continue; // Skip if package not in INI
+            
+            auto& packageSection = packageIt->second;
+            auto keyComboIt = packageSection.find("key_combo");
+            if (keyComboIt != packageSection.end()) {
+                existingCombo = keyComboIt->second; // Reusing the same variable
+                if (!existingCombo.empty() && tsl::hlp::comboStringToKeys(existingCombo) == tsl::hlp::comboStringToKeys(keyCombo)) {
+                    packageSection["key_combo"] = "";
+                    packagesModified = true;
+                }
+            }
+        }
+        
+        // Write back if modified, then clear memory
+        if (packagesModified) {
+            ult::saveIniFileData(ult::PACKAGES_INI_FILEPATH, packagesIniData);
+        }
+        // packagesIniData automatically cleared when scope ends
+    }
+}
+
+// Define default key combos (same as UltrahandSettingsMenu)
+static const std::array<std::string, 29> defaultCombos = {
+    // Primary (Default) Combos – top priority, always first
+    "ZL+ZR+DDOWN",
+    "ZL+ZR+DRIGHT",
+    "ZL+ZR+DUP",
+    "ZL+ZR+DLEFT",
+
+    // Basic Combos – L/R with D-pad
+    "L+R+DDOWN",
+    "L+R+DRIGHT",
+    "L+R+DUP",
+    "L+R+DLEFT",
+    "L+DDOWN",
+    "R+DDOWN",
+
+    // Menu Key Combos – involving PLUS/MINUS
+    "ZL+ZR+PLUS",
+    "L+R+PLUS",
+    "ZL+ZR+MINUS",
+    "L+R+MINUS",
+    "ZL+MINUS",
+    "ZR+MINUS",
+    "ZL+PLUS",
+    "ZR+PLUS",
+    "MINUS+PLUS",
+
+    // Stick Click Combos
+    "LS+RS",
+    "L+DDOWN+RS",
+    "L+R+LS",
+    "L+R+RS",
+
+    // Advanced Combos – unlikely to conflict, good for extra features
+    "ZL+ZR+LS",
+    "ZL+ZR+RS",
+    "ZL+ZR+L",
+    "ZL+ZR+R",
+    "ZL+ZR+LS+RS"
+};
 
 // Global constant map for button and arrow placeholders
 const std::unordered_map<std::string, std::string> symbolPlaceholders = {
@@ -114,7 +281,8 @@ const std::unordered_map<std::string, std::string> symbolPlaceholders = {
     {"{CAPTURE}", ""},
     {"{REFRESH_SYMBOL}", ""},
     {"{WARNING_SYMBOL}", ""},
-    {"{INFO_SYMBOL}", ""}
+    {"{INFO_SYMBOL}", ""},
+    {"{DIVIDER_SYMBOL}", ""}
 };
 
 
@@ -166,61 +334,33 @@ bool isVersionGreaterOrEqual(const char* currentVersion, const char* requiredVer
     return currPatch >= reqPatch;
 }
 
+inline bool checkVersionCondition(const std::string& condition, const std::string& currentVersion) {
+    if (condition.empty()) return true;
 
-//void testAudioOutput() {
-//    Result res;
-//    audoutInitialize();
-//    
-//    // Sample rate and buffer size
-//    const size_t sampleRate = 48000; // 48 kHz
-//    const size_t seconds = 1; // Duration of audio
-//    const size_t bufferSize = sampleRate * sizeof(int16_t) * seconds;
-//
-//    // Allocate buffer dynamically to avoid large stack allocations
-//    int16_t* buffer = (int16_t*)malloc(bufferSize);
-//    if (buffer == nullptr) {
-//        logMessage("Failed to allocate buffer memory!\n");
-//        audoutExit();
-//        return;
-//    }
-//    
-//    // Generate a simple tone (sine wave)
-//    float frequency = 400.0f; // 440 Hz tone
-//    float amplitude = 0.5f;   // Volume
-//
-//    for (size_t i = 0; i < bufferSize / sizeof(int16_t); i++) {
-//        float sample = amplitude * sinf(2.0f * M_PI * frequency * i / sampleRate);
-//        buffer[i] = (int16_t)(sample * 32767.0f); // Convert to 16-bit PCM
-//    }
-//
-//    // Prepare buffers
-//    AudioOutBuffer audioBuffer;
-//    audioBuffer.buffer = buffer;
-//    audioBuffer.buffer_size = bufferSize;
-//    audioBuffer.data_size = bufferSize;
-//
-//    // Start audio output
-//    res = audoutStartAudioOut();
-//    if (R_FAILED(res)) {
-//        logMessage("Failed to start audio output!");
-//        free(buffer);
-//        audoutExit();
-//        return;
-//    }
-//
-//    // Play the sound
-//    res = audoutAppendAudioOutBuffer(&audioBuffer);
-//    if (R_FAILED(res)) {
-//        logMessage("Failed to append audio buffer!");
-//    }
-//    
-//    audoutWaitPlayFinish(NULL, NULL, 1000);
-//
-//    // Clean up
-//    free(buffer);
-//    audoutStopAudioOut();
-//    audoutExit();
-//}
+    const char* cur = currentVersion.c_str();
+    std::string op, ver;
+
+    if (condition.size() > 1 && condition[0] == '>' && condition[1] == '=') {
+        op = ">="; ver = condition.substr(2);
+    } else if (condition.size() > 1 && condition[0] == '<' && condition[1] == '=') {
+        op = "<="; ver = condition.substr(2);
+    } else if (condition[0] == '>') {
+        op = ">"; ver = condition.substr(1);
+    } else if (condition[0] == '<') {
+        op = "<"; ver = condition.substr(1);
+    } else {
+        op = "=="; ver = condition;
+    }
+
+    const char* req = ver.c_str();
+    if (op == "==") return isVersionGreaterOrEqual(cur, req) && isVersionGreaterOrEqual(req, cur);
+    if (op == ">=") return isVersionGreaterOrEqual(cur, req);
+    if (op == "<=") return isVersionGreaterOrEqual(req, cur);
+    if (op == ">")  return isVersionGreaterOrEqual(cur, req) && !isVersionGreaterOrEqual(req, cur);
+    if (op == "<")  return isVersionGreaterOrEqual(req, cur) && !isVersionGreaterOrEqual(cur, req);
+    return true;
+}
+
 
 #define FUSE_CPU_SPEEDO_0_CALIB 0x114
 //#define FUSE_CPU_SPEEDO_1_CALIB 0x12C
@@ -235,103 +375,57 @@ bool isVersionGreaterOrEqual(const char* currentVersion, const char* requiredVer
 #define FUSE_GPU_IDDQ_CALIB 0x228
 
 
-//bool areAllNonZero(const std::initializer_list<u32>& values) {
-//    return std::all_of(values.begin(), values.end(), [](u32 value) { return value != 0; });
-//}
-
-//uint32_t readFuseValue(std::ifstream &file, std::streamoff offset) {
-//    uint32_t value = 0;
-//    // Seek to the specified offset
-//    file.seekg(offset, std::ios::beg);
-//    if (file.good()) {
-//        // Read the value (assuming it's a 4-byte integer)
-//        file.read(reinterpret_cast<char*>(&value), sizeof(value));
-//    } else {
-//        //std::cerr << "Error: Unable to seek to the specified offset." << std::endl;
-//    }
-//    return value;
-//}
-
 void writeFuseIni(const std::string& outputPath, const char* data = nullptr) {
-#if NO_FSTREAM_DIRECTIVE
     // Use stdio.h functions for file operations
     FILE* outFile = fopen(outputPath.c_str(), "w");
     if (outFile) {
-        // Write the header message and section name
-        // Uncomment this line if needed to include the commented warning line
-        // fwrite("; do not adjust these values manually unless they were not dumped correctly\n", 1, 81, outFile);
+        // Write the header in one call instead of three separate fwrite calls
+        fputs("[", outFile);
+        fputs(FUSE_STR.c_str(), outFile); 
+        fputs("]\n", outFile);
         
-        fwrite("[", 1, 1, outFile);
-        fwrite(FUSE_STR.c_str(), 1, FUSE_STR.size(), outFile);
-        fwrite("]\n", 1, 2, outFile);
-
         if (data) {
-            // Write each key-value pair with `fprintf`
+            // fprintf is necessary here for actual formatting - keep these
             fprintf(outFile, "cpu_speedo_0=%u\n", *reinterpret_cast<const uint32_t*>(data + FUSE_CPU_SPEEDO_0_CALIB));
             fprintf(outFile, "cpu_speedo_2=%u\n", *reinterpret_cast<const uint32_t*>(data + FUSE_CPU_SPEEDO_2_CALIB));
             fprintf(outFile, "soc_speedo_0=%u\n", *reinterpret_cast<const uint32_t*>(data + FUSE_SOC_SPEEDO_0_CALIB));
-            fprintf(outFile, "cpu_iddq=%u\n", *reinterpret_cast<const uint32_t*>(data + FUSE_CPU_IDDQ_CALIB));
-            fprintf(outFile, "soc_iddq=%u\n", *reinterpret_cast<const uint32_t*>(data + FUSE_SOC_IDDQ_CALIB));
-            fprintf(outFile, "gpu_iddq=%u\n", *reinterpret_cast<const uint32_t*>(data + FUSE_GPU_IDDQ_CALIB));
-            fprintf(outFile, "disable_reload=false\n");
-        } else {
-            // Write empty values if `data` is not provided
-            fputs("cpu_speedo_0=\n", outFile);
-            fputs("cpu_speedo_2=\n", outFile);
-            fputs("soc_speedo_0=\n", outFile);
-            fputs("cpu_iddq=\n", outFile);
-            fputs("soc_iddq=\n", outFile);
-            fputs("gpu_iddq=\n", outFile);
+            fprintf(outFile, "cpu_iddq=%u\n", *reinterpret_cast<const uint32_t*>(data + FUSE_CPU_IDDQ_CALIB) * 4);
+            fprintf(outFile, "soc_iddq=%u\n", *reinterpret_cast<const uint32_t*>(data + FUSE_SOC_IDDQ_CALIB) * 4);
+            fprintf(outFile, "gpu_iddq=%u\n", *reinterpret_cast<const uint32_t*>(data + FUSE_GPU_IDDQ_CALIB) * 5);
+            // Detect RAM size at write time and persist it
+            {
+                u64 totalMem = 0;
+                const char* ramSizeGB = "4";
+                if (R_SUCCEEDED(svcGetSystemInfo(&totalMem, 0, INVALID_HANDLE, 0)) &&
+                    totalMem > (6ULL * 1024 * 1024 * 1024))
+                    ramSizeGB = "8";
+                fprintf(outFile, "ram_size_gb=%s\n", ramSizeGB);
+            }
             fputs("disable_reload=false\n", outFile);
-        }
-
-        fclose(outFile); // Close the file
-    }
-#else
-    // Use fstream for file operations
-    std::ofstream outFile(outputPath);
-    if (outFile) {
-        // Uncomment this line if needed to include the commented warning line
-        // outFile.write("; do not adjust these values manually unless they were not dumped correctly\n", 81);
-
-        outFile.write("[", 1);
-        outFile.write(FUSE_STR.c_str(), FUSE_STR.size());
-        outFile.write("]\n", 2);
-
-        if (data) {
-            outFile << "cpu_speedo_0=" << *reinterpret_cast<const uint32_t*>(data + FUSE_CPU_SPEEDO_0_CALIB) << '\n'
-                    << "cpu_speedo_2=" << *reinterpret_cast<const uint32_t*>(data + FUSE_CPU_SPEEDO_2_CALIB) << '\n'
-                    << "soc_speedo_0=" << *reinterpret_cast<const uint32_t*>(data + FUSE_SOC_SPEEDO_0_CALIB) << '\n'
-                    << "cpu_iddq=" << *reinterpret_cast<const uint32_t*>(data + FUSE_CPU_IDDQ_CALIB) << '\n'
-                    << "soc_iddq=" << *reinterpret_cast<const uint32_t*>(data + FUSE_SOC_IDDQ_CALIB) << '\n'
-                    << "gpu_iddq=" << *reinterpret_cast<const uint32_t*>(data + FUSE_GPU_IDDQ_CALIB) << '\n'
-                    << "disable_reload=false\n";
         } else {
-            outFile << "cpu_speedo_0=\n"
-                    << "cpu_speedo_2=\n"
-                    << "soc_speedo_0=\n"
-                    << "cpu_iddq=\n"
-                    << "soc_iddq=\n"
-                    << "gpu_iddq=\n"
-                    << "disable_reload=false\n";
+            // Single fputs call instead of seven separate ones
+            fputs("cpu_speedo_0=\n"
+                  "cpu_speedo_2=\n"
+                  "soc_speedo_0=\n"
+                  "cpu_iddq=\n"
+                  "soc_iddq=\n"
+                  "gpu_iddq=\n"
+                  "ram_size_gb=\n"
+                  "disable_reload=false\n", outFile);
         }
-
-        outFile.close();
+        fclose(outFile);
     }
-#endif
 }
 
 
 void fuseDumpToIni(const std::string& outputPath = FUSE_DATA_INI_PATH) {
-    if (isFileOrDirectory(outputPath)) return;
+    if (isFile(outputPath)) return;
 
     u64 pid = 0;
     if (R_FAILED(pmdmntGetProcessId(&pid, 0x0100000000000006))) {
-        //pmdmntExit();
         writeFuseIni(outputPath);
         return;
     }
-    //pmdmntExit();
 
     Handle debug;
     if (R_FAILED(svcDebugActiveProcess(&debug, pid))) {
@@ -379,7 +473,13 @@ void fuseDumpToIni(const std::string& outputPath = FUSE_DATA_INI_PATH) {
 std::string getLocalIpAddress() {
     Result rc;
     u32 ipAddress;
-
+    
+    // Initialize nifm service
+    rc = nifmInitialize(NifmServiceType_System);
+    if (R_FAILED(rc)) {
+        // Failed to initialize, return default
+        return UNAVAILABLE_SELECTION;
+    }
     
     // Get the current IP address
     rc = nifmGetCurrentIpAddress(&ipAddress);
@@ -394,18 +494,44 @@ std::string getLocalIpAddress() {
         nifmExit();
         return std::string(ipStr);
     } else {
-        // Return a default IP address if the IP could not be retrieved
-        return UNAVAILABLE_SELECTION;  // Or "Unknown" if you prefer
+        // Clean up before returning default
+        nifmExit();
+        return UNAVAILABLE_SELECTION;
     }
 }
 
+std::string getMasterVolumeLevel() {
+    audctlInitialize();
+    float currentVolume = 0.0f;
+    Result rc = audctlGetSystemOutputMasterVolume(&currentVolume);
+    audctlExit();
+    
+    if (R_SUCCEEDED(rc)) {
+        int volumePercentage = static_cast<int>(currentVolume * 100.0f + 0.5f);
+        return ult::to_string(volumePercentage);
+    }
+    
+    return "100"; // Default to 100 if failed
+}
 
-
+std::string getBacklightLevel() {
+    lblInitialize();
+    float currentBrightness = 0.0f;
+    Result rc = lblGetCurrentBrightnessSetting(&currentBrightness);
+    lblExit();
+    
+    if (R_SUCCEEDED(rc)) {
+        int brightnessPercentage = static_cast<int>(currentBrightness * 100.0f + 0.5f);
+        return ult::to_string(brightnessPercentage);
+    }
+    
+    return "100"; // Default to 100 if failed
+}
 
 // Function to remove all empty command strings
 void removeEmptyCommands(std::vector<std::vector<std::string>>& commands) {
     commands.erase(std::remove_if(commands.begin(), commands.end(),
-        [](const std::vector<std::string>& vec) {
+        [](const std::vector<std::string>& vec) noexcept {
             return vec.empty();
         }),
         commands.end());
@@ -459,6 +585,16 @@ const char* getMemoryType(uint64_t packed_version) {
         case 32: return "Micron_MT53E512M32D1NP-046 WT:B_4 GB LPDDR4X 4266 Mbps";
         case 33: return "Micron_MT53E512M32D1NP-046 WT:B_4 GB LPDDR4X 4266 Mbps";
         case 34: return "Micron_MT53E512M32D1NP-046 WT:B_4 GB LPDDR4X 4266 Mbps";
+
+        case 16: return "Hynix_NMEM-DIE (Copper)_null";
+        case 35: return "null_H54G46CYRBX267_null";
+        case 36: return "Magnesium_MT53E512M32D1NP-046 WT:B_null";
+        case 37: return "Samsung_K4FBE3D4HM-GHCL_null";
+        case 38: return "Samsung_K4FBE3D4HM-GFCL_null";
+        case 39: return "Samsung_K4FBE3D4HM-TFCL_null";
+        case 40: return "Samsung_K4FBE3D4HM-MGCJ_null";
+        case 41: return "Samsung_K4FBE3D4HM-THCL_null";
+        case 42: return "Samsung_K4FBE3D4HM-SGCL_null";
         default: return "";
     }
 }
@@ -468,11 +604,11 @@ const char* getMemoryType(uint64_t packed_version) {
 const char* getStorageInfo(const std::string& storageType) {
     s64 freeSpace = 0;
     s64 totalSpace = 0;
-    char* buffer = (char*)malloc(30);
+    char* buffer = (char*)malloc(64);  // Increased size for percentage info
 
     FsFileSystem fs;
     Result result;
-    
+
     // Open the appropriate file system based on storage type
     if (storageType == "emmc")
         result = fsOpenBisFileSystem(&fs, FsBisPartitionId_User, "");
@@ -499,19 +635,16 @@ const char* getStorageInfo(const std::string& storageType) {
         return buffer;
     }
 
-    // Calculate the used space
-    s64 usedSpace = totalSpace - freeSpace;
+    // Calculate the used space and usage percentage
+    const s64 usedSpace = totalSpace - freeSpace;
+    const float usedSpaceGB = usedSpace / (1024.0f * 1024.0f * 1024.0f);
+    const float totalSpaceGB = totalSpace / (1024.0f * 1024.0f * 1024.0f);
+    const int percentUsed = (totalSpace > 0) ? static_cast<int>((usedSpace * 100) / totalSpace) : 0;
 
-    // Convert the used, free, and total space from bytes to GB
-    float usedSpaceGB = usedSpace / (1024.0f * 1024.0f * 1024.0f);
-    float totalSpaceGB = totalSpace / (1024.0f * 1024.0f * 1024.0f);
+    // Format the string with percentage
+    snprintf(buffer, 64, "%.1f GB / %.1f GB (%d%%)", usedSpaceGB, totalSpaceGB, percentUsed);
 
-    // Format the used and total space as a string
-    snprintf(buffer, 64, "%.2f GB / %.2f GB", usedSpaceGB, totalSpaceGB);
-
-    // Close the file system
     fsFsClose(&fs);
-
     return buffer;
 }
 
@@ -520,13 +653,10 @@ const char* getStorageInfo(const std::string& storageType) {
 void unpackDeviceInfo() {
     u64 packed_version;
     splGetConfig((SplConfigItem)2, &packed_version);
-    memoryType = getMemoryType(packed_version);
-    //memoryVendor = UNAVAILABLE_SELECTION;
-    //memoryModel = UNAVAILABLE_SELECTION;
-    //memorySize = UNAVAILABLE_SELECTION;
+    const std::string memoryType = getMemoryType(packed_version);
     
     if (!memoryType.empty()) {
-        std::vector<std::string> memoryData = splitString(memoryType, "_");
+        const std::vector<std::string> memoryData = splitString(memoryType, "_");
         if (memoryData.size() > 0) memoryVendor = memoryData[0];
         if (memoryData.size() > 1) memoryModel = memoryData[1];
         if (memoryData.size() > 2) memorySize = memoryData[2];
@@ -542,25 +672,169 @@ void unpackDeviceInfo() {
     splGetConfig((SplConfigItem)65007, &packed_version);
     usingEmunand = (packed_version != 0);
 
+    // Cache hekate version once at startup (extractVersionFromBinary reads the entire binary)
+    const std::string _hekateVer = extractVersionFromBinary("sdmc:/bootloader/update.bin");
+    hekateVersion = _hekateVer.empty() ? UNAVAILABLE_SELECTION : _hekateVer;
+
+    // nx-volloader version
+    const std::string _ovlloaderVer = cleanVersionLabel(loaderInfo);
+    ovlloaderVersion = _ovlloaderVer.empty() ? UNAVAILABLE_SELECTION : _ovlloaderVer;
 
     fuseDumpToIni();
-
-    if (isFileOrDirectory(FUSE_DATA_INI_PATH)) {
-        const std::pair<const char*, u32*> keys[] = {
-            {"cpu_speedo_0", &cpuSpeedo0},
-            {"cpu_speedo_2", &cpuSpeedo2},
-            {"soc_speedo_0", &socSpeedo0},
-            {"cpu_iddq", &cpuIDDQ},
-            {"soc_iddq", &socIDDQ},
-            {"gpu_iddq", &gpuIDDQ}
+    
+    if (isFile(FUSE_DATA_INI_PATH)) {
+        // Load INI data once instead of 6 separate file reads
+        const auto fuseSection = getKeyValuePairsFromSection(FUSE_DATA_INI_PATH, FUSE_STR);
+        const auto end = fuseSection.end();
+        
+        auto getValue = [&](const char* key) -> u32 {
+            auto it = fuseSection.find(key);
+            return (it != end && !it->second.empty()) ? ult::stoi(it->second) : 0;
         };
-        std::string value;
-        for (const auto& key : keys) {
-            value = parseValueFromIniSection(FUSE_DATA_INI_PATH, FUSE_STR, key.first);
-            *key.second = value.empty() ? 0 : ult::stoi(value);
+        
+        cpuSpeedo0 = getValue("cpu_speedo_0");
+        cpuSpeedo2 = getValue("cpu_speedo_2");
+        socSpeedo0 = getValue("soc_speedo_0");
+        cpuIDDQ = getValue("cpu_iddq");
+        socIDDQ = getValue("soc_iddq");
+        gpuIDDQ = getValue("gpu_iddq");
+
+        auto itRamSize = fuseSection.find("ram_size_gb");
+        if (itRamSize != end && !itRamSize->second.empty()) {
+            is8GBEnabled = (itRamSize->second == "8");
+        } else {
+            // Key missing (old fuse file) — detect live and patch the file
+            u64 totalMem = 0;
+            is8GBEnabled = R_SUCCEEDED(svcGetSystemInfo(&totalMem, 0, INVALID_HANDLE, 0)) &&
+                           totalMem > (6ULL * 1024 * 1024 * 1024);
+            setIniFileValue(FUSE_DATA_INI_PATH, FUSE_STR, "ram_size_gb", is8GBEnabled ? "8" : "4");
         }
     }
+}
 
+
+// Escapes regex special chars except '*'
+static std::string resolveWildcardFromKnownPath(
+    const std::string& oldPattern,
+    const std::string& resolvedPath,
+    const std::string& newPattern
+) {
+    // Helper function to check if paths match and extract wildcard values
+    auto matchAndExtract = [](const std::string& pattern, const std::string& path, std::vector<std::string>& captures) -> bool {
+        size_t patternPos = 0;
+        size_t pathPos = 0;
+        size_t nextPatternPos;
+        char nextChar;
+        size_t foundPos;
+        bool found;
+        char patternChar;
+        char pathChar;
+        bool match;
+
+        while (patternPos < pattern.size() && pathPos < path.size()) {
+            if (pattern[patternPos] == '*') {
+                // Find the next non-wildcard character in pattern
+                nextPatternPos = patternPos + 1;
+                while (nextPatternPos < pattern.size() && pattern[nextPatternPos] == '*') {
+                    nextPatternPos++; // Skip consecutive wildcards
+                }
+                
+                if (nextPatternPos >= pattern.size()) {
+                    // Wildcard is at the end, capture everything remaining
+                    captures.push_back(path.substr(pathPos));
+                    return true;
+                }
+                
+                // Find the next literal character after the wildcard
+                nextChar = pattern[nextPatternPos];
+                
+                // Find where this character appears in the path
+                foundPos = pathPos;
+                found = false;
+                
+                // Look for the next literal sequence starting from current path position
+                while (foundPos < path.size()) {
+                    if ((nextChar == '/' || nextChar == '\\') && 
+                        (path[foundPos] == '/' || path[foundPos] == '\\')) {
+                        found = true;
+                        break;
+                    } else if (nextChar != '/' && nextChar != '\\' && 
+                               std::tolower(path[foundPos]) == std::tolower(nextChar)) {
+                        found = true;
+                        break;
+                    }
+                    foundPos++;
+                }
+                
+                if (!found) {
+                    return false;
+                }
+                
+                // Capture everything between current position and found position
+                captures.push_back(path.substr(pathPos, foundPos - pathPos));
+                pathPos = foundPos;
+                patternPos = nextPatternPos;
+            } else {
+                // Literal character matching (case-insensitive, handle path separators)
+                patternChar = pattern[patternPos];
+                pathChar = path[pathPos];
+                
+                match = false;
+                if ((patternChar == '/' || patternChar == '\\') && 
+                    (pathChar == '/' || pathChar == '\\')) {
+                    match = true;
+                } else if (std::tolower(patternChar) == std::tolower(pathChar)) {
+                    match = true;
+                }
+                
+                if (!match) {
+                    return false;
+                }
+                
+                patternPos++;
+                pathPos++;
+            }
+        }
+        
+        // Handle remaining wildcards at the end of pattern
+        while (patternPos < pattern.size() && pattern[patternPos] == '*') {
+            captures.push_back("");
+            patternPos++;
+        }
+        
+        // Pattern should be fully consumed, path can have remaining characters
+        return patternPos >= pattern.size();
+    };
+    
+    // Try to match the pattern at different positions in the resolved path (simulating .* anchors)
+    std::vector<std::string> captures;
+    bool matched = false;
+    std::string subPath;
+
+    for (size_t startPos = 0; startPos <= resolvedPath.size(); ++startPos) {
+        captures.clear();
+        subPath = resolvedPath.substr(startPos);
+        
+        if (matchAndExtract(oldPattern, subPath, captures)) {
+            matched = true;
+            break;
+        }
+    }
+    
+    if (!matched) {
+        return newPattern;
+    }
+    
+    // Replace wildcards in newPattern with captured values
+    std::string result = newPattern;
+    size_t pos;
+    for (size_t i = 0; i < captures.size(); ++i) {
+        pos = result.find('*');
+        if (pos == std::string::npos) break;
+        result.replace(pos, 1, captures[i]);
+    }
+    
+    return result;
 }
 
 
@@ -579,8 +853,7 @@ void powerOffAllControllers() {
     // Initialize Bluetooth manager
     rc = btmInitialize();
     if (R_FAILED(rc)) {
-        commandSuccess = false;
-        //LogLine("Error btmInitialize: %u - %X\n", rc, rc);
+        setCommandFailed();
         return;
     }
     
@@ -591,24 +864,18 @@ void powerOffAllControllers() {
             g_addresses[i] = connected_devices[i].address;
         }
     } else {
-        commandSuccess = false;
-        //LogLine("Error btmGetDeviceCondition: %u - %X\n", rc, rc);
+        setCommandFailed();
     }
     
     if (R_SUCCEEDED(rc)) {
-        //LogLine("Disconnecting controllers. Count: %u\n", g_connected_count);
         for (int i = 0; i != g_connected_count; ++i) {
             rc = btmHidDisconnect(g_addresses[i]);
             if (R_FAILED(rc)) {
-                commandSuccess = false;
-                //LogLine("Error btmHidDisconnect: %u - %X\n", rc, rc);
-            } else {
-                //LogLine("Disconnected Address: %u - %X\n", g_addresses[i], g_addresses[i]);
+                setCommandFailed();
             }
         }
-        //LogLine("All controllers disconnected.\n");
     } else {
-        commandSuccess = false;
+        setCommandFailed();
     }
     
     // Exit Bluetooth manager
@@ -618,189 +885,169 @@ void powerOffAllControllers() {
 
 
 
-void initializeTheme(const std::string& themeIniPath = THEME_CONFIG_INI_PATH) {
-    tsl::hlp::ini::IniData themeData;
-    bool initialize = false;
-
-    if (isFileOrDirectory(themeIniPath)) {
-        themeData = getParsedDataFromIniFile(themeIniPath);
-
-        if (themeData.count(THEME_STR) > 0) {
-            auto& themeSection = themeData[THEME_STR];
-
-            // Iterate through each default setting and apply if not already set
-            for (const auto& [key, value] : defaultThemeSettingsMap) {
-                if (themeSection.count(key) == 0) {
-                    setIniFileValue(themeIniPath, THEME_STR, key, value);
-                }
-            }
-        } else {
-            initialize = true;
-        }
-    } else {
-        initialize = true;
-    }
-
-    // If the file does not exist or the theme section is missing, initialize with all default values
-    if (initialize) {
-        for (const auto& [key, value] : defaultThemeSettingsMap) {
-            setIniFileValue(themeIniPath, THEME_STR, key, value);
-        }
-    }
-
-    if (!isFileOrDirectory(THEMES_PATH)) {
-        createDirectory(THEMES_PATH);
-    }
-}
-
-
 /**
- * @brief Copy Tesla key combo to Ultrahand settings.
+ * @brief Synchronize Tesla and Ultrahand key combos.
  *
- * This function retrieves the key combo from Tesla settings and copies it to Ultrahand settings.
+ * This function synchronizes key combos between Tesla and Ultrahand settings.
+ * - If Tesla has a combo and Ultrahand doesn't: copy Tesla → Ultrahand
+ * - If Ultrahand has a combo and Tesla doesn't or differs: copy Ultrahand → Tesla
+ * - If neither has a combo: do nothing
+ * 
+ * @return true if neither config has a combo, false otherwise
  */
-void copyTeslaKeyComboToUltrahand() {
-    std::string keyCombo = ULTRAHAND_COMBO_STR;
-    std::map<std::string, std::map<std::string, std::string>> parsedData;
-    
-    bool teslaConfigExists = isFileOrDirectory(TESLA_CONFIG_INI_PATH);
-    bool ultrahandConfigExists = isFileOrDirectory(ULTRAHAND_CONFIG_INI_PATH);
-
-    bool initializeTesla = false;
-    std::string teslaKeyCombo = keyCombo;
-
-    if (teslaConfigExists) {
-        parsedData = getParsedDataFromIniFile(TESLA_CONFIG_INI_PATH);
-        if (parsedData.count(TESLA_STR) > 0) {
-            auto& teslaSection = parsedData[TESLA_STR];
-            if (teslaSection.count(KEY_COMBO_STR) > 0) {
-                teslaKeyCombo = teslaSection[KEY_COMBO_STR];
-            } else {
-                initializeTesla = true;
-            }
-        } else {
-            initializeTesla = true;
-        }
-    } else {
-        initializeTesla = true;
+bool copyTeslaKeyComboToUltrahand() {
+    // Check for Tesla key combo
+    bool hasTeslaKeyCombo = false;
+    std::string teslaKeyCombo;
+    if (isFile(TESLA_CONFIG_INI_PATH)) {
+        teslaKeyCombo = parseValueFromIniSection(TESLA_CONFIG_INI_PATH, TESLA_STR, KEY_COMBO_STR);
+        hasTeslaKeyCombo = !teslaKeyCombo.empty();
     }
     
-    bool initializeUltrahand = false;
-    if (ultrahandConfigExists) {
-        parsedData = getParsedDataFromIniFile(ULTRAHAND_CONFIG_INI_PATH);
-        if (parsedData.count(ULTRAHAND_PROJECT_NAME) > 0) {
-            auto& ultrahandSection = parsedData[ULTRAHAND_PROJECT_NAME];
-            if (ultrahandSection.count(KEY_COMBO_STR) > 0) {
-                keyCombo = ultrahandSection[KEY_COMBO_STR];
-            } else {
-                initializeUltrahand = true;
-            }
-        } else {
-            initializeUltrahand = true;
-        }
-    } else {
-        initializeUltrahand = true;
+    // Check for Ultrahand key combo
+    bool hasUltrahandKeyCombo = false;
+    std::string ultrahandKeyCombo;
+    if (isFile(ULTRAHAND_CONFIG_INI_PATH)) {
+        ultrahandKeyCombo = parseValueFromIniSection(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, KEY_COMBO_STR);
+        hasUltrahandKeyCombo = !ultrahandKeyCombo.empty();
     }
-
-    if (initializeTesla || (teslaKeyCombo != keyCombo)) {
-        setIniFileValue(TESLA_CONFIG_INI_PATH, TESLA_STR, KEY_COMBO_STR, keyCombo);
+    
+    // Apply sync logic
+    if (hasTeslaKeyCombo && !hasUltrahandKeyCombo) {
+        // Tesla has combo, Ultrahand doesn't → copy Tesla to Ultrahand
+        setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, KEY_COMBO_STR, teslaKeyCombo);
+    } else if (hasUltrahandKeyCombo && (!hasTeslaKeyCombo || teslaKeyCombo != ultrahandKeyCombo)) {
+        // Ultrahand has combo and (Tesla doesn't OR they differ) → copy Ultrahand to Tesla
+        setIniFileValue(TESLA_CONFIG_INI_PATH, TESLA_STR, KEY_COMBO_STR, ultrahandKeyCombo);
     }
-
-    if (initializeUltrahand) {
-        setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, KEY_COMBO_STR, keyCombo);
+    
+    // Return true if neither has a combo
+    if (!hasTeslaKeyCombo && !hasUltrahandKeyCombo) {
+        return true;
     }
-
+    
     tsl::impl::parseOverlaySettings();
+    return false;
 }
-
 
 
 // Constants for overlay module
 constexpr int OverlayLoaderModuleId = 348;
 constexpr Result ResultSuccess = MAKERESULT(0, 0);
 constexpr Result ResultParseError = MAKERESULT(OverlayLoaderModuleId, 1);
+constexpr uint32_t ULTR_SIGNATURE  = 0x52544C55; // "ULTR"
+
 
 /**
- * @brief Retrieves overlay module information from a given file.
+ * @brief Retrieves overlay module information from a given file (ultra-optimized).
  *
  * @param filePath The path to the overlay module file.
  * @return A tuple containing the result code, module name, and display version.
  */
-std::tuple<Result, std::string, std::string> getOverlayInfo(const std::string& filePath) {
-#if NO_FSTREAM_DIRECTIVE
+std::tuple<Result, std::string, std::string, bool, bool> getOverlayInfo(const std::string& filePath) {
     FILE* file = fopen(filePath.c_str(), "rb");
-    if (!file) {
-        return {ResultParseError, "", ""};
+    if (!file) return {ResultParseError, "", "", false, false};
+
+    // Get file size
+    fseek(file, 0, SEEK_END);
+    const long fileSize = ftell(file);
+    if (fileSize < static_cast<long>(sizeof(NroStart) + sizeof(NroHeader))) {
+        fclose(file);
+        return {ResultParseError, "", "", false, false};
+    }
+    const size_t fileSz = static_cast<size_t>(fileSize);
+
+    // --- Strategy: Read front chunk that likely contains header + MOD0 ---
+    // Most NRO files have MOD0 within first 8-16KB
+    constexpr size_t FRONT_READ_SIZE = 8192;  // 16KB
+    const size_t frontReadSize = (fileSz < FRONT_READ_SIZE) ? fileSz : FRONT_READ_SIZE;
+    
+    uint8_t* frontBuf = static_cast<uint8_t*>(malloc(frontReadSize));
+    if (!frontBuf) {
+        fclose(file);
+        return {ResultParseError, "", "", false, false};
+    }
+
+    fseek(file, 0, SEEK_SET);
+    if (fread(frontBuf, 1, frontReadSize, file) != frontReadSize) {
+        free(frontBuf);
+        fclose(file);
+        return {ResultParseError, "", "", false, false};
+    }
+
+    // Validate and extract NRO header from buffer
+    if (frontReadSize < sizeof(NroStart) + sizeof(NroHeader)) {
+        free(frontBuf);
+        fclose(file);
+        return {ResultParseError, "", "", false, false};
     }
 
     NroHeader nroHeader;
-    NroAssetHeader assetHeader;
-    NacpStruct nacp;
-
-    // Read NRO header
-    fseek(file, sizeof(NroStart), SEEK_SET);
-    if (fread(&nroHeader, sizeof(NroHeader), 1, file) != 1) {
+    std::memcpy(&nroHeader, frontBuf + sizeof(NroStart), sizeof(NroHeader));
+    
+    if (nroHeader.size == 0 || nroHeader.size >= fileSz) {
+        free(frontBuf);
         fclose(file);
-        return {ResultParseError, "", ""};
+        return {ResultParseError, "", "", false, false};
     }
 
-    // Read asset header
+    // --- Detect MOD0 LNY2 via shared helper (also used by usingLNY2 in tesla.cpp) ---
+    const uint32_t mod0_rel    = *reinterpret_cast<const uint32_t*>(frontBuf + 0x4);
+    const uint32_t text_offset = *reinterpret_cast<const uint32_t*>(frontBuf + 0x20);
+    bool usesNewLibNX = detectLNY2FromBuffers(frontBuf, frontReadSize,
+                                              text_offset, mod0_rel, fileSz, file);
+
+    free(frontBuf);
+
+    // --- Read NACP metadata ---
+    if (nroHeader.size + sizeof(NroAssetHeader) > fileSz) {
+        fclose(file);
+        return {ResultParseError, "", "", false, usesNewLibNX};
+    }
+
     fseek(file, nroHeader.size, SEEK_SET);
-    if (fread(&assetHeader, sizeof(NroAssetHeader), 1, file) != 1) {
+    NroAssetHeader assetHeader;
+    if (fread(&assetHeader, sizeof(NroAssetHeader), 1, file) != 1 ||
+        assetHeader.nacp.offset > fileSz - nroHeader.size ||
+        nroHeader.size + assetHeader.nacp.offset + sizeof(NacpStruct) > fileSz) {
         fclose(file);
-        return {ResultParseError, "", ""};
+        return {ResultParseError, "", "", false, usesNewLibNX};
     }
 
-    // Read NACP struct
     fseek(file, nroHeader.size + assetHeader.nacp.offset, SEEK_SET);
+    NacpStruct nacp;
     if (fread(&nacp, sizeof(NacpStruct), 1, file) != 1) {
         fclose(file);
-        return {ResultParseError, "", ""};
+        return {ResultParseError, "", "", false, usesNewLibNX};
+    }
+
+    // --- Check ULTR signature (last 4 bytes of file) ---
+    uint32_t last4 = 0;
+    bool usingLibUltrahand = false;
+    
+    if (fileSz >= 4) {
+        fseek(file, -4, SEEK_END);
+        usingLibUltrahand = (fread(&last4, sizeof(last4), 1, file) == 1) && 
+                           (last4 == ULTR_SIGNATURE);
     }
 
     fclose(file);
 
-#else
-    // Using std::ifstream version
-    std::ifstream file(filePath, std::ios::binary);
-    if (!file) {
-        return {ResultParseError, "", ""};
-    }
+    // --- Extract strings ---
+    const char* nameEnd = static_cast<const char*>(std::memchr(nacp.lang[0].name, '\0', sizeof(nacp.lang[0].name)));
+    const size_t nameLen = nameEnd ? (nameEnd - nacp.lang[0].name) : sizeof(nacp.lang[0].name);
+    
+    const char* versionEnd = static_cast<const char*>(std::memchr(nacp.display_version, '\0', sizeof(nacp.display_version)));
+    const size_t versionLen = versionEnd ? (versionEnd - nacp.display_version) : sizeof(nacp.display_version);
 
-    NroHeader nroHeader;
-    NroAssetHeader assetHeader;
-    NacpStruct nacp;
-
-    // Read NRO header
-    file.seekg(sizeof(NroStart), std::ios::beg);
-    if (!file.read(reinterpret_cast<char*>(&nroHeader), sizeof(NroHeader))) {
-        return {ResultParseError, "", ""};
-    }
-
-    // Read asset header
-    file.seekg(nroHeader.size, std::ios::beg);
-    if (!file.read(reinterpret_cast<char*>(&assetHeader), sizeof(NroAssetHeader))) {
-        return {ResultParseError, "", ""};
-    }
-
-    // Read NACP struct
-    file.seekg(nroHeader.size + assetHeader.nacp.offset, std::ios::beg);
-    if (!file.read(reinterpret_cast<char*>(&nacp), sizeof(NacpStruct))) {
-        return {ResultParseError, "", ""};
-    }
-
-    file.close();
-#endif
-
-    // Assuming nacp.lang[0].name and nacp.display_version are null-terminated
     return {
         ResultSuccess,
-        std::string(nacp.lang[0].name),
-        std::string(nacp.display_version)
+        std::string(nacp.lang[0].name, nameLen),
+        std::string(nacp.display_version, versionLen),
+        usingLibUltrahand,
+        usesNewLibNX
     };
 }
-
-
 
 void addHeader(auto& list, const std::string& headerText) {
     list->addItem(new tsl::elm::CategoryHeader(headerText));
@@ -814,189 +1061,21 @@ void addDummyListItem(auto& list, s32 index = -1) {
     list->addItem(new tsl::elm::DummyListItem(), 0, index);
 }
 
-// Helper function to wrap text into multiple lines based on a maximum width (character count)
-// Subsequent lines are indented by 4 spaces
-//std::vector<std::string> wrapText(const std::string& text, size_t maxWidth) {
-//    std::vector<std::string> wrappedLines;
-//    //std::string indent = "    ";  // 4 spaces for indentation
-//    std::string indent = "└ ";
-//    size_t currentPos = 0;
-//
-//    // First line (no indentation)
-//    wrappedLines.push_back(text.substr(currentPos, maxWidth));
-//    currentPos += maxWidth;
-//
-//    // Subsequent lines (indented by 4 spaces)
-//    while (currentPos < text.size()) {
-//        wrappedLines.push_back(indent + text.substr(currentPos, maxWidth));
-//        currentPos += maxWidth;
-//    }
-//
-//    return wrappedLines;
-//}
+void addSelectionIsEmptyDrawer(auto& list) {
+    //addDummyListItem(list);
+    auto* warning = new tsl::elm::CustomDrawer([](tsl::gfx::Renderer* renderer, u16, u16, u16, u16){
+        // Icon
+        const size_t iconX = (448 - renderer->getTextDimensions("\uE150", false, 90).first) / 2;
+        renderer->drawString("\uE150", false, iconX, 324, 90, tsl::defaultTextColor);
 
-
-std::vector<std::string> wrapText(const std::string& text, float maxWidth, const std::string& wrappingMode, bool useIndent, const std::string& indent, float indentWidth, size_t fontSize) {
-    if (wrappingMode == "none" || (wrappingMode != "char" && wrappingMode != "word")) {
-        return std::vector<std::string>{text};  // Return the entire text as a single line
-    }
-
-    std::vector<std::string> wrappedLines;
-    std::string currentLine;
-    std::string currentWord;
-    bool firstLine = true;
-    float currentMaxWidth = maxWidth;
-
-    if (wrappingMode == "char") {
-        size_t i = 0;
-        while (i < text.size()) {
-            currentLine += text[i];
-            currentMaxWidth = firstLine ? maxWidth : maxWidth - indentWidth;  // Subtract indent width for subsequent lines
-
-            if (tsl::gfx::calculateStringWidth(currentLine, fontSize, false) > currentMaxWidth) {
-                wrappedLines.push_back(((firstLine && useIndent) || !useIndent) ? currentLine : indent + currentLine);  // Indent if not the first line
-                currentLine.clear();  // Start a new line
-                firstLine = false;
-            }
-            i++;
-        }
-
-        if (!currentLine.empty()) {
-            wrappedLines.push_back(((firstLine && useIndent) || !useIndent) ? currentLine : indent + currentLine);  // Add the last line
-        }
-    } else if (wrappingMode == "word") {
-        StringStream stream(text);
-        while (stream >> currentWord) {
-            if (tsl::gfx::calculateStringWidth(currentLine + currentWord, fontSize, false) > currentMaxWidth) {
-                wrappedLines.push_back(((firstLine && useIndent) || !useIndent) ? currentLine : indent + currentLine);  // Add the current line
-                currentLine.clear();  // Start a new line with the current word
-                firstLine = false;
-            }
-
-            if (!currentLine.empty()) {
-                currentLine += " ";  // Add a space between words
-            }
-            currentLine += currentWord;
-        }
-
-        if (!currentLine.empty()) {
-            wrappedLines.push_back(((firstLine && useIndent) || !useIndent) ? currentLine : indent + currentLine);  // Add the last line
-        }
-    }
-
-    return wrappedLines;
+        // Text
+        const size_t textX = (448 - renderer->getTextDimensions(SELECTION_IS_EMPTY, false, 25).first) / 2;
+        renderer->drawString(SELECTION_IS_EMPTY, false, textX, 410, 25, tsl::defaultTextColor);
+    });
+    list->addItem(warning);
 }
 
-
-
-void drawTable(std::unique_ptr<tsl::elm::List>& list, std::vector<std::string>& sectionLines, std::vector<std::string>& infoLines,
-               size_t columnOffset = 163, size_t startGap = 19, size_t endGap = 12, size_t newlineGap = 0,
-               const std::string& tableSectionTextColor = DEFAULT_STR, const std::string& tableInfoTextColor = DEFAULT_STR, const std::string& tableInfoTextHighlightColor = DEFAULT_STR, 
-               const std::string& alignment = LEFT_STR, bool hideTableBackground = false, bool useHeaderIndent = false, 
-               bool isScrollable = false, const std::string& wrappingMode = "none", bool useWrappedTextIndent = false) {
-
-    const size_t lineHeight = 16;
-    const size_t fontSize = 16;
-    const size_t xMax = tsl::cfg::FramebufferWidth - 95;
-    //const std::string indent = "    ";  // 4 spaces for indentation
-    const std::string indent = "└ ";
-    float indentWidth = tsl::gfx::calculateStringWidth(indent, fontSize, false);  // Calculate width of the indent
-
-    auto getTextColor = [](const std::string& colorStr, auto defaultColor) {
-        if (colorStr == "warning") return tsl::warningTextColor;
-        if (colorStr == "text") return tsl::defaultTextColor;
-        if (colorStr == "on_value") return tsl::onTextColor;
-        if (colorStr == "off_value") return tsl::offTextColor;
-        if (colorStr == "header") return tsl::headerTextColor;
-        if (colorStr == "info") return tsl::infoTextColor;
-        if (colorStr == "section") return tsl::sectionTextColor;
-        if (colorStr == "healthy_ram") return tsl::healthyRamTextColor;
-        if (colorStr == "neutral_ram") return tsl::neutralRamTextColor;
-        if (colorStr == "bad_ram") return tsl::badRamTextColor;
-        return (colorStr == DEFAULT_STR) ? defaultColor : tsl::RGB888(colorStr);
-    };
-
-    auto alternateSectionTextColor = getTextColor(tableSectionTextColor, tsl::sectionTextColor);
-    auto alternateInfoTextColor = getTextColor(tableInfoTextColor, tsl::infoTextColor);
-    auto alternateInfoTextHighlightColor = getTextColor(tableInfoTextHighlightColor, tsl::infoTextColor);
-
-    // Vectors for recalculating offsets and expanding lines
-    std::vector<std::string> expandedSectionLines;
-    std::vector<std::string> expandedInfoLines;
-    std::vector<s32> yOffsets;
-    std::vector<int> infoXOffsets;
-
-    // Preprocess and wrap section lines, ensuring infoLines align correctly
-    size_t currentY = startGap;
-
-    std::vector<std::string> wrappedLines;
-    float infoTextWidth;
-
-    for (size_t i = 0; i < sectionLines.size(); ++i) {
-        // Wrap the section lines before passing them to the drawer, and indent if required
-        wrappedLines = wrapText(sectionLines[i], xMax - 12 - 4, wrappingMode, useWrappedTextIndent, indent, indentWidth, fontSize);
-        
-        std::string infoText;
-        for (const auto& wrappedLine : wrappedLines) {
-            expandedSectionLines.push_back(wrappedLine);
-            
-            // Replicate or replace NULL_STR with UNAVAILABLE_SELECTION in infoLines
-            infoText = (i < infoLines.size() && infoLines[i].find(NULL_STR) != std::string::npos) 
-                                   ? UNAVAILABLE_SELECTION 
-                                   : (i < infoLines.size() ? infoLines[i] : "");
-            
-            expandedInfoLines.push_back(infoText);  // Add the processed info text
-    
-            // Calculate X offsets for the info line based on alignment
-            infoTextWidth = tsl::gfx::calculateStringWidth(infoText, fontSize, false);
-    
-            if (alignment == LEFT_STR) {
-                infoXOffsets.push_back(static_cast<int>(columnOffset));
-            } else if (alignment == RIGHT_STR) {
-                infoXOffsets.push_back(static_cast<int>(xMax - infoTextWidth + (columnOffset - 160 + 1)));
-            } else { // CENTER_STR
-                infoXOffsets.push_back(static_cast<int>(columnOffset + (xMax - infoTextWidth) / 2));
-            }
-    
-            yOffsets.push_back(currentY);  // Set the offset for each line
-            currentY += lineHeight + newlineGap;  // Increment Y position for the next line
-        }
-    }
-
-
-    // Compute total height based on the number of expanded lines
-    size_t totalHeight = lineHeight * expandedSectionLines.size() + newlineGap * (expandedSectionLines.size() - 1) + endGap;
-
-    // Add the TableDrawer with modified sectionLines and infoLines (now they match in size)
-    list->addItem(new tsl::elm::TableDrawer([=](tsl::gfx::Renderer* renderer, s32 x, s32 y, s32 w, s32 h) mutable {
-        if (useHeaderIndent) {
-            renderer->drawRect(x - 2, y + 2, 4, 22, renderer->a(tsl::headerSeparatorColor));
-        }
-        std::string infoText;
-        bool infoTextColorIsSame = (tableInfoTextColor == tableInfoTextHighlightColor);
-        // Draw each section and info line
-        for (size_t i = 0; i < expandedSectionLines.size(); ++i) {
-            // Draw the section line
-            renderer->drawString(expandedSectionLines[i], false, x + 12, y + yOffsets[i], fontSize, renderer->a(alternateSectionTextColor));
-
-            // Draw the corresponding info line
-            if (i < expandedInfoLines.size()) {
-                infoText = expandedInfoLines[i];
-
-                if (infoTextColorIsSame)
-                    renderer->drawString(infoText, false, x + infoXOffsets[i], y + yOffsets[i], fontSize, renderer->a(alternateInfoTextColor));
-                else
-                    renderer->drawStringWithHighlight(infoText, false, x + infoXOffsets[i], y + yOffsets[i], fontSize, renderer->a(alternateInfoTextColor), renderer->a(alternateInfoTextHighlightColor));
-            }
-        }
-    }, hideTableBackground, endGap, isScrollable), totalHeight);
-}
-
-
-
-
-
-void applyPlaceholderReplacements(std::vector<std::string>& cmd, const std::string& hexPath, const std::string& iniPath, const std::string& listString, const std::string& listPath, const std::string& jsonString, const std::string& jsonPath);
+bool applyPlaceholderReplacements(std::vector<std::string>& cmd, const std::string& hexPath, const std::string& iniPath, const std::string& listString, const std::string& listPath, const std::string& jsonString, const std::string& jsonPath, const std::string& packagePath = "");
 
 std::string getFirstSectionText(const std::vector<std::vector<std::string>>& tableData, const std::string& packagePath) {
     std::string message;
@@ -1005,9 +1084,11 @@ std::string getFirstSectionText(const std::vector<std::vector<std::string>>& tab
     
     bool inEristaSection = false;
     bool inMarikoSection = false;
+    std::vector<std::string> lines;
     
+    std::vector<std::string> cmd;
     for (const auto& commands : tableData) {
-        auto cmd = commands;  // Make a copy if you need to modify it
+        cmd = commands;  // Make a copy if you need to modify it
 
         if (cmd.empty()) {
             continue;
@@ -1030,7 +1111,7 @@ std::string getFirstSectionText(const std::vector<std::vector<std::string>>& tab
             (!inEristaSection && !inMarikoSection)) {
 
             // Apply placeholder replacements if necessary
-            applyPlaceholderReplacements(cmd, hexPath, iniPath, listString, listPath, jsonString, jsonPath);
+            applyPlaceholderReplacements(cmd, hexPath, iniPath, listString, listPath, jsonString, jsonPath, packagePath);
 
             const size_t cmdSize = cmd.size();
 
@@ -1039,7 +1120,7 @@ std::string getFirstSectionText(const std::vector<std::vector<std::string>>& tab
                 preprocessPath(listFileSourcePath, packagePath);
 
                 // Read lines from the file
-                std::vector<std::string> lines = readListFromFile(listFileSourcePath);
+                lines = readListFromFile(listFileSourcePath);
 
                 // Return the first line if available
                 if (!lines.empty()) {
@@ -1060,6 +1141,7 @@ std::string getFirstSectionText(const std::vector<std::vector<std::string>>& tab
             } else if (commandName == JSON_STR) {
                 if (cmdSize >= 2) {
                     jsonString = cmd[1];
+                    removeQuotes(jsonString);
                     // Process jsonString if needed
                 }
             } else if (commandName == JSON_FILE_STR) {
@@ -1093,147 +1175,450 @@ std::string getFirstSectionText(const std::vector<std::vector<std::string>>& tab
 }
 
 
-
-
-void addTable(std::unique_ptr<tsl::elm::List>& list, std::vector<std::vector<std::string>>& tableData,
-    const std::string& packagePath, const size_t& columnOffset=163, const size_t& tableStartGap=19, const size_t& tableEndGap=12, const size_t& tableSpacing=0,
-    const std::string& tableSectionTextColor=DEFAULT_STR, const std::string& tableInfoTextColor=DEFAULT_STR, const std::string& tableInfoTextHighlightColor=DEFAULT_STR, const std::string& tableAlignment=RIGHT_STR,
-    const bool& hideTableBackground = false, const bool& useHeaderIndent = false, const bool& isScrollable = false, const std::string& wrappingMode="none", const bool& useWrappedTextIndent = false) {
-
-    std::string message;
-
-    //std::string sectionString, infoString;
-    std::vector<std::string> sectionLines, infoLines;
-
-    std::string listFileSourcePath;
-
-    std::string hexPath, iniPath, listString, listPath, jsonString, jsonPath;
-
-    //std::string columnAlignment = tableAlignment;
-
-    bool inEristaSection = false;
-    bool inMarikoSection = false;
-    //size_t tableSize = 0;
-    //size_t newlineGap = 10;
-
-    for (auto& commands : tableData) {
-
-        auto& cmd = commands; // Get the first command for processing
-
-        if (abortCommand.load(std::memory_order_acquire)) {
-            abortCommand.store(false, std::memory_order_release);
-            commandSuccess = false;
-            #if USING_LOGGING_DIRECTIVE
-            disableLogging = true;
-            logFilePath = defaultLogFilePath;
-            #endif
-            return;
+void addGap(tsl::elm::List* list, s32 gapHeight) {
+    list->addItem(new tsl::elm::CustomDrawer(
+        [](tsl::gfx::Renderer* renderer, s32 x, s32 y, s32 w, s32 h) {
+            // Empty drawer - just creates space
         }
-
-        if (cmd.empty()) {
-            //commands.erase(commands.begin()); // Remove empty command
-            continue;
-        }
-
-        const std::string& commandName = cmd[0];
-
-        if (commandName == "erista:") {
-            inEristaSection = true;
-            inMarikoSection = false;
-            commands.erase(commands.begin()); // Remove processed command
-            continue;
-        } else if (commandName == "mariko:") {
-            inEristaSection = false;
-            inMarikoSection = true;
-            commands.erase(commands.begin()); // Remove processed command
-            continue;
-        }
-
-        if ((inEristaSection && !inMarikoSection && usingErista) || (!inEristaSection && inMarikoSection && usingMariko) || (!inEristaSection && !inMarikoSection)) {
-
-            applyPlaceholderReplacements(cmd, hexPath, iniPath, listString, listPath, jsonString, jsonPath);
-
-            #if USING_LOGGING_DIRECTIVE
-            if (interpreterLogging) {
-                disableLogging = false;
-                message = "Reading line:";
-                for (const std::string& token : cmd)
-                    message += " " + token;
-                logMessage(message);
-            }
-            #endif
-
-            const size_t cmdSize = cmd.size();
-
-            if (commandName == "list_file_source" && listFileSourcePath.empty()) {
-                listFileSourcePath = cmd[1];
-                preprocessPath(listFileSourcePath, packagePath);
-                
-                // Read lines from the file
-                std::vector<std::string> lines = readListFromFile(listFileSourcePath);
-            
-                // Append lines to sectionLines and add empty lines to infoLines
-                for (const auto& line : lines) {
-                    sectionLines.push_back(line);
-                    infoLines.push_back(""); // Add an empty string for each section line
-                }
-            }
-
-
-            else if (commandName == LIST_STR) {
-                if (cmdSize >= 2) {
-                    listString = cmd[1];
-                    removeQuotes(listString);
-                }
-            } else if (commandName == LIST_FILE_STR) {
-                if (cmdSize >= 2) {
-                    listPath = cmd[1];
-                    preprocessPath(listPath, packagePath);
-                }
-            } else if (commandName == JSON_STR) {
-                if (cmdSize >= 2) {
-                    jsonString = cmd[1];
-                }
-            } else if (commandName == JSON_FILE_STR) {
-                if (cmdSize >= 2) {
-                    jsonPath = cmd[1];
-                    preprocessPath(jsonPath, packagePath);
-                }
-            } else if (commandName == INI_FILE_STR) {
-                if (cmdSize >= 2) {
-                    iniPath = cmd[1];
-                    preprocessPath(iniPath, packagePath);
-                }
-            } else if (commandName == HEX_FILE_STR) {
-                if (cmdSize >= 2) {
-                    hexPath = cmd[1];
-                    preprocessPath(hexPath, packagePath);
-                }
-            } else {
-                sectionLines.push_back(cmd[0]);
-                infoLines.push_back(cmd[2]);
-                //sectionString += cmd[0] + "\n";
-                //infoString += cmd[2] + "\n";
-                //tableSize++;
-            }
-        }
-    }
-
-    // seperate sectionString and info string.  the sections will be on the left side of the "=", the info will be on the right side of the "=" within the string.  the end of an entry will be met with a newline (except for the very last entry). 
-    // sectionString and infoString will each have equal newlines (denoting )
-
-    drawTable(list, sectionLines, infoLines, columnOffset, tableStartGap, tableEndGap, tableSpacing, tableSectionTextColor, tableInfoTextColor, tableInfoTextHighlightColor, tableAlignment, hideTableBackground, useHeaderIndent, isScrollable, wrappingMode, useWrappedTextIndent);
+    ), gapHeight);
 }
 
 
-void addHelpInfo(std::unique_ptr<tsl::elm::List>& list) {
-    // Add a section break with small text to indicate the "Commands" section
+// ─── Helper: flatten + placeholder + wrap & expand ─────────────────────────────
+static bool buildTableDrawerLines(
+    const std::vector<std::vector<std::string>>& tableData,
+    std::vector<std::string>&                    sectionLines,
+    std::vector<std::string>&                    infoLines,
+    const std::string&                           packagePath,
+    size_t                                       columnOffset,
+    size_t                                       startGap,
+    size_t                                       newlineGap,
+    const std::string&                           wrappingMode,
+    const std::string&                           alignment,
+    bool                                         useWrappedTextIndent,
+    std::vector<std::string>&                    outSection,
+    std::vector<std::string>&                    outInfo,
+    std::vector<s32>&                            outY,
+    std::vector<int>&                            outX
+) {
+    static constexpr size_t lineHeight = 16;
+    static constexpr size_t fontSize = 16;
+    const size_t xMax = tsl::cfg::FramebufferWidth - 95;
+    const std::string indent = "└ ";
+    const float indentWidth = tsl::gfx::calculateStringWidth(indent, fontSize, false);
+
+    outSection.clear();
+    outInfo.clear();
+    outY.clear();
+    outX.clear();
+
+    size_t curY = startGap;
+    bool anyReplacementsMade = false;
+
+    // Translation helper — called once up front, no lock held during wrapping
+    auto getTranslated = [](const std::string& s) -> std::string {
+        if (s.empty()) return s;
+        std::shared_lock<std::shared_mutex> readLock(tsl::gfx::s_translationCacheMutex);
+        auto it = ult::translationCache.find(s);
+        return (it != ult::translationCache.end()) ? it->second : s;
+    };
+
+    auto processLines = [&](const std::vector<std::string>& lines, const std::vector<std::string>& infos) {
+        std::string infoText;
+        int xPos;
+        float lineInfoWidth;
+        std::vector<std::string> wrappedLines;
+        std::vector<std::string> wrappedInfoLines;
+        for (size_t i = 0; i < lines.size(); ++i) {
+            const std::string& baseText = lines[i];
+            const std::string& infoTextRaw = (i < infos.size()) ? infos[i] : "";
+            infoText = (infoTextRaw.find(NULL_STR) != std::string::npos) ? UNAVAILABLE_SELECTION : infoTextRaw;
+
+            wrappedLines = tsl::wrapText(
+                baseText,
+                xMax - 8,
+                wrappingMode,
+                useWrappedTextIndent,
+                indent, indentWidth,
+                fontSize
+            );
+
+            // Wrap the info/values column.
+            // The label column's right edge is at (x+12) + (xMax-8) = x + xMax + 4.
+            // The info column starts at x + columnOffset, so its wrap width to reach
+            // the same right boundary is: (xMax + 4) - columnOffset.
+            // Pass empty indent/"" and 0 indentWidth (no indent for values column, and
+            // passing a non-zero indentWidth can affect effective line width inside
+            // wrapText even when useIndent=false, causing uneven line breaks).
+            wrappedInfoLines = tsl::wrapText(
+                infoText,
+                static_cast<float>(xMax) + 4.0f - static_cast<float>(columnOffset),
+                wrappingMode,
+                false,
+                "", 0.0f,
+                fontSize
+            );
+
+            const size_t rowCount = std::max(wrappedLines.size(), wrappedInfoLines.size());
+
+            for (size_t j = 0; j < rowCount; ++j) {
+                const std::string secLine  = (j < wrappedLines.size())     ? wrappedLines[j]     : "";
+                const std::string infoLine = (j < wrappedInfoLines.size()) ? wrappedInfoLines[j] : "";
+
+                outSection.push_back(secLine);
+                outInfo.push_back(infoLine);
+
+                lineInfoWidth = tsl::gfx::calculateStringWidth(infoLine, fontSize, false);
+
+                xPos = 0;
+                if (alignment == LEFT_STR) {
+                    xPos = static_cast<int>(columnOffset);
+                } else if (alignment == RIGHT_STR) {
+                    xPos = static_cast<int>(xMax - lineInfoWidth + (columnOffset - 160 + 1));
+                } else {
+                    xPos = static_cast<int>(columnOffset + (xMax - lineInfoWidth) / 2);
+                }
+
+                outX.push_back(xPos);
+                outY.push_back(static_cast<s32>(curY));
+                curY += lineHeight + newlineGap;
+            }
+        }
+    };
+
+    if (!tableData.empty()) {
+        std::vector<std::string> baseSection;
+        std::vector<std::string> baseInfo;
+        std::vector<std::string> lines;
+
+        std::string listFileSourcePath;
+        std::string hexPath, iniPath, listString, listPath, jsonString, jsonPath;
+        bool inErista = false, inMariko = false;
+
+        for (const auto& cmds : tableData) {
+            if (cmds.empty()) continue;
+            const auto& name = cmds[0];
+
+            if (name == "erista:") {
+                inErista = true;
+                inMariko = false;
+                continue;
+            }
+            if (name == "mariko:") {
+                inErista = false;
+                inMariko = true;
+                continue;
+            }
+
+            if ((inErista && usingErista) || (inMariko && usingMariko) || (!inErista && !inMariko)) {
+                auto cmd = cmds;
+
+                if (applyPlaceholderReplacements(
+                    cmd, hexPath, iniPath,
+                    listString, listPath,
+                    jsonString, jsonPath, packagePath
+                )) {
+                    anyReplacementsMade = true;
+                }
+
+                if (cmd[0] == "list_file_source" && cmd.size() >= 2 && listFileSourcePath.empty()) {
+                    listFileSourcePath = cmd[1];
+                    preprocessPath(listFileSourcePath, packagePath);
+                    lines = readListFromFile(listFileSourcePath, 0, true);
+                    for (const auto& line : lines) {
+                        baseSection.push_back(getTranslated(line));
+                        baseInfo.push_back("");
+                    }
+                }
+                else if (cmd[0] == LIST_STR && cmd.size() >= 2) {
+                    listString = cmd[1];
+                    removeQuotes(listString);
+                }
+                else if (cmd[0] == LIST_FILE_STR && cmd.size() >= 2) {
+                    listPath = cmd[1];
+                    preprocessPath(listPath, packagePath);
+                }
+                else if (cmd[0] == JSON_STR && cmd.size() >= 2) {
+                    jsonString = cmd[1];
+                    removeQuotes(jsonString);
+                }
+                else if (cmd[0] == JSON_FILE_STR && cmd.size() >= 2) {
+                    jsonPath = cmd[1];
+                    preprocessPath(jsonPath, packagePath);
+                }
+                else if (cmd[0] == INI_FILE_STR && cmd.size() >= 2) {
+                    iniPath = cmd[1];
+                    preprocessPath(iniPath, packagePath);
+                }
+                else if (cmd[0] == HEX_FILE_STR && cmd.size() >= 2) {
+                    hexPath = cmd[1];
+                    preprocessPath(hexPath, packagePath);
+                }
+                else {
+                    if (!cmd[0].empty() && cmd[0][0] == ';') continue;
+                    if (cmd[0].empty() && cmd.size() > 2) {
+                        // {json(...)} prefix resolved to "" — shift: cmd[1]→col1, cmd[2]→col2
+                        baseSection.push_back(getTranslated(cmd[1]));
+                        baseInfo.push_back(getTranslated(cmd.size() > 2 ? cmd[2] : ""));
+                    } else {
+                        baseSection.push_back(getTranslated(cmd[0]));
+                        baseInfo.push_back(getTranslated(cmd.size() > 1 ? cmd[1] : ""));
+                    }
+                }
+            }
+        }
+        processLines(baseSection, baseInfo);
+    } else {
+        {
+            std::shared_lock<std::shared_mutex> readLock(tsl::gfx::s_translationCacheMutex);
+            for (auto& s : sectionLines) {
+                auto it = ult::translationCache.find(s);
+                if (it != ult::translationCache.end()) s = it->second;
+            }
+            for (auto& s : infoLines) {
+                auto it = ult::translationCache.find(s);
+                if (it != ult::translationCache.end()) s = it->second;
+            }
+        }
+        processLines(sectionLines, infoLines);
+    }
+
+    return anyReplacementsMade;
+}
+
+
+// Helper function moved outside - no lambda creation overhead
+static tsl::Color getRawColor(const std::string& c, tsl::Color defaultColor) {
+    // Check most common/special case first
+    if (c == DEFAULT_STR) return defaultColor;
+    
+    // Quick length check to eliminate impossible matches
+    const size_t len = c.length();
+    
+    // Group by length to reduce comparisons
+    switch (len) {
+        case 4:
+            if (c == "text") return tsl::defaultTextColor;
+            if (c == "info") return tsl::infoTextColor;
+            break;
+            
+        case 6:
+            if (c == "header") return tsl::headerTextColor;
+            break;
+            
+        case 7:
+            if (c[0] == 'w' && c == "warning") return tsl::warningTextColor;
+            if (c[0] == 's' && c == "section") return tsl::sectionTextColor;
+            if (c[0] == 'b' && c == "bad_ram") return tsl::badRamTextColor;
+            break;
+            
+        case 8:
+            if (c == "on_value") return tsl::onTextColor;
+            break;
+            
+        case 9:
+            if (c == "off_value") return tsl::offTextColor;
+            break;
+            
+        case 11:
+            if (c[0] == 'h' && c == "healthy_ram") return tsl::healthyRamTextColor;
+            if (c[0] == 'n' && c == "neutral_ram") return tsl::neutralRamTextColor;
+            break;
+    }
+    
+    return tsl::RGB888(c);
+}
+
+
+void drawTable(
+    tsl::elm::List*      list,
+    const std::vector<std::vector<std::string>>& tableData,
+    std::vector<std::string>&             sectionLines,
+    std::vector<std::string>&             infoLines,
+    size_t columnOffset             = 164,
+    size_t startGap                 = 20,
+    size_t endGap                   = 9,
+    size_t newlineGap               = 4,
+    const std::string& tableSectionTextColor       = DEFAULT_STR,
+    const std::string& tableInfoTextColor          = DEFAULT_STR,
+    const std::string& tableInfoTextHighlightColor = DEFAULT_STR,
+    const std::string& alignment                   = LEFT_STR,
+    bool hideTableBackground        = false,
+    bool useHeaderIndent            = false,
+    bool isPolling                  = false,
+    bool isScrollable               = true,
+    const std::string& wrappingMode               = "none",
+    bool useWrappedTextIndent        = false,
+    const std::string& packagePath          = ""
+) {
+    // Prebuild initial buffers
+    std::vector<std::string> cacheExpSec, cacheExpInfo;
+    std::vector<s32>         cacheYOff;
+    std::vector<s32>         cacheXOff;
+
+    const bool usingPlaceholders = buildTableDrawerLines(
+        tableData, sectionLines, infoLines, packagePath,
+        columnOffset, startGap, newlineGap,
+        wrappingMode, alignment, useWrappedTextIndent,
+        cacheExpSec, cacheExpInfo, cacheYOff, cacheXOff
+    ) && isPolling;
+
+    // Resolve colors once outside the render loop
+    const auto secRaw = getRawColor(tableSectionTextColor, tsl::sectionTextColor);
+    const auto infoRaw = getRawColor(tableInfoTextColor, tsl::infoTextColor);
+    const auto hiliteRaw = getRawColor(tableInfoTextHighlightColor, tsl::infoTextColor);
+    
+    // Pre-calculate color comparison
+    const bool sameCol = (tableInfoTextColor == tableInfoTextHighlightColor);
+
+    // Use nanoseconds for high-performance timing
+    u64 lastUpdateNS = ult::nowNs();
+    static constexpr u64 ONE_SECOND_NS = 1000000000ULL;
+
+    // Pre-compute height before moving the vectors into the closure
+    const u32 itemHeight = static_cast<u32>(
+        16 * cacheExpSec.size()
+        + newlineGap * (cacheExpSec.empty() ? 0 : cacheExpSec.size() - 1)
+        + endGap
+    );
+
+    list->addItem(new tsl::elm::TableDrawer(
+        [=,
+         cacheExpSec  = std::move(cacheExpSec),
+         cacheExpInfo = std::move(cacheExpInfo),
+         cacheYOff    = std::move(cacheYOff),
+         cacheXOff    = std::move(cacheXOff)]
+        (tsl::gfx::Renderer* renderer, s32 x, s32 y, s32 w, s32 h) mutable {
+
+            if (usingPlaceholders) {
+                const u64 currentNS = ult::nowNs();
+                
+                if ((currentNS - lastUpdateNS) >= ONE_SECOND_NS) {
+                    buildTableDrawerLines(
+                        tableData, sectionLines, infoLines, packagePath,
+                        columnOffset, startGap, newlineGap,
+                        wrappingMode, alignment, useWrappedTextIndent,
+                        cacheExpSec, cacheExpInfo, cacheYOff, cacheXOff
+                    );
+                    lastUpdateNS = currentNS;
+                }
+            }
+
+            // Minimal branching, maximum cache efficiency
+            if (useHeaderIndent) {
+                renderer->drawRect(x-2, y, 4, 22, renderer->aWithOpacity(tsl::headerSeparatorColor));
+            }
+
+            // Convert to renderer colors once per frame
+            const auto secColor = (secRaw);
+            const auto infoColor = (infoRaw);
+            const auto dividerColor = (tsl::textSeparatorColor);
+            
+            const size_t count = cacheExpSec.size();
+            const s32 baseX = x + 12;
+
+            // ── Viewport culling ──────────────────────────────────────────────
+            // TableDrawer::draw calls enableScissoring(0, 88, w, FramebufferHeight-163)
+            // before invoking this lambda, so any row whose pixels fall entirely
+            // outside [kClipTop, kClipBottom) produces no visible output.
+            // drawString still runs full glyph-lookup work (mutex lock, shared_ptr
+            // atomic ops per character) for every row it is called on — including
+            // off-screen ones — because the scissor clip happens deep inside
+            // renderGlyph, after all setup is done.
+            //
+            // cacheYOff is monotonically increasing (processLines increments curY
+            // by lineHeight+newlineGap every step), so:
+            //   • Binary-search for the first row whose bottom edge reaches kClipTop.
+            //   • Break as soon as a row's baseline is at or past kClipBottom —
+            //     all subsequent rows are further down and also invisible.
+            //
+            // Result: O(log N) skip of off-screen rows above + O(1) exit below,
+            // reducing drawString calls from O(total) to O(visible) every frame.
+            static constexpr s32 kRowH     = 16;   // lineHeight / fontSize constant
+            static constexpr s32 kClipTop  = 88+10;
+            const s32 kClipBottom = kClipTop
+                + static_cast<s32>(tsl::cfg::FramebufferHeight) - 73 - 97 + 2 + 5;
+
+            // Lower-bound binary search: first row where bottom edge > kClipTop.
+            size_t firstVis = 0;
+            {
+                size_t lo = 0, hi = count;
+                while (lo < hi) {
+                    const size_t mid = (lo + hi) >> 1;
+                    if (y + cacheYOff[mid] + kRowH <= kClipTop)
+                        lo = mid + 1;
+                    else
+                        hi = mid;
+                }
+                firstVis = lo;
+            }
+
+            if (sameCol) {
+                // Fastest path: same colors, minimal function calls
+                for (size_t i = firstVis; i < count; ++i) {
+                    const s32 yPos = y + cacheYOff[i];
+                    if (yPos >= kClipBottom) break;
+                    renderer->drawStringWithColoredSections(cacheExpSec[i], false, tsl::s_dividerSpecialChars, baseX, yPos, 16, secColor, dividerColor);
+                    renderer->drawStringWithColoredSections(cacheExpInfo[i], false, tsl::s_dividerSpecialChars, x + cacheXOff[i], yPos, 16, infoColor, dividerColor);
+                }
+            } else {
+                // Different colors path
+                const auto hiliteColor = hiliteRaw;
+                
+                for (size_t i = firstVis; i < count; ++i) {
+                    const s32 yPos = y + cacheYOff[i];
+                    if (yPos >= kClipBottom) break;
+                    renderer->drawStringWithColoredSections(cacheExpSec[i], false, tsl::s_dividerSpecialChars, baseX, yPos, 16, secColor, dividerColor);
+                    renderer->drawStringWithHighlight(
+                        cacheExpInfo[i], false, x + cacheXOff[i], yPos, 16,
+                        infoColor, hiliteColor
+                    );
+                }
+            }
+        },
+        hideTableBackground,
+        endGap,
+        isScrollable
+    ), itemHeight);
+}
+
+
+// ─── addTable simply forwards through ───────────────────────────────────────────
+void addTable(
+    tsl::elm::List*       list,
+    const std::vector<std::vector<std::string>>& tableData,
+    const std::string&                     packagePath,
+    const size_t&                          columnOffset                = 164,
+    const size_t&                          tableStartGap               = 20,
+    const size_t&                          tableEndGap                 = 9,
+    const size_t&                          tableSpacing                = 0,
+    const std::string&                     tableSectionTextColor       = DEFAULT_STR,
+    const std::string&                     tableInfoTextColor          = DEFAULT_STR,
+    const std::string&                     tableInfoTextHighlightColor = DEFAULT_STR,
+    const std::string&                     tableAlignment              = RIGHT_STR,
+    const bool&                            hideTableBackground         = false,
+    const bool&                            useHeaderIndent             = false,
+    const bool&                            isPolling                   = false,
+    const bool&                            isScrollable                = true,
+    const std::string&                     wrappingMode                = "none",
+    const bool&                            useWrappedTextIndent        = false
+) {
+    std::vector<std::string> sectionLines, infoLines;
+    drawTable(
+        list, tableData,
+        sectionLines, infoLines,
+        columnOffset, tableStartGap, tableEndGap, tableSpacing,
+        tableSectionTextColor, tableInfoTextColor, tableInfoTextHighlightColor,
+        tableAlignment, hideTableBackground, useHeaderIndent,
+        isPolling, isScrollable, wrappingMode, useWrappedTextIndent,
+        packagePath
+    );
+}
+
+
+void addHelpInfo(tsl::elm::List* list) {
     addHeader(list, USER_GUIDE);
 
-    // Adjust the horizontal offset as needed
-    int xOffset = ult::stoi(USERGUIDE_OFFSET);
-
-    // Define the section lines and info lines directly
     std::vector<std::string> sectionLines = {
         SETTINGS_MENU,
         SCRIPT_OVERLAY,
@@ -1248,93 +1633,185 @@ void addHelpInfo(std::unique_ptr<tsl::elm::List>& list) {
         "\uE0E3 (" + ON_OVERLAY_PACKAGE + ")"
     };
 
-    // Draw the table with the defined lines
-    drawTable(list, sectionLines, infoLines, xOffset, 19, 12, 4);
-    //drawTable(list, sectionLines, infoLines, xOffset, 19, 12, 4, DEFAULT_STR, DEFAULT_STR, LEFT_STR, false, false, true, "none", false);
+    size_t maxInfoWidth = 0;
+    for (const auto& s : infoLines)
+        maxInfoWidth = std::max(maxInfoWidth, static_cast<size_t>(tsl::gfx::calculateStringWidth(s, 16, false)));
+
+    std::vector<std::vector<std::string>> dummyTableData;
+    drawTable(list, dummyTableData, sectionLines, infoLines,
+        static_cast<size_t>(tsl::cfg::FramebufferWidth) - 90 - maxInfoWidth,
+        20, 9, 4);
 }
 
 
+// Returns the last Unicode codepoint in a UTF-8 string, or 0 on failure
+static u32 lastCodepoint(const std::string& s) {
+    if (s.empty()) return 0;
+    const u8* ptr = reinterpret_cast<const u8*>(s.c_str());
+    const u8* end = ptr + s.size();
+    u32 cp = 0;
+    while (ptr < end) {
+        u32 tmp;
+        ssize_t w = decode_utf8(&tmp, ptr);
+        if (w <= 0) break;
+        cp = tmp;
+        ptr += w;
+    }
+    return cp;
+}
 
-void addPackageInfo(std::unique_ptr<tsl::elm::List>& list, auto& packageHeader, std::string type = PACKAGE_STR) {
-    // Add a section break with small text to indicate the "Commands" section
+
+void addPackageInfo(tsl::elm::List* list, auto& packageHeader, std::string type = PACKAGE_STR, std::string defaultLang = "en") {
     addHeader(list, (type == PACKAGE_STR ? PACKAGE_INFO : OVERLAY_INFO));
-
-    int maxLineLength = 28;  // Adjust the maximum line length as needed
-    int xOffset = 120;    // Adjust the horizontal offset as needed
-    //int numEntries = 0;   // Count of the number of entries
-
+    static constexpr size_t xOffset = 120;
+    static constexpr size_t fontSize = 16;
+    const float infoMaxWidth = static_cast<float>(tsl::cfg::FramebufferWidth - 95 - xOffset);
     std::vector<std::string> sectionLines;
     std::vector<std::string> infoLines;
-
-    // Helper function to add text with wrapping
-    auto addWrappedText = [&](const std::string& header, const std::string& text) {
+    auto addField = [&](const std::string& header, const std::string& text, const std::string& mode) {
+        if (text.empty()) return;
         sectionLines.push_back(header);
-        std::string::size_type aboutHeaderLength = header.length();
-        
-        size_t startPos = 0;
-        size_t spacePos = 0;
-
-        size_t endPos;
-        std::string line;
-
-        while (startPos < text.length()) {
-            endPos = std::min(startPos + maxLineLength, text.length());
-            line = text.substr(startPos, endPos - startPos);
-            
-            // Check if the current line ends with a space; if not, find the last space in the line
-            if (endPos < text.length() && text[endPos] != ' ') {
-                spacePos = line.find_last_of(' ');
-                if (spacePos != std::string::npos) {
-                    endPos = startPos + spacePos;
-                    line = text.substr(startPos, endPos - startPos);
-                }
-            }
-
-            infoLines.push_back(line);
-            startPos = endPos + 1;
-            //numEntries++;
-
-            // Add corresponding newline to the packageSectionString
-            if (startPos < text.length())
-                sectionLines.push_back(std::string(aboutHeaderLength, ' '));
+        const size_t headerLen = header.length();
+        const auto lines = tsl::wrapText(text, infoMaxWidth, mode, false, "", 0, fontSize);
+        for (size_t i = 0; i < lines.size(); i++) {
+            infoLines.push_back(lines[i]);
+            if (i + 1 < lines.size())
+                sectionLines.push_back(std::string(headerLen, ' '));
         }
     };
-
-    // Adding package header info
-    if (!packageHeader.title.empty()) {
-        sectionLines.push_back(_TITLE);
-        infoLines.push_back(packageHeader.title);
-        //numEntries++;
+    auto getTranslated = [](const std::string& s) -> std::string {
+        std::shared_lock<std::shared_mutex> readLock(tsl::gfx::s_translationCacheMutex);
+        auto it = ult::translationCache.find(s);
+        return (it != ult::translationCache.end()) ? it->second : s;
+    };
+    std::string creatorHeader = _CREATOR;
+    
+    const bool hasComma =
+        packageHeader.creator.find(',')  != std::string::npos ||
+        packageHeader.creator.find("，") != std::string::npos ||
+        packageHeader.creator.find("、") != std::string::npos;
+    
+    if (type == OVERLAY_STR || !hasComma) {
+        if (auto pos = creatorHeader.find('('); pos != std::string::npos)
+            creatorHeader.resize(pos);
     }
-
-    if (!packageHeader.version.empty()) {
-        sectionLines.push_back(_VERSION);
-        infoLines.push_back(packageHeader.version);
-        //numEntries++;
-    }
-
-    if (!packageHeader.creator.empty()) {
-        //sectionLines.push_back(CREATOR);
-        //infoLines.push_back(packageHeader.creator);
-        //numEntries++;
-        addWrappedText(_CREATOR, packageHeader.creator);
-    }
-
-    if (!packageHeader.about.empty()) {
-        addWrappedText(_ABOUT, packageHeader.about);
-    }
-
-    if (!packageHeader.credits.empty()) {
-        addWrappedText(_CREDITS, packageHeader.credits);
-    }
-
-    // Drawing the table with section lines and info lines
-    //drawTable(list, sectionLines, infoLines, xOffset, 20, 12, 3);
-    drawTable(list, sectionLines, infoLines, xOffset, 19, 12, 3, DEFAULT_STR, DEFAULT_STR, DEFAULT_STR, LEFT_STR, false, false, true);
+    
+    addField(_TITLE,        packageHeader.title,                  "none");
+    addField(_VERSION,      packageHeader.version,                "none");
+    addField(creatorHeader, packageHeader.creator,                WORD_STR);
+    addField(_ABOUT,        getTranslated(packageHeader.about),   defaultLang == "en" ? WORD_STR : CHAR_STR);
+    addField(_CREDITS,      getTranslated(packageHeader.credits), WORD_STR);
+    std::vector<std::vector<std::string>> dummyTableData;
+    drawTable(list, dummyTableData, sectionLines, infoLines, xOffset, 20, 9, 3, DEFAULT_STR, DEFAULT_STR, DEFAULT_STR, LEFT_STR, false, false, true);
 }
 
+// Load once at startup, store globally
+std::vector<u8> devImageData;
+constexpr s32 devImageWidth  = 121;
+constexpr s32 devImageHeight = 89;
+constexpr size_t devImageFrameSize = devImageWidth * devImageHeight * 2; // RGBA4444
 
+bool loadDevImages() {
+    const std::string p1 = ASSETS_PATH + "ppkantorski-1.rgba";
+    const std::string p2 = ASSETS_PATH + "ppkantorski-2.rgba";
+    if (!isFile(p1) || !isFile(p2)) return false;
+    devImageData.resize(devImageFrameSize * 2);
+    constexpr size_t srcSize = devImageWidth * devImageHeight * 4;
+    return loadRGBA8888toRGBA4444(p1, devImageData.data(), srcSize) &&
+           loadRGBA8888toRGBA4444(p2, devImageData.data() + devImageFrameSize, srcSize);
+}
 
+static u64  creatorStartTick = 0, nextBlinkTick = 0, blinkEndTick = 0;
+static bool creatorAnimDone  = false;
+static u64  devImageDismissTick = 0;   // non-zero once a tap triggers dismiss
+static bool devImageDismissing  = false; // true = sliding down, false = waiting
+static bool devImageTouchHeld   = false; // finger held in landing zone → pause slide-in timer
+static s32  devImageDismissStartY = static_cast<s32>(557.0f + devImageHeight); // Y where dismiss was triggered
+static s32  devImageCurrentDrawY  = static_cast<s32>(557.0f + devImageHeight); // updated every frame
+static u64  devImageLastTick    = 0;     // previous frame tick for hold-pause delta
+
+void drawDevImage(tsl::gfx::Renderer* renderer) {
+    if (devImageData.size() < devImageFrameSize * 2) return;
+
+    const u64 now = armGetSystemTick();
+    if (creatorStartTick == 0) {
+        creatorStartTick = now;
+        devImageLastTick = now;
+    }
+    // Per-frame delta used to freeze the slide-in timer while a touch is held
+    const u64 delta = now - devImageLastTick;
+    devImageLastTick = now;
+
+    constexpr float targetY = 557.0f, startY = targetY + devImageHeight;
+    constexpr float duration = 0.5f, delay = 0.2f;
+    s32 drawY;
+
+    // Dismiss branch is checked first so a mid-slide-in tap is handled correctly
+    if (devImageDismissTick != 0) {
+        const float elapsed = armTicksToNs(now - devImageDismissTick) / 1e9f;
+        if (devImageDismissing) {
+            // Slide down from wherever dismiss was triggered (not necessarily targetY)
+            const float t = std::min(elapsed / duration, 1.0f);
+            const float ease = 1.0f - (1.0f - t) * (1.0f - t) * (1.0f - t);
+            drawY = static_cast<s32>(devImageDismissStartY + (startY - devImageDismissStartY) * ease);
+            if (t >= 1.0f) {
+                drawY = static_cast<s32>(startY);
+                devImageDismissing  = false;
+                devImageDismissTick = now; // restart timer for wait phase
+            }
+        } else {
+            // Hold off-screen for 0.5 s, then restart the slide-up
+            drawY = static_cast<s32>(startY);
+            if (elapsed >= 0.5f) {
+                devImageDismissTick = 0;
+                creatorStartTick    = now;
+                devImageLastTick    = now;
+                creatorAnimDone     = false;
+                nextBlinkTick = blinkEndTick = 0;
+            }
+        }
+    } else if (!creatorAnimDone) {
+        // Freeze the slide-in timer while the user's finger is held in the landing zone
+        if (devImageTouchHeld)
+            creatorStartTick += delta;
+
+        const float elapsed = armTicksToNs(now - creatorStartTick) / 1e9f;
+        if (elapsed < delay) {
+            drawY = static_cast<s32>(startY);
+        } else {
+            const float t = std::min((elapsed - delay) / duration, 1.0f);
+            const float ease = 1.0f - (1.0f - t) * (1.0f - t) * (1.0f - t);
+            drawY = static_cast<s32>(startY + (targetY - startY) * ease);
+            if (t >= 1.0f) {
+                creatorAnimDone = true;
+                drawY = static_cast<s32>(targetY);
+                const float firstBlink = 1.0f + (rand() % 300) / 100.0f;
+                nextBlinkTick = now + armNsToTicks(static_cast<u64>(firstBlink * 1e9f));
+            }
+        }
+    } else {
+        drawY = static_cast<s32>(targetY);
+    }
+
+    // Expose current position so the touch handler can use it for hit-testing
+    devImageCurrentDrawY = drawY;
+
+    bool useFrame2 = devImageDismissing; // use 2nd image while sliding down
+    if (creatorAnimDone && !devImageDismissing) {
+        if (blinkEndTick > 0 && now < blinkEndTick) {
+            useFrame2 = true;
+        } else if (blinkEndTick > 0 && now >= blinkEndTick) {
+            blinkEndTick = 0;
+            nextBlinkTick = now + armNsToTicks(static_cast<u64>((1.0f + (rand() % 600) / 100.0f) * 1e9f));
+        } else if (nextBlinkTick > 0 && now >= nextBlinkTick) {
+            blinkEndTick  = now + armNsToTicks(150000000ULL);
+            nextBlinkTick = 0;
+            useFrame2 = true;
+        }
+    }
+    const u8* imageData = devImageData.data() + (useFrame2 ? devImageFrameSize : 0);
+    renderer->drawBitmapRGBA4444(258, drawY, devImageWidth, devImageHeight, imageData, tsl::gfx::Renderer::s_opacity);
+}
 
 
 /**
@@ -1354,183 +1831,204 @@ void addPackageInfo(std::unique_ptr<tsl::elm::List>& list, auto& packageHeader, 
  * directories.
  */
 
-
 bool isDangerousCombination(const std::string& originalPath) {
-    // 1) Normalize repeated wildcards (collapse runs of '*' to a single '*')
-    std::string patternPath = originalPath;
-    {
-        std::string normalized;
+    // Early exit: Check for double wildcards first (cheapest check)
+    if (originalPath.find("**") != std::string::npos) {
+        return true;
+    }
+    
+    // Early exit: Check if path contains wildcards at all
+    const bool hasWildcards = originalPath.find('*') != std::string::npos;
+    
+    // 1) Normalize repeated wildcards only if wildcards exist
+    std::string patternPath;
+    if (hasWildcards) {
         bool lastWasStar = false;
-        for (char c : patternPath) {
+        for (char c : originalPath) {
             if (c == '*') {
                 if (!lastWasStar) {
-                    normalized += c;
+                    patternPath += c;
                     lastWasStar = true;
                 }
                 // skip extra '*'
             } else {
-                normalized += c;
+                patternPath += c;
                 lastWasStar = false;
             }
         }
-        patternPath = normalized;
+    } else {
+        patternPath = originalPath; // No wildcards, use as-is
     }
-
-    // 2) Define folder sets with behavior-based names
-    static const std::vector<const char*> albumFolders = {
-        "sdmc:/Nintendo/Album/",
-        "sdmc:/emuMMC/RAW1/Nintendo/Album/"
+    
+    // 2) Define folder sets with precomputed lengths for faster comparisons
+    struct FolderInfo {
+        const char* path;
+        size_t length;
     };
-
-    static const std::vector<const char*> ultraProtectedFolders = {
-        "sdmc:/Nintendo/Contents/",
-        "sdmc:/Nintendo/save/",
-        "sdmc:/emuMMC/RAW1/Nintendo/Contents/",
-        "sdmc:/emuMMC/RAW1/Nintendo/save/"
+    
+    static constexpr FolderInfo albumFolders[] = {
+        {"sdmc:/Nintendo/Album/", 20},
+        {"sdmc:/emuMMC/RAW1/Nintendo/Album/", 33}
     };
-
-    // Folders where wildcards are allowed, but no broad "delete entire folder" allowed
-    static const std::vector<const char*> restrictedWildcardFolders = {
-        "sdmc:/config/",
-        "sdmc:/bootloader/",
-        "sdmc:/atmosphere/",
-        "sdmc:/switch/"
+    
+    static constexpr FolderInfo ultraProtectedFolders[] = {
+        {"sdmc:/Nintendo/Contents/", 23},
+        {"sdmc:/Nintendo/save/", 18},
+        {"sdmc:/emuMMC/RAW1/Nintendo/Contents/", 36},
+        {"sdmc:/emuMMC/RAW1/Nintendo/save/", 31}
     };
-
-    // Protected folders where wildcards are disallowed except in album folders
-    static const std::vector<const char*> protectedFolders = {
-        "sdmc:/Nintendo/",
-        "sdmc:/emuMMC/",
-        "sdmc:/emuMMC/RAW1/"
+    
+    static constexpr FolderInfo restrictedWildcardFolders[] = {
+        {"sdmc:/config/", 13},
+        {"sdmc:/bootloader/", 18},
+        {"sdmc:/atmosphere/", 18},
+        {"sdmc:/switch/", 14}
     };
-
-    static const std::vector<const char*> alwaysDangerousPatterns = {
-        "..", "~"
+    
+    static constexpr FolderInfo protectedFolders[] = {
+        {"sdmc:/Nintendo/", 16},
+        {"sdmc:/emuMMC/", 13},
+        {"sdmc:/emuMMC/RAW1/", 18}
     };
-
-    static const std::vector<const char*> wildcardPatterns = {
-        "*", "*/"
+    
+    // 3) Check other always dangerous patterns (cheap string searches)
+    static constexpr std::array<const char*, 3> alwaysDangerousPatterns = {
+        "~",
+        "null*",
+        "*null"
     };
-
-    // --- 3) Always block dangerous patterns anywhere
+    
     for (const auto& pat : alwaysDangerousPatterns) {
         if (patternPath.find(pat) != std::string::npos) {
             return true;
         }
     }
-
-    // --- 4) Wildcards in root folder names disallowed
-    const char rootPrefix[] = "sdmc:/";
-    size_t rootLen = std::strlen(rootPrefix);
-    if (patternPath.compare(0, rootLen, rootPrefix) == 0) {
-        size_t nextSlash = patternPath.find('/', rootLen);
-        if (nextSlash == std::string::npos) nextSlash = patternPath.size();
-        size_t wildcardPos = patternPath.find('*', rootLen);
-        if (wildcardPos != std::string::npos && wildcardPos < nextSlash) {
-            return true; // wildcard in top-level directory disallowed
-        }
-    } else {
-        // Disallow wildcards outside sdmc:/
-        if (patternPath.find('*') != std::string::npos) {
-            return true;
-        }
-    }
-
-    // --- 5) Block any path inside ultra-protected folders fully
-    for (const auto& folder : ultraProtectedFolders) {
-        if (patternPath.compare(0, std::strlen(folder), folder) == 0) {
-            return true;
-        }
-    }
-
-    // --- 6) Handle restrictedWildcardFolders:
-    // Wildcards allowed *inside* these folders,
-    // but disallow targeting the folder itself or broad "*" at root of that folder.
-    for (const auto& folder : restrictedWildcardFolders) {
-        if (patternPath.compare(0, std::strlen(folder), folder) == 0) {
-            std::string relative = patternPath.substr(std::strlen(folder));
-
-            // If relative is empty or just '*', it means "the whole folder" or "all files"
-            if (relative.empty() || relative == "*" || relative == "*/") {
-                return true; // block broad delete or targeting folder itself
+    
+    // 4) Root folder wildcard check (only if wildcards exist)
+    if (hasWildcards) {
+        static constexpr const char rootPrefix[] = "sdmc:/";
+        static constexpr size_t rootLen = 6; // Length of "sdmc:/"
+        
+        if (patternPath.length() >= rootLen && 
+            patternPath.compare(0, rootLen, rootPrefix) == 0) {
+            size_t nextSlash = patternPath.find('/', rootLen);
+            if (nextSlash == std::string::npos) nextSlash = patternPath.size();
+            const size_t wildcardPos = patternPath.find('*', rootLen);
+            if (wildcardPos != std::string::npos && wildcardPos < nextSlash) {
+                return true; // wildcard in top-level directory disallowed
             }
-
-            // Otherwise allow wildcards deeper inside folder
-            return false;
+        } else {
+            // Disallow wildcards outside sdmc:/
+            return true;
         }
     }
-
-    // --- 7) Block wildcard usage in protectedFolders, except albumFolders
+    
+    // 5) Check ultra-protected folders (highest priority)
+    for (const auto& folder : ultraProtectedFolders) {
+        if (patternPath.length() >= folder.length &&
+            patternPath.compare(0, folder.length, folder.path) == 0) {
+            return true;
+        }
+    }
+    
+    // 6) Check restricted wildcard folders (only if wildcards exist)
+    std::string relative;
+    if (hasWildcards) {
+        for (const auto& folder : restrictedWildcardFolders) {
+            if (patternPath.length() >= folder.length &&
+                patternPath.compare(0, folder.length, folder.path) == 0) {
+                
+                // OPTIMIZED: Create relative string only when processing restricted folders
+                relative = patternPath.substr(folder.length);
+                
+                // If relative is empty or just '*', it means "the whole folder" or "all files"
+                if (relative.empty() || relative == "*" || relative == "*/") {
+                    return true; // block broad delete or targeting folder itself
+                }
+                
+                // Otherwise allow wildcards deeper inside folder
+                return false;
+            }
+        }
+    }
+    
+    // 7) Check protected folders
+    bool isAlbum;
+    
     for (const auto& folder : protectedFolders) {
-        if (patternPath.compare(0, std::strlen(folder), folder) == 0) {
-            bool isAlbum = false;
+        if (patternPath.length() >= folder.length &&
+            patternPath.compare(0, folder.length, folder.path) == 0) {
+            
+            // Check if this is an album folder (exception to protection)
+            isAlbum = false;
             for (const auto& albumFolder : albumFolders) {
-                if (patternPath.compare(0, std::strlen(albumFolder), albumFolder) == 0) {
+                if (patternPath.length() >= albumFolder.length &&
+                    patternPath.compare(0, albumFolder.length, albumFolder.path) == 0) {
                     isAlbum = true;
                     break;
                 }
             }
+            
             if (isAlbum) {
                 return false; // wildcards allowed in album folders
             }
-
-            std::string relative = patternPath.substr(std::strlen(folder));
-            for (const auto& pat : wildcardPatterns) {
-                if (relative.find(pat) != std::string::npos) {
+            
+            // Check for wildcards in protected folder (only if wildcards exist)
+            if (hasWildcards) {
+                // OPTIMIZED: Create relative string only when processing protected folders
+                relative = patternPath.substr(folder.length);
+                if (relative.find('*') != std::string::npos) {
                     return true; // wildcard in protected folder disallowed
                 }
             }
             return false;
         }
     }
-
-    // --- 8) Otherwise, no dangerous combination detected
+    
+    // 8) Otherwise, no dangerous combination detected
     return false;
 }
 
 
-
-
 // Function to populate selectedItemsListOff from a JSON array based on a key
-void populateSelectedItemsList(const std::string& sourceType, const std::string& jsonStringOrPath, const std::string& jsonKey, std::vector<std::string>& selectedItemsList) {
+void populateSelectedItemsListFromJson(const std::string& sourceType, const std::string& jsonStringOrPath, const std::string& jsonKey, std::vector<std::string>& selectedItemsList) {
+    selectedItemsList.clear();
+
     // Check for empty JSON source strings
     if (jsonStringOrPath.empty()) {
         return;
     }
-
     // Use a unique_ptr to manage JSON object with appropriate deleter
-    std::unique_ptr<json_t, void(*)(json_t*)> jsonData(nullptr, json_decref);
-
+    std::unique_ptr<json_t, JsonDeleter> jsonData(nullptr, JsonDeleter());
     // Convert JSON string or read from file based on the source type
     if (sourceType == JSON_STR) {
         jsonData.reset(stringToJson(jsonStringOrPath));
     } else if (sourceType == JSON_FILE_STR) {
         jsonData.reset(readJsonFromFile(jsonStringOrPath));
     }
-
     // Early return if jsonData is null or not an array
-    if (!jsonData || !json_is_array(jsonData.get())) {
+    if (!jsonData) {
         return;
     }
-
+    
+    cJSON* jsonArray = reinterpret_cast<cJSON*>(jsonData.get());
+    if (!cJSON_IsArray(jsonArray)) {
+        return;
+    }
+    
     // Prepare for efficient insertion
-    json_t* jsonArray = jsonData.get();
-    const size_t arraySize = json_array_size(jsonArray);
-    selectedItemsList.reserve(arraySize);
-
+    const int arraySize = cJSON_GetArraySize(jsonArray);
+    
     // Store the key as a const char* to avoid repeated c_str() calls
     const char* jsonKeyCStr = jsonKey.c_str();
-
+    
     // Iterate over the JSON array
-    for (size_t i = 0; i < arraySize; ++i) {
-        auto* item = json_array_get(jsonArray, i);
-        if (json_is_object(item)) {
-            auto* keyValue = json_object_get(item, jsonKeyCStr);
-            if (json_is_string(keyValue)) {
-                const char* value = json_string_value(keyValue);
-                if (value) {
-                    selectedItemsList.emplace_back(value);
-                }
+    for (int i = 0; i < arraySize; ++i) {
+        cJSON* item = cJSON_GetArrayItem(jsonArray, i);
+        if (cJSON_IsObject(item)) {
+            cJSON* keyValue = cJSON_GetObjectItemCaseSensitive(item, jsonKeyCStr);
+            if (cJSON_IsString(keyValue) && keyValue->valuestring) {
+                selectedItemsList.emplace_back(keyValue->valuestring);
             }
         }
     }
@@ -1550,77 +2048,118 @@ void populateSelectedItemsList(const std::string& sourceType, const std::string&
  * @return The input string with placeholders replaced by the replacement string.
  */
 inline void applyPlaceholderReplacement(std::string& input, const std::string& placeholder, const std::string& replacement) {
-    size_t pos = input.find(placeholder);
+    const size_t pos = input.find(placeholder);
     if (pos == std::string::npos) {
         return;  // Returns original string directly if no placeholder is found
     }
-    //std::string result = input;
     input.replace(pos, placeholder.length(), replacement);
-    //return result;
 }
 
 
 
 
 void applyReplaceIniPlaceholder(std::string& arg, const std::string& commandName, const std::string& iniPath) {
-
     const std::string searchString = "{" + commandName + "(";
-    size_t startPos = arg.find(searchString);
-    if (startPos == std::string::npos) {
-        return;
+    
+    // Early exit: Check if placeholder pattern exists before doing any INI work
+    if (arg.find(searchString) == std::string::npos) {
+        return; // No placeholders found, nothing to do
     }
-
-    size_t endPos = arg.find(")}", startPos);
-    if (endPos == std::string::npos || endPos <= startPos) {
-        return;
-    }
-
-    //std::string replacement = arg;  // Copy arg because we need to modify it
-
-    std::string placeholderContent = arg.substr(startPos + searchString.length(), endPos - startPos - searchString.length());
-    trim(placeholderContent);
-
-    size_t commaPos = placeholderContent.find(',');
-    if (commaPos != std::string::npos) {
-        std::string iniSection = placeholderContent.substr(0, commaPos);
-        trim(iniSection);
-        removeQuotes(iniSection);
-        std::string iniKey = placeholderContent.substr(commaPos + 1);
-        trim(iniKey);
-        removeQuotes(iniKey);
-
-        std::string parsedResult = parseValueFromIniSection(iniPath, iniSection, iniKey);
-        // Replace the placeholder with the parsed result and keep the remaining string intact
-        arg = arg.substr(0, startPos) + parsedResult + arg.substr(endPos + 2);
-    } else {
-        // Check if the content is an integer
-        if (std::all_of(placeholderContent.begin(), placeholderContent.end(), ::isdigit)) {
-            size_t entryIndex = ult::stoi(placeholderContent);
-
-            // Return list of section names and use entryIndex to get the specific entry
-            std::vector<std::string> sectionNames = parseSectionsFromIni(iniPath);
-            if (entryIndex < sectionNames.size()) {
-                std::string sectionName = sectionNames[entryIndex];
-                arg = arg.substr(0, startPos) + sectionName + arg.substr(endPos + 2);
-            } else {
-                // Handle the case where entryIndex is out of range
-                arg = arg.substr(0, startPos) + NULL_STR + arg.substr(endPos + 2);
-            }
-        } else {
-            // Handle the case where the placeholder content is not a valid index
-            arg = arg.substr(0, startPos) + NULL_STR + arg.substr(endPos + 2);
+    
+    // Pre-declare variables outside the loop
+    size_t startPos = 0;
+    size_t endPos;
+    size_t commaPos;
+    size_t entryIndex;
+    std::string placeholderContent;
+    std::string replacement;
+    std::string iniSection;
+    std::string iniKey;
+    
+    // Cache section names to avoid re-parsing INI file multiple times
+    std::vector<std::string> sectionNames;
+    bool sectionsLoaded = false;
+    
+    // Build result incrementally to avoid expensive string replacement operations
+    std::string result;
+    size_t lastPos = 0;
+    const size_t searchStringLen = searchString.length();
+    
+    // Process all occurrences of the placeholder
+    while ((startPos = arg.find(searchString, lastPos)) != std::string::npos) {
+        endPos = arg.find(")}", startPos);
+        if (endPos == std::string::npos || endPos <= startPos) {
+            // Invalid placeholder, append text up to this point and continue searching
+            result.append(arg, lastPos, startPos + searchStringLen - lastPos);
+            lastPos = startPos + searchStringLen;
+            continue;
         }
+        
+        // Append text before placeholder
+        result.append(arg, lastPos, startPos - lastPos);
+        
+        placeholderContent = arg.substr(startPos + searchStringLen, 
+                                       endPos - startPos - searchStringLen);
+        trim(placeholderContent);
+        
+        commaPos = placeholderContent.find(',');
+        
+        if (commaPos != std::string::npos) {
+            // Handle section,key format
+            iniSection = placeholderContent.substr(0, commaPos);
+            trim(iniSection);
+            removeQuotes(iniSection);
+            
+            iniKey = placeholderContent.substr(commaPos + 1);
+            trim(iniKey);
+            removeQuotes(iniKey);
+            
+            replacement = returnOrNull(parseValueFromIniSection(iniPath, iniSection, iniKey));
+        } else {
+            // Check if the content is an integer
+            if (std::all_of(placeholderContent.begin(), placeholderContent.end(), ::isdigit)) {
+                if (!isValidNumber(placeholderContent)) {
+                    replacement = NULL_STR;
+                } else {
+                    entryIndex = ult::stoi(placeholderContent);
+                    
+                    // Load section names only once when needed
+                    if (!sectionsLoaded) {
+                        sectionNames = parseSectionsFromIniPattern(iniPath);
+                        sectionsLoaded = true;
+                    }
+                    
+                    if (entryIndex < sectionNames.size()) {
+                        replacement = sectionNames[entryIndex];
+                    } else {
+                        replacement = NULL_STR;
+                    }
+                }
+            } else {
+                replacement = NULL_STR;
+            }
+        }
+        
+        // Append the replacement
+        result.append(replacement);
+        
+        // Update lastPos to continue after this placeholder
+        lastPos = endPos + 2;
     }
-
-
-
-    //return replacement;
+    
+    // Append remaining text after last placeholder
+    result.append(arg, lastPos);
+    
+    // Replace original string with result
+    arg = std::move(result);
 }
-
 
 
 /**
  * @brief Replaces a JSON source placeholder with the actual JSON source.
+ *
+ * Optimized version with variables moved to usage scope to avoid repeated allocations.
+ * Supports "null" key as a fallback default for failed lookups.
  *
  * @param arg The input string containing the placeholder.
  * @param commandName The name of the JSON command (e.g., "json", "json_file").
@@ -1628,94 +2167,133 @@ void applyReplaceIniPlaceholder(std::string& arg, const std::string& commandName
  * @return std::string The input string with the placeholder replaced by the actual JSON source,
  *                   or the original input string if replacement failed or jsonDict is nullptr.
  */
-// Replace JSON placeholders in the string
 std::string replaceJsonPlaceholder(const std::string& arg, const std::string& commandName, const std::string& jsonPathOrString) {
+    // Early exit: Check if placeholder pattern exists before doing any JSON work
+    const std::string searchString = "{" + commandName + "(";
+    if (arg.find(searchString) == std::string::npos) {
+        return arg; // No placeholders found, return original
+    }
+    
+    // Load JSON data only if we have placeholders to process
     std::unique_ptr<json_t, JsonDeleter> jsonDict;
     if (commandName == "json" || commandName == "json_source") {
         jsonDict.reset(stringToJson(jsonPathOrString));
     } else if (commandName == "json_file" || commandName == "json_file_source") {
         jsonDict.reset(readJsonFromFile(jsonPathOrString));
     }
-
     if (!jsonDict) {
         return arg; // Return original string if JSON data couldn't be loaded
     }
-
-    std::string replacement = arg;
-    const std::string searchString = "{" + commandName + "(";
-    size_t startPos = replacement.find(searchString);
-
-    // Declare variables outside the loop to avoid reinitialization
-    size_t endPos = 0;
-    size_t nextPos = 0;
-    size_t commaPos = 0;
-    size_t index ;
+    
+    // Build result incrementally to avoid expensive string replacement operations
+    std::string result;
+    
+    size_t lastPos = 0;
+    size_t startPos = arg.find(searchString);
+    
+    const size_t searchStringLen = searchString.length();
+    
+    // Pre-declare variables outside loops to avoid repeated allocations
+    size_t endPos, nextPos, commaPos, index;
     std::string key;
-    bool validValue = false;
+    bool validValue;
+    
+    // Keep reference to root for "null" fallback lookups
+    cJSON* root = reinterpret_cast<cJSON*>(jsonDict.get());
     
     while (startPos != std::string::npos) {
-        endPos = replacement.find(")}", startPos);
+        endPos = arg.find(")}", startPos);
         if (endPos == std::string::npos) {
             break; // Break if no closing tag is found
         }
-
-        nextPos = startPos + searchString.length();
-        json_t* value = jsonDict.get(); // Get the JSON root object
+        
+        // Append text before placeholder
+        result.append(arg, lastPos, startPos - lastPos);
+        
+        nextPos = startPos + searchStringLen;
+        cJSON* value = root; // Start from root
         validValue = true;
-
+        
         while (nextPos < endPos && validValue) {
-            commaPos = replacement.find(',', nextPos);
+            commaPos = arg.find(',', nextPos);
             if (commaPos == std::string::npos || commaPos > endPos) {
                 commaPos = endPos; // Set to endPos if no comma is found or it's beyond endPos
             }
-
-            key = replacement.substr(nextPos, commaPos - nextPos); // Extract the key
-            if (json_is_object(value)) {
-                value = json_object_get(value, key.c_str()); // Navigate through object
-            } else if (json_is_array(value)) {
+            
+            // Reuse string capacity for key
+            key.assign(arg, nextPos, commaPos - nextPos);
+            
+            if (cJSON_IsObject(value)) {
+                value = cJSON_GetObjectItemCaseSensitive(value, key.c_str()); // Navigate through object
+            } else if (cJSON_IsArray(value)) {
                 index = std::stoul(key); // Convert key to index for arrays
-                value = json_array_get(value, index);
+                value = cJSON_GetArrayItem(value, index);
             } else {
                 validValue = false; // Set validValue to false if value is neither object nor array
             }
             nextPos = commaPos + 1; // Move next position past the comma
         }
-
-        if (validValue && value && json_is_string(value)) {
-            replacement.replace(startPos, endPos + 2 - startPos, json_string_value(value)); // Replace text
+        
+        if (validValue && value && cJSON_IsString(value) && value->valuestring) {
+            // Append the value as-is, even if it's an empty string
+            result.append(value->valuestring);
+        } else if (validValue && value && cJSON_IsNumber(value)) {
+            // Handle numeric JSON values
+            double d = value->valuedouble;
+            if (d == (double)(long long)d) {
+                result.append(std::to_string((long long)d));
+            } else {
+                char buf[32];
+                snprintf(buf, sizeof(buf), "%g", d);
+                result.append(buf);
+            }
+        } else if (validValue && value && cJSON_IsBool(value)) {
+            // Handle boolean JSON values
+            result.append(cJSON_IsTrue(value) ? TRUE_STR : FALSE_STR);
+        } else {
+            // Key doesn't exist or isn't a string - try "null" fallback
+            cJSON* fallbackValue = cJSON_GetObjectItemCaseSensitive(root, NULL_STR.c_str());
+            if (fallbackValue && cJSON_IsString(fallbackValue) && fallbackValue->valuestring) {
+                result.append(fallbackValue->valuestring);
+            } else {
+                result.append(NULL_STR);
+            }
         }
-
-        startPos = replacement.find(searchString, endPos + 2); // Find next occurrence
+        
+        lastPos = endPos + 2;
+        startPos = arg.find(searchString, lastPos); // Find next occurrence from last position
     }
-
-    return replacement; // Return the modified string
+    
+    // Append remaining text after last placeholder
+    result.append(arg, lastPos);
+    
+    return result; // Return the modified string
 }
 
 // Helper function to replace placeholders
 void replaceAllPlaceholders(std::string& source, const std::string& placeholder, const std::string& replacement) {
-    //std::string modifiedArg = source;
-    std::string lastArg;
-    while (source.find(placeholder) != std::string::npos) {
-        //modifiedArg = replacePlaceholder(modifiedArg, placeholder, replacement);
-        applyPlaceholderReplacement(source, placeholder, replacement);
-        if (source == lastArg)
-            break;
-        lastArg = source;
+    size_t pos = 0;
+    while ((pos = source.find(placeholder, pos)) != std::string::npos) {
+        source.replace(pos, placeholder.size(), replacement);
+        pos += replacement.size();
     }
-    return;
 }
 
 
 
 // Helper function to replace all placeholders in a single pass
-void replacePlaceholdersInArg(std::string& source, const std::unordered_map<std::string, std::string>& replacements) {
+bool replacePlaceholdersInArg(std::string& source, const std::unordered_map<std::string, std::string>& replacements) {
+    bool replaced = false;
+    size_t pos;
     for (const auto& [placeholder, replacement] : replacements) {
-        size_t pos = 0;
+        pos = 0;
         while ((pos = source.find(placeholder, pos)) != std::string::npos) {
             source.replace(pos, placeholder.length(), replacement);
             pos += replacement.length();  // Move past the replacement to avoid infinite loop
+            replaced = true;
         }
     }
+    return replaced;
 }
 
 
@@ -1723,19 +2301,18 @@ void replacePlaceholdersInArg(std::string& source, const std::unordered_map<std:
 std::vector<std::vector<std::string>> getSourceReplacement(const std::vector<std::vector<std::string>>& commands,
     const std::string& entry, size_t entryIndex, const std::string& packagePath = "") {
 
-    //std::string memoryVendor = splitStringAtIndex(memoryType, "_", 0);
-    //const std::string memoryModel = splitStringAtIndex(memoryType, "_", 1);
-
     bool inEristaSection = false;
     bool inMarikoSection = false;
-    
+
     std::vector<std::vector<std::string>> modifiedCommands;
-    std::string listString, listPath, jsonString, jsonPath, iniPath;
+    std::string listString, listPath, jsonString, jsonPath, iniPath, iniFilePath;
+    std::string hexFilePath;
     bool usingFileSource = false;
 
     std::string fileName = getNameFromPath(entry);
-    if (!isDirectory(entry))
+    if (!isDirectory(entry)) {
         dropExtension(fileName);
+    }
 
     std::vector<std::string> modifiedCmd;
     std::string commandName;
@@ -1744,17 +2321,23 @@ std::vector<std::vector<std::string>> getSourceReplacement(const std::vector<std
     std::string replacement;
 
     std::string path;
+    std::string raw;
+
+    const std::string indexStr = ult::to_string(entryIndex);
+
+
 
     for (const auto& cmd : commands) {
-        if (cmd.empty())
+        if (cmd.empty()) {
             continue;
-        
+        }
+
         modifiedCmd.clear();
-        modifiedCmd.reserve(cmd.size());
         commandName = cmd[0];
 
-        if (commandName == "download")
-            isDownloadCommand = true;
+        if (commandName == "download") {
+            isDownloadCommand.store(true, std::memory_order_release);
+        }
 
         if (stringToLowercase(commandName) == "erista:") {
             inEristaSection = true;
@@ -1765,110 +2348,155 @@ std::vector<std::vector<std::string>> getSourceReplacement(const std::vector<std
             inMarikoSection = true;
             continue;
         }
-        
-        if ((inEristaSection && usingErista) || (inMarikoSection && usingMariko) || (!inEristaSection && !inMarikoSection)) {
-            for (const auto& arg : cmd) {
-                modifiedArg = arg;
 
-                if (commandName == "file_source") {
-                    usingFileSource = true;
-                }
-                else if (commandName == "list_source" && listString.empty()) {
+        if ((inEristaSection && usingErista) ||
+            (inMarikoSection && usingMariko) ||
+            (!inEristaSection && !inMarikoSection))
+        {
+            // Update source paths/values from this command before processing args.
+            // Done unconditionally (no .empty() guard) so sources can be redefined mid-section.
+            // Each source arg is fully resolved using whatever ini_file/hex_file/etc. are current
+            // at this point in the section, so placeholders can be composed inside any source.
+            if (commandName == "file_source") {
+                usingFileSource = true;
+            } else if (cmd.size() >= 2) {
+                auto resolveArg = [&](std::string val) -> std::string {
+                    std::vector<std::string> tmp = { std::move(val) };
+                    applyPlaceholderReplacements(tmp, hexFilePath, iniFilePath, listString, listPath, jsonString, jsonPath, packagePath);
+                    return std::move(tmp[0]);
+                };
+                if (commandName == "ini_file") {
+                    iniFilePath = resolveArg(cmd[1]);
+                    preprocessPath(iniFilePath, packagePath);
+                } else if (commandName == "hex_file") {
+                    hexFilePath = resolveArg(cmd[1]);
+                    preprocessPath(hexFilePath, packagePath);
+                } else if (commandName == "list_file_source") {
+                    listPath = resolveArg(cmd[1]);
+                    preprocessPath(listPath, packagePath);
+                } else if (commandName == "ini_file_source") {
+                    iniPath = resolveArg(cmd[1]);
+                    preprocessPath(iniPath, packagePath);
+                } else if (commandName == "json_file_source") {
+                    jsonPath = resolveArg(cmd[1]);
+                    preprocessPath(jsonPath, packagePath);
+                } else if (commandName == "json" || commandName == "json_source") {
+                    // Raw capture only — content resolved sequentially by interpretAndExecuteCommands
+                    jsonString = cmd[1];
+                    removeQuotes(jsonString);
+                } else if (commandName == "list" || commandName == "list_source") {
+                    // Raw capture only — content resolved sequentially by interpretAndExecuteCommands
                     listString = cmd[1];
                     removeQuotes(listString);
                 }
-                else if (commandName == "list_file_source" && listPath.empty()) {
-                    listPath = cmd[1];
-                    preprocessPath(listPath, packagePath);
-                }
-                else if (commandName == "ini_file_source" && iniPath.empty()) {
-                    iniPath = cmd[1];
-                    preprocessPath(iniPath, packagePath);
-                }
-                else if (commandName == "json_source" && jsonString.empty()) {
-                    jsonString = cmd[1];
-                }
-                else if (commandName == "json_file_source" && jsonPath.empty()) {
-                    jsonPath = cmd[1];
-                    preprocessPath(jsonPath, packagePath);
-                }
-                
+            }
+
+            // Apply placeholder replacements to each arg.
+            // NOTE: {ini_file(...)} and {hex_file(...)} are intentionally NOT resolved here for
+            // regular command args. interpretAndExecuteCommands resolves them sequentially via
+            // applyPlaceholderReplacements, so set-ini-val writes are visible to subsequent
+            // {ini_file(...)} reads in the same section. Resolving them here upfront would bake
+            // in stale values read before any commands in the section have executed.
+            for (const auto& arg : cmd) {
+                modifiedArg = arg;
+
+                // Resolve local source-entry placeholders first (not in any global map).
                 replaceAllPlaceholders(modifiedArg, "{file_source}", entry);
                 replaceAllPlaceholders(modifiedArg, "{file_name}", fileName);
                 path = getParentDirNameFromPath(entry);
                 removeQuotes(path);
                 replaceAllPlaceholders(modifiedArg, "{folder_name}", path);
+                replaceAllPlaceholders(modifiedArg, "{index}", indexStr);
 
+
+                // {list_source(...)} block — uses *_source path (index into current selection list)
                 if (modifiedArg.find("{list_source(") != std::string::npos) {
-                    //modifiedArg = replacePlaceholder(modifiedArg, "*", ult::to_string(entryIndex));
-                    applyPlaceholderReplacement(modifiedArg, "*", ult::to_string(entryIndex));
+                    applyPlaceholderReplacement(modifiedArg, "*", indexStr);
                     startPos = modifiedArg.find("{list_source(");
-                    endPos = modifiedArg.find(")}");
+                    endPos   = modifiedArg.find(")}", startPos + 13);
                     if (endPos != std::string::npos && endPos > startPos) {
-                        replacement = stringToList(listString)[entryIndex];
-                        replacement = replacement.empty() ? NULL_STR : replacement;
+                        const auto& listItems = stringToList(listString);
+                        raw = (entryIndex < listItems.size()) ? listItems[entryIndex] : "";
+                        replacement = returnOrNull(raw);
                         modifiedArg.replace(startPos, endPos - startPos + 2, replacement);
                     }
                 }
 
+                // {list_file_source(...)} block
                 if (modifiedArg.find("{list_file_source(") != std::string::npos) {
-                    //modifiedArg = replacePlaceholder(modifiedArg, "*", ult::to_string(entryIndex));
-                    applyPlaceholderReplacement(modifiedArg, "*", ult::to_string(entryIndex));
+                    applyPlaceholderReplacement(modifiedArg, "*", indexStr);
                     startPos = modifiedArg.find("{list_file_source(");
-                    endPos = modifiedArg.find(")}");
+                    endPos = modifiedArg.find(")}", startPos + 18);
                     if (endPos != std::string::npos && endPos > startPos) {
-                        replacement = getEntryFromListFile(listPath, entryIndex);
-                        replacement = replacement.empty() ? NULL_STR : replacement;
+                        raw = getEntryFromListFile(listPath, entryIndex);
+                        replacement = returnOrNull(raw);
                         modifiedArg.replace(startPos, endPos - startPos + 2, replacement);
                     }
                 }
 
+                // {ini_file_source(...)} block
                 if (modifiedArg.find("{ini_file_source(") != std::string::npos) {
-                    //modifiedArg = replacePlaceholder(modifiedArg, "*", ult::to_string(entryIndex));
-                    applyPlaceholderReplacement(modifiedArg, "*", ult::to_string(entryIndex));
-                    startPos = modifiedArg.find("{ini_file_source(");
-                    endPos = modifiedArg.find(")}");
-                    if (endPos != std::string::npos && endPos > startPos) {
-                        //replacement = applyReplaceIniPlaceholder(modifiedArg, "ini_file_source", iniPath);
-                        applyReplaceIniPlaceholder(modifiedArg, "ini_file_source", iniPath);
-                        modifiedArg = modifiedArg.empty() ? NULL_STR : modifiedArg;
-                        modifiedArg.replace(startPos, endPos - startPos + 2, modifiedArg);
-                    }
+                    applyPlaceholderReplacement(modifiedArg, "*", indexStr);
+                    applyReplaceIniPlaceholder(modifiedArg, "ini_file_source", iniPath);
                 }
 
+                // {json_source(...)} block
                 if (modifiedArg.find("{json_source(") != std::string::npos) {
-                    //modifiedArg = replacePlaceholder(modifiedArg, "*", ult::to_string(entryIndex));
-                    applyPlaceholderReplacement(modifiedArg, "*", ult::to_string(entryIndex));
+                    applyPlaceholderReplacement(modifiedArg, "*", indexStr);
                     startPos = modifiedArg.find("{json_source(");
-                    endPos = modifiedArg.find(")}");
+                    endPos   = modifiedArg.find(")}", startPos + 13);
                     if (endPos != std::string::npos && endPos > startPos) {
-                        replacement = replaceJsonPlaceholder(modifiedArg.substr(startPos, endPos - startPos + 2), "json_source", jsonString);
-                        replacement = replacement.empty() ? NULL_STR : replacement;
+                        raw = replaceJsonPlaceholder(
+                            modifiedArg.substr(startPos, endPos - startPos + 2),
+                            "json_source",
+                            jsonString
+                        );
+                        replacement = returnOrNull(raw);
                         modifiedArg.replace(startPos, endPos - startPos + 2, replacement);
                     }
                 }
 
+                // {json_file_source(...)} block
                 if (modifiedArg.find("{json_file_source(") != std::string::npos) {
-                    //modifiedArg = replacePlaceholder(modifiedArg, "*", ult::to_string(entryIndex));
-                    applyPlaceholderReplacement(modifiedArg, "*", ult::to_string(entryIndex));
+                    applyPlaceholderReplacement(modifiedArg, "*", indexStr);
                     startPos = modifiedArg.find("{json_file_source(");
-                    endPos = modifiedArg.find(")}");
+                    endPos   = modifiedArg.find(")}", startPos + 18);
                     if (endPos != std::string::npos && endPos > startPos) {
-                        replacement = replaceJsonPlaceholder(modifiedArg.substr(startPos, endPos - startPos + 2), "json_file_source", jsonPath);
-                        replacement = replacement.empty() ? NULL_STR : replacement;
+                        raw = replaceJsonPlaceholder(
+                            modifiedArg.substr(startPos, endPos - startPos + 2),
+                            "json_file_source",
+                            jsonPath
+                        );
+                        replacement = returnOrNull(raw);
                         modifiedArg.replace(startPos, endPos - startPos + 2, replacement);
                     }
                 }
-                
+
                 modifiedCmd.push_back(std::move(modifiedArg));
             }
 
+            // Capture json/list inline values so subsequent *_source placeholders can use them
+            // for source-path composition (e.g. json_file_source './{json(key)}/').
+            // NOTE: Do NOT resolve {ini_file(...)}, {json(...)}, etc. here.
+            // interpretAndExecuteCommands resolves all regular command args sequentially at
+            // execution time, so writes from prior commands (download, set-ini-val, etc.) are
+            // visible to subsequent {ini_file(...)}/{json(...)} reads in the same script.
+            if ((commandName == "json" || commandName == "json_source") && modifiedCmd.size() >= 2) {
+                jsonString = modifiedCmd[1];
+                removeQuotes(jsonString);
+            }
+            if ((commandName == "list" || commandName == "list_source") && modifiedCmd.size() >= 2) {
+                listString = modifiedCmd[1];
+                removeQuotes(listString);
+            }
             modifiedCommands.emplace_back(std::move(modifiedCmd));
         }
     }
 
     if (usingFileSource) {
-        modifiedCommands.insert(modifiedCommands.begin(), {"file_name", fileName});
+        modifiedCommands.insert(modifiedCommands.begin(), { "file_name", fileName });
+        modifiedCommands.insert(modifiedCommands.begin(), { "folder_name", path });
+        modifiedCommands.insert(modifiedCommands.begin(), { "sourced_path", entry });
     }
 
     return modifiedCommands;
@@ -1876,54 +2504,45 @@ std::vector<std::vector<std::string>> getSourceReplacement(const std::vector<std
 
 
 std::string getCurrentTimestamp(const std::string& format) {
-    auto now = std::chrono::system_clock::now();
-    auto now_time_t = std::chrono::system_clock::to_time_t(now);
-    auto milliseconds = std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch()) % 1000;
-
-    // Prepare a format for strftime without unsupported tokens
+    // Try using standard POSIX time() function
+    time_t seconds = time(nullptr);
+    const u32 milliseconds = (ult::nowNs() / 1000000ULL) % 1000; // We lose millisecond precision with this method
+    
     std::string modifiedFormat = format;
     bool hasMilliseconds = false;
-
-    // Remove %f from the format string temporarily, if present
-    size_t pos = modifiedFormat.find("%f");
+    
+    const size_t pos = modifiedFormat.find("%f");
     if (pos != std::string::npos) {
-        modifiedFormat.erase(pos, 2); // Remove "%f"
+        modifiedFormat.erase(pos, 2);
         hasMilliseconds = true;
     }
-
-    // Format using strftime up to seconds
+    
     char buffer[30];
-    if (!std::strftime(buffer, sizeof(buffer), modifiedFormat.c_str(), std::localtime(&now_time_t))) {
-        return ""; // Handle error if needed
+    if (!std::strftime(buffer, sizeof(buffer), modifiedFormat.c_str(), std::localtime(&seconds))) {
+        return "";
     }
-
+    
     std::string formattedTime(buffer);
     StringStream oss;
-
-    // Handle %s for seconds since epoch
+    
     if (formattedTime.find("%s") != std::string::npos) {
-        oss << static_cast<long long>(std::chrono::system_clock::to_time_t(now)); 
+        oss << static_cast<long long>(seconds); 
         formattedTime.replace(formattedTime.find("%s"), 2, oss.str());
-        oss.clear(); // Clear the StringStream for the next usage
+        oss.clear();
     }
-
-    // Handle %f for milliseconds, if it was in the original format
+    
     if (hasMilliseconds) {
-        std::string millisecondsStr = ult::to_string(milliseconds.count());
-
-        // Pad milliseconds to three digits if necessary
+        std::string millisecondsStr = ult::to_string(milliseconds);
         if (millisecondsStr.length() < 3) {
             millisecondsStr.insert(0, 3 - millisecondsStr.length(), '0');
         }
-
-        // Check if the format string included '.' right before %f
         if (pos > 0 && format[pos - 1] == '.') {
-            formattedTime += millisecondsStr;  // Just add milliseconds without an extra period
+            formattedTime += millisecondsStr;
         } else {
-            formattedTime += "." + millisecondsStr;  // Add period before milliseconds if not already present
+            formattedTime += "." + millisecondsStr;
         }
     }
-
+    
     return formattedTime;
 }
 
@@ -1947,7 +2566,7 @@ double parseNumber(const std::string& expression, size_t& pos, bool& valid) {
     // Check if the expression starts with a '(' indicating a nested expression
     if (expression[pos] == '(') {
         ++pos;  // Skip the '('
-        double result = parseExpression(expression, pos, valid);
+        const double result = parseExpression(expression, pos, valid);
         if (expression[pos] == ')') {
             ++pos;  // Skip the ')'
         } else {
@@ -1998,14 +2617,16 @@ double parseExpression(const std::string& expression, size_t& pos, bool& valid) 
     double result = parseNumber(expression, pos, valid);
     if (!valid) return 0;
 
+    char op;
+    double operand;
     while (pos < expression.length()) {
         skipSpaces(expression, pos);
         if (pos >= expression.length()) break;
 
-        char op = expression[pos++];
+        op = expression[pos++];
         skipSpaces(expression, pos);
 
-        double operand = parseNumber(expression, pos, valid);
+        operand = parseNumber(expression, pos, valid);
         if (!valid) return 0;
 
         switch (op) {
@@ -2026,7 +2647,8 @@ double parseExpression(const std::string& expression, size_t& pos, bool& valid) 
                 result /= operand;
                 break;
             case '%':
-                if (STBTT_fmod(result, 1.0f) != 0.0f || STBTT_fmod(operand, 1.0f) != 0.0f) {
+                if (result != static_cast<double>(static_cast<int>(result)) ||
+                    operand != static_cast<double>(static_cast<int>(operand))) {
                     valid = false;  // Modulus only valid for integers
                     return 0;
                 }
@@ -2050,8 +2672,8 @@ double evaluateExpression(const std::string& expression, bool& valid) {
 
 // Handle Math Placeholder with Parentheses, Modulus, and Optional Integer Support
 std::string handleMath(const std::string& placeholder) {
-    size_t startPos = placeholder.find('(') + 1;
-    size_t endPos = placeholder.find(')');
+    const size_t startPos = placeholder.find('(') + 1;
+    const size_t endPos = placeholder.find(')');
 
     if (startPos == std::string::npos || endPos == std::string::npos || startPos >= endPos) {
         return NULL_STR;
@@ -2060,7 +2682,7 @@ std::string handleMath(const std::string& placeholder) {
     std::string mathExpression = placeholder.substr(startPos, endPos - startPos);
     removeQuotes(mathExpression);
 
-    size_t commaPos = mathExpression.find(',');
+    const size_t commaPos = mathExpression.find(',');
     bool forceInteger = false;
 
     if (commaPos != std::string::npos) {
@@ -2070,9 +2692,10 @@ std::string handleMath(const std::string& placeholder) {
         mathExpression = mathExpression.substr(0, commaPos);
     }
 
+    size_t pos;
     // Add spaces around operators to ensure proper parsing
-    for (char op : {'+', '-', '*', '/'}) {
-        size_t pos = 0;
+    for (const char op : {'+', '-', '*', '/'}) {
+        pos = 0;
         while ((pos = mathExpression.find(op, pos)) != std::string::npos) {
             if (pos > 0 && mathExpression[pos - 1] != ' ') {
                 mathExpression.insert(pos, " ");
@@ -2086,7 +2709,7 @@ std::string handleMath(const std::string& placeholder) {
     }
 
     bool valid = false;
-    double result = evaluateExpression(mathExpression, valid);
+    const double result = evaluateExpression(mathExpression, valid);
 
     if (!valid) {
         return NULL_STR;
@@ -2094,12 +2717,12 @@ std::string handleMath(const std::string& placeholder) {
 
     // Format the result with StringStream
     StringStream oss;
-    if (forceInteger || STBTT_fmod(result, 1.0) == 0.0) {
+    if (forceInteger || result == static_cast<double>(static_cast<int>(result))) {
         oss << static_cast<int>(result);  // Integer output if required
     } else {
         // Manually format to two decimal places for double output
-        int intPart = static_cast<int>(result);
-        int decimalPart = static_cast<int>((result - intPart) * 100);  // Get two decimal places
+        const int intPart = static_cast<int>(result);
+        const int decimalPart = static_cast<int>((result - intPart) * 100);  // Get two decimal places
 
         oss << intPart << ".";
 
@@ -2115,8 +2738,8 @@ std::string handleMath(const std::string& placeholder) {
 
 
 std::string handleLength(const std::string& placeholder) {
-    size_t startPos = placeholder.find('(') + 1;
-    size_t endPos = placeholder.find(')');
+    const size_t startPos = placeholder.find('(') + 1;
+    const size_t endPos = placeholder.find(')');
     
     if (startPos != std::string::npos && endPos != std::string::npos && endPos > startPos) {
         std::string str = placeholder.substr(startPos, endPos - startPos);
@@ -2131,284 +2754,751 @@ std::string handleLength(const std::string& placeholder) {
 }
 
 
+// Finds the next occurrence of ANY function-style placeholder opener from `starts`,
+// beginning at `from`. On tie (same index), it prefers the LONGEST token.
+// Returns npos if none found, and sets matchedLen accordingly.
+static size_t findNextOpenToken(const std::string& s,
+                                size_t from,
+                                const std::vector<std::string>& starts,
+                                size_t& matchedLen) {
 
-// Define the replacePlaceholders function outside of applyPlaceholderReplacements
-//auto replacePlaceholders = [](std::string& arg, const std::string& placeholder, const std::function<std::string(const std::string&)>& replacer) {
-//    size_t startPos, endPos;
-//    std::string lastArg, replacement;
-//
-//    size_t nestedStartPos, nextStartPos, nextEndPos;
-//
-//    while ((startPos = arg.find(placeholder)) != std::string::npos) {
-//        nestedStartPos = startPos;
-//        while (true) {
-//            nextStartPos = arg.find(placeholder, nestedStartPos + 1);
-//            nextEndPos = arg.find(")}", nestedStartPos);
-//            if (nextStartPos != std::string::npos && nextStartPos < nextEndPos) {
-//                nestedStartPos = nextStartPos;
-//            } else {
-//                endPos = nextEndPos;
-//                break;
-//            }
-//        }
-//
-//        if (endPos == std::string::npos || endPos <= startPos) break;
-//
-//        replacement = replacer(arg.substr(startPos, endPos - startPos + 2));
-//        if (replacement.empty()) {
-//            replacement = NULL_STR;
-//        }
-//        arg.replace(startPos, endPos - startPos + 2, replacement);
-//        if (arg == lastArg) {
-//            if (interpreterLogging) {
-//                disableLogging = false;
-//                logMessage("failed replacement arg: " + arg);
-//            }
-//            replacement = NULL_STR;
-//            arg.replace(startPos, endPos - startPos + 2, replacement);
-//            break;
-//        }
-//        lastArg = arg;
-//    }
-//};
+    size_t bestPos = std::string::npos;
+    matchedLen = 0;
 
-void replacePlaceholdersRecursively(std::string& arg, const std::vector<std::pair<std::string, std::function<std::string(const std::string&)>>>& placeholders) {
-    std::string lastArg;
-    
-    // Continue replacing until no more placeholders are found
-    bool placeholdersRemaining = true;
-    while (placeholdersRemaining) {
-        placeholdersRemaining = false; // Reset the flag at the beginning of each loop
-        
-        for (const auto& [placeholder, replacer] : placeholders) {
-            size_t startPos, endPos;
-            size_t nestedStartPos, nextStartPos, nextEndPos;
+    for (const auto& tok : starts) {
+        const size_t pos = s.find(tok, from);
+        if (pos == std::string::npos) continue;
 
-            while ((startPos = arg.find(placeholder)) != std::string::npos) {
-                nestedStartPos = startPos;
-                while (true) {
-                    nextStartPos = arg.find(placeholder, nestedStartPos + 1);
-                    nextEndPos = arg.find(")}", nestedStartPos);
-                    if (nextStartPos != std::string::npos && nextStartPos < nextEndPos) {
-                        nestedStartPos = nextStartPos;
-                    } else {
-                        endPos = nextEndPos;
-                        break;
-                    }
-                }
-
-                if (endPos == std::string::npos || endPos <= startPos) break;
-
-                std::string placeholderContent = arg.substr(startPos, endPos - startPos + 2);
-                std::string replacement = replacer(placeholderContent);
-
-                if (replacement.empty()) {
-                    replacement = NULL_STR;
-                }
-
-                arg.replace(startPos, endPos - startPos + 2, replacement);
-                placeholdersRemaining = true; // Since we replaced something, we continue processing
-
-                // To prevent infinite loops, if no change is made, break
-                if (arg == lastArg) {
-                    arg.replace(startPos, endPos - startPos + 2, NULL_STR);
-                    break;
-                }
-
-                lastArg = arg;
-            }
+        if (bestPos == std::string::npos || pos < bestPos ||
+            (pos == bestPos && tok.size() > matchedLen)) {
+            bestPos = pos;
+            matchedLen = tok.size();
         }
     }
+    return bestPos;
+}
+
+// Starting at `startPos` which points to the FIRST character of the opener of the
+// CURRENT placeholder (e.g., the '{' in "{slice("), find the matching closing
+// pair for that placeholder. We count nested openers of ANY placeholder type
+// and match on ")}" closes.
+//
+// Return value: index of the ')' in the matching closing ")}" (so you can substr
+// with +2 to include ")}"). Returns npos if unmatched.
+static size_t findMatchingClose(const std::string& s,
+                                size_t startPos,
+                                const std::vector<std::string>& starts,
+                                size_t outerOpenLen) {
+
+    // We have already seen one opener at startPos
+    int depth = 1;
+    size_t scan = startPos + outerOpenLen;
+
+    size_t openLen;
+    bool openerFirst;
+
+    while (scan < s.size()) {
+        // Find next opener (any) and next closer ")}"
+        const size_t nextCloser = s.find(")}", scan);
+
+        openLen = 0;
+        const size_t nextOpener = findNextOpenToken(s, scan, starts, openLen);
+
+        // Decide which token comes first
+        if (nextCloser == std::string::npos && nextOpener == std::string::npos) {
+            return std::string::npos; // no more tokens
+        }
+
+        openerFirst = false;
+        if (nextOpener != std::string::npos) {
+            if (nextCloser == std::string::npos) openerFirst = true;
+            else openerFirst = (nextOpener < nextCloser);
+        }
+
+        if (openerFirst) {
+            // Found a nested opener
+            ++depth;
+            scan = nextOpener + openLen; // continue after this opener
+        } else {
+            // Found a closer
+            --depth;
+            if (depth == 0) {
+                return nextCloser; // return index of ')'
+            }
+            scan = nextCloser + 2; // continue after ")}"
+        }
+    }
+
+    return std::string::npos; // unmatched
 }
 
 
+/**
+ * @brief Recursively resolves nested placeholders in a string from innermost to outermost.
+ *
+ * This function processes function-style placeholders (e.g., {math(...)}, {split(...)}, {slice(...)})
+ * by recursively resolving their inner content first, then applying the outer transformation.
+ * It uses a universal approach that attempts to resolve all placeholders it can, and intelligently
+ * skips outer placeholders when inner placeholders cannot be resolved (e.g., source placeholders
+ * that require external context from getSourceReplacement).
+ *
+ * Resolution Process:
+ * 1. Finds a placeholder pattern like {function(...)}
+ * 2. Extracts and recursively resolves the inner content
+ * 3. If inner content couldn't be resolved (unchanged and still contains placeholders),
+ *    skips the outer placeholder and leaves it intact for later resolution
+ * 4. If inner content was successfully resolved, applies the outer function transformation
+ * 5. Continues until no more replacements can be made
+ *
+ * Examples:
+ * - {split({math(5+5)},",",0)} → Resolves math first (10), then split → Final result
+ * - {split({list_source(*)},",",0)} → Inner can't resolve → Entire placeholder preserved
+ * - {math({ram_vendor}+5)} → ram_vendor already resolved → Processes math → Final result
+ *
+ * @param arg The string to process, modified in-place with resolved placeholders
+ * @param placeholders Vector of placeholder patterns and their resolver functions.
+ *                     Each pair contains: opener pattern (e.g., "{math(") and resolver lambda
+ * @return true if any replacements were made, false otherwise
+ *
+ * @note Simple placeholders like {ram_vendor}, {hos_version} should be resolved by
+ *       replacePlaceholdersInArg() before calling this function.
+ * @note Source placeholders like {list_source(*)}, {file_source} are resolved in
+ *       getSourceReplacement() and will be skipped by this function.
+ */
+static bool replacePlaceholdersRecursivelyImpl(
+    std::string& arg,
+    const std::vector<std::pair<std::string, std::function<std::string(const std::string&)>>>& placeholders,
+    const std::vector<std::string>& starts) {
+    
+    bool anyReplacementsMade = false;
+    bool replacedThisPass;
+    size_t searchPos;
+    std::string replacement;
+    std::string inner;
+    std::string resolvedPlaceholder;
 
+    for (;;) {
+        replacedThisPass = false;
 
-void applyPlaceholderReplacements(std::vector<std::string>& cmd, const std::string& hexPath, const std::string& iniPath, const std::string& listString, const std::string& listPath, const std::string& jsonString, const std::string& jsonPath) {
-    std::vector<std::pair<std::string, std::function<std::string(const std::string&)>>> placeholders = {
-        {"{hex_file(", [&](const std::string& placeholder) { return replaceHexPlaceholder(placeholder, hexPath); }},
-        {"{ini_file(", [&](const std::string& placeholder) { 
-            std::string result = placeholder;
-            applyReplaceIniPlaceholder(result, INI_FILE_STR, iniPath); 
-            return result; 
-        }},
-        {"{list(", [&](const std::string& placeholder) {
-            size_t startPos = placeholder.find('(') + 1;
-            size_t endPos = placeholder.find(')');
-            size_t listIndex = ult::stoi(placeholder.substr(startPos, endPos - startPos));
-            return stringToList(listString)[listIndex];
-        }},
-        {"{list_file(", [&](const std::string& placeholder) {
-            size_t startPos = placeholder.find('(') + 1;
-            size_t endPos = placeholder.find(')');
-            size_t listIndex = ult::stoi(placeholder.substr(startPos, endPos - startPos));
-            return getEntryFromListFile(listPath, listIndex);
-        }},
-        {"{json(", [&](const std::string& placeholder) { return replaceJsonPlaceholder(placeholder, JSON_STR, jsonString); }},
-        {"{json_file(", [&](const std::string& placeholder) { return replaceJsonPlaceholder(placeholder, JSON_FILE_STR, jsonPath); }},
-        {"{timestamp(", [&](const std::string& placeholder) {
-            size_t startPos = placeholder.find("(") + 1;
-            size_t endPos = placeholder.find(")");
-            std::string format = (endPos != std::string::npos) ? placeholder.substr(startPos, endPos - startPos) : "%Y-%m-%d %H:%M:%S";
-            removeQuotes(format);
-            return getCurrentTimestamp(format);
-        }},
-        {"{decimal_to_hex(", [&](const std::string& placeholder) {
-            size_t startPos = placeholder.find("(") + 1;
-            size_t endPos = placeholder.find(")");
-            std::string params = placeholder.substr(startPos, endPos - startPos);
-        
-            // Split params by comma
-            size_t commaPos = params.find(",");
-            std::string decimalValue;
-            std::string order;
-        
-            if (commaPos != std::string::npos) {
-                decimalValue = params.substr(0, commaPos);
-                order = params.substr(commaPos + 1);
-                // Trim whitespace from order
-                order.erase(0, order.find_first_not_of(" \t\n\r"));
-                order.erase(order.find_last_not_of(" \t\n\r") + 1);
-            } else {
-                decimalValue = params;
-                order = "";  // optional param is empty
-            }
-        
-            // You can now call decimalToHex with decimalValue and order
-            // Adjust decimalToHex function accordingly or handle order here
-        
-            if (order.empty()) {
-                return decimalToHex(decimalValue);
-            } else {
-                return decimalToHex(decimalValue, std::stoi(order)); // assuming overload or second param version
-            }
-        }},
-        {"{ascii_to_hex(", [&](const std::string& placeholder) {
-            size_t startPos = placeholder.find("(") + 1;
-            size_t endPos = placeholder.find(")");
-            std::string asciiValue = placeholder.substr(startPos, endPos - startPos);
-            return asciiToHex(asciiValue);
-        }},
-        {"{hex_to_rhex(", [&](const std::string& placeholder) {
-            size_t startPos = placeholder.find("(") + 1;
-            size_t endPos = placeholder.find(")");
-            std::string hexValue = placeholder.substr(startPos, endPos - startPos);
-            return hexToReversedHex(hexValue);
-        }},
-        {"{hex_to_decimal(", [&](const std::string& placeholder) {
-            size_t startPos = placeholder.find("(") + 1;
-            size_t endPos = placeholder.find(")");
-            std::string hexValue = placeholder.substr(startPos, endPos - startPos);
-            return hexToDecimal(hexValue);
-        }},
-        {"{random(", [&](const std::string& placeholder) {
-            // Ensure the random seed is initialized
-            std::srand(std::time(0));
-            
-            size_t startPos = placeholder.find('(') + 1;
-            size_t endPos = placeholder.find(')');
-            std::string parameters = placeholder.substr(startPos, endPos - startPos);
-            size_t commaPos = parameters.find(',');
-            
-            if (commaPos != std::string::npos) {
-                int lowValue = ult::stoi(parameters.substr(0, commaPos));
-                int highValue = ult::stoi(parameters.substr(commaPos + 1));
-                
-                // Generate a random number in the range [lowValue, highValue]
-                int randomValue = lowValue + rand() % (highValue - lowValue + 1);
-                
-                return ult::to_string(randomValue);  // Return the random value as a string
-            }
-            return placeholder;
-        }},
-        {"{slice(", [&](const std::string& placeholder) {
-            size_t startPos = placeholder.find('(') + 1;
-            size_t endPos = placeholder.find(')');
-            std::string parameters = placeholder.substr(startPos, endPos - startPos);
-            size_t commaPos = parameters.find(',');
+        for (size_t t = 0; t < placeholders.size(); ++t) {
+            const auto& opener = placeholders[t].first;
+            const auto& replacer = placeholders[t].second;
+            const size_t openerLen = opener.size();
 
-            if (commaPos != std::string::npos) {
-                std::string str = parameters.substr(0, commaPos);
-                size_t sliceStart = ult::stoi(parameters.substr(commaPos + 1, parameters.find(',', commaPos + 1) - (commaPos + 1)));
-                size_t sliceEnd = ult::stoi(parameters.substr(parameters.find_last_of(',') + 1));
-                return sliceString(str, sliceStart, sliceEnd);
-            }
-            return placeholder;
-        }},
-        {"{split(", [&](const std::string& placeholder) {
-            size_t startPos = placeholder.find('(') + 1;
-            size_t endPos = placeholder.find(')');
-            std::string parameters = placeholder.substr(startPos, endPos - startPos);
-            
-            size_t firstCommaPos = parameters.find(',');
-            size_t lastCommaPos = parameters.find_last_of(',');
-        
-            if (firstCommaPos != std::string::npos && lastCommaPos != std::string::npos && firstCommaPos != lastCommaPos) {
-                std::string str = parameters.substr(0, firstCommaPos);
-                std::string delimiter = parameters.substr(firstCommaPos + 1, lastCommaPos - firstCommaPos - 1);
-                size_t index = ult::stoi(parameters.substr(lastCommaPos + 1));
-                trim(str);
-                removeQuotes(str);
-                trim(delimiter);
-                removeQuotes(delimiter);
+            searchPos = 0;
+            while (true) {
+                const size_t startPos = arg.find(opener, searchPos);
+                if (startPos == std::string::npos) break;
 
-                std::string result = splitStringAtIndex(str, delimiter, index);
-                if (result.empty()) {
-                    return str;
-                } else {
-                    return result;
+                const size_t closePos = findMatchingClose(arg, startPos, starts, openerLen);
+                if (closePos == std::string::npos) {
+                    searchPos = startPos + openerLen;
+                    continue;
                 }
+
+                const size_t innerStart = startPos + openerLen;
+                const size_t innerLen   = closePos - innerStart;
+                const size_t fullLen    = closePos - startPos + 2;
+
+                bool innerChanged = false;
+                
+                // Skip recursion entirely if inner is empty or has no placeholders
+                if (innerLen > 0) {
+                    inner.assign(arg, innerStart, innerLen);
+                    if (inner.find('{') != std::string::npos) {
+                        innerChanged = replacePlaceholdersRecursivelyImpl(inner, placeholders, starts);
+                        
+                        // If recursion made no changes and inner still has unresolved placeholders,
+                        // skip this outer placeholder
+                        if (!innerChanged) {
+                            searchPos = startPos + openerLen;
+                            continue;
+                        }
+                    }
+                }
+
+                // Build the resolved placeholder
+                if (!innerChanged) {
+                    resolvedPlaceholder.assign(arg, startPos, fullLen);
+                } else {
+                    resolvedPlaceholder.clear();
+                    resolvedPlaceholder.reserve(openerLen + inner.size() + 2);
+                    resolvedPlaceholder += opener;
+                    resolvedPlaceholder += inner;
+                    resolvedPlaceholder += ")}";
+                }
+
+                replacement = replacer(resolvedPlaceholder);
+
+                if (replacement.size() == resolvedPlaceholder.size() && replacement == resolvedPlaceholder) {
+                    searchPos = startPos + openerLen;
+                    continue;
+                }
+
+                arg.replace(startPos, fullLen, replacement);
+                anyReplacementsMade = true;
+                replacedThisPass = true;
+                searchPos = startPos + replacement.size();
             }
-            return placeholder;
-        }},
-        {"{math(", [&](const std::string& placeholder) { return handleMath(placeholder); }},
-        {"{length(", [&](const std::string& placeholder) { return handleLength(placeholder); }},
-    };
+        }
 
-     // Second pass: Only replace {math(...)} after other placeholders are evaluated
-    //std::vector<std::pair<std::string, std::function<std::string(const std::string&)>>> secondPassPlaceholders = {
-    //    {"{math(", [&](const std::string& placeholder) { return handleMath(placeholder); }}
-    //};   
+        if (!replacedThisPass) break;
+    }
 
-    // Create a map with all non-button/arrow placeholders and their replacements
-    std::unordered_map<std::string, std::string> generalPlaceholders = {
+    return anyReplacementsMade;
+}
+
+bool replacePlaceholdersRecursively(
+    std::string& arg,
+    const std::vector<std::pair<std::string, std::function<std::string(const std::string&)>>>& placeholders) {
+    
+    if (arg.find('{') == std::string::npos) return false;
+
+    std::vector<std::string> starts;
+    starts.reserve(placeholders.size());
+    for (const auto& pr : placeholders) {
+        starts.push_back(pr.first);
+    }
+    return replacePlaceholdersRecursivelyImpl(arg, placeholders, starts);
+}
+
+
+std::unordered_map<std::string, std::string> generalPlaceholders;
+void updateGeneralPlaceholders() {
+    generalPlaceholders = {
         {"{ram_vendor}", memoryVendor},
         {"{ram_model}", memoryModel},
+        {"{ram_size_gb}", is8GBEnabled ? "8" : "4"},
         {"{ams_version}", amsVersion},
         {"{hos_version}", hosVersion},
+        {"{hekate_version}", hekateVersion},
+        {"{ovlloader_version}", ovlloaderVersion},
+        {"{ultrahand_version}", APP_VERSION},
+        {"{package_version}", packageRootLayerVersion},
         {"{cpu_speedo}", ult::to_string(cpuSpeedo0)},
         {"{cpu_iddq}", ult::to_string(cpuIDDQ)},
         {"{gpu_speedo}", ult::to_string(cpuSpeedo2)},
         {"{gpu_iddq}", ult::to_string(gpuIDDQ)},
         {"{soc_speedo}", ult::to_string(socSpeedo0)},
         {"{soc_iddq}", ult::to_string(socIDDQ)},
-        {"{title_id}", getTitleIdAsString()}
+        {"{title_id}", getTitleIdAsString()},
+        {"{build_id}", getBuildIdAsString()},
+        {"{local_ip}", getLocalIpAddress()},
+        {"{volume}", getMasterVolumeLevel()},
+        {"{backlight}", getBacklightLevel()}
+    };
+}
+
+// Extracts the argument string from inside a "name(...)" placeholder token.
+// Returns true and sets `out` on success; returns false and sets `out` to
+// NULL_STR when either paren is absent.  Used by the lambdas below to
+// eliminate the repeated find/bounds-check/substr boilerplate.
+// CRC32 (ISO 3309 / ITU-T V.42) — table-driven Sarwate, no extra libs needed.
+// The 256-entry table is evaluated at compile time; the loop is branchless.
+static std::string crc32File(const std::string& path) {
+    struct Table {
+        uint32_t v[256];
+        constexpr Table() : v{} {
+            for (uint32_t i = 0; i < 256; ++i) {
+                uint32_t c = i;
+                for (int k = 0; k < 8; ++k)
+                    c = (c >> 1) ^ (0xEDB88320u & -(c & 1u));
+                v[i] = c;
+            }
+        }
+    };
+    static constexpr Table T{};
+
+    FILE* f = fopen(path.c_str(), "rb");
+    if (!f) return NULL_STR;
+
+    uint32_t crc = 0xFFFFFFFFu;
+    uint8_t buf[4096];
+    size_t n;
+    while ((n = fread(buf, 1, sizeof(buf), f)) > 0) {
+        for (size_t i = 0; i < n; ++i)
+            crc = (crc >> 8) ^ T.v[(crc ^ buf[i]) & 0xFFu];
+    }
+    fclose(f);
+
+    crc ^= 0xFFFFFFFFu;
+    char hex[9];
+    snprintf(hex, sizeof(hex), "%08X", crc);
+    return std::string(hex);
+}
+
+static bool getPlaceholderContent(const std::string& placeholder, std::string& out) {
+    const size_t open = placeholder.find('(');
+    if (open == std::string::npos) { out = NULL_STR; return false; }
+    const size_t close = placeholder.find(')', open + 1);
+    if (close == std::string::npos) { out = NULL_STR; return false; }
+    out = placeholder.substr(open + 1, close - open - 1);
+    return true;
+}
+
+bool applyPlaceholderReplacements(std::vector<std::string>& cmd, const std::string& hexPath, 
+                                 const std::string& iniPath, const std::string& listString, 
+                                 const std::string& listPath, const std::string& jsonString, 
+                                 const std::string& jsonPath, const std::string& packagePath) {
+    bool replacementsMade = false;
+
+    // Shared helpers for conditional placeholders.
+    //
+    // parse2: {if_xxx(VALUE, TRUE_FALLBACK [, FALSE_FALLBACK])}
+    //   value      = arg 1  (the subject, typically a resolved placeholder)
+    //   trueFb     = arg 2  (returned when condition is TRUE)
+    //   falseFb    = arg 3  (optional; returned when condition is FALSE; defaults to value)
+    static const auto parse2 = [](const std::string& ph,
+                                   std::string& value, std::string& trueFb,
+                                   std::string& falseFb, bool& hasFalseFb) -> bool {
+        const size_t open  = ph.find('(');
+        const size_t close = ph.rfind(')');
+        if (open == std::string::npos || close == std::string::npos || close <= open + 1)
+            return false;
+        const std::string inner = ph.substr(open + 1, close - open - 1);
+        const size_t firstComma = inner.find(',');
+        if (firstComma == std::string::npos) return false;
+        const size_t lastComma  = inner.rfind(',');
+        value = inner.substr(0, firstComma);
+        removeQuotes(value);
+        if (firstComma == lastComma) {
+            // 2-arg form: no false fallback
+            trueFb = inner.substr(firstComma + 1);
+            removeQuotes(trueFb);
+            hasFalseFb = false;
+        } else {
+            // 3-arg form: false fallback present
+            trueFb  = inner.substr(firstComma + 1, lastComma - firstComma - 1);
+            falseFb = inner.substr(lastComma + 1);
+            removeQuotes(trueFb);
+            removeQuotes(falseFb);
+            hasFalseFb = true;
+        }
+        return true;
+    };
+    // parse3: {if_xxx(VALUE, COMPARE_VALUE, TRUE_FALLBACK [, FALSE_FALLBACK])}
+    //   value      = arg 1  (the subject)
+    //   needle     = arg 2  (what to compare against)
+    //   trueFb     = arg 3  (returned when condition is TRUE)
+    //   falseFb    = arg 4  (optional; returned when condition is FALSE; defaults to value)
+    static const auto parse3 = [](const std::string& ph,
+                                   std::string& value, std::string& needle,
+                                   std::string& trueFb, std::string& falseFb,
+                                   bool& hasFalseFb) -> bool {
+        const size_t open  = ph.find('(');
+        const size_t close = ph.rfind(')');
+        if (open == std::string::npos || close == std::string::npos || close <= open + 1)
+            return false;
+        const std::string inner = ph.substr(open + 1, close - open - 1);
+        const size_t c1 = inner.find(',');         // end of value
+        if (c1 == std::string::npos) return false;
+        const size_t c2 = inner.find(',', c1 + 1); // end of needle
+        if (c2 == std::string::npos) return false;
+        const size_t cl = inner.rfind(',');         // start of false_fb (if any)
+        value  = inner.substr(0, c1);
+        needle = inner.substr(c1 + 1, c2 - c1 - 1);
+        removeQuotes(value);
+        removeQuotes(needle);
+        if (cl == c2) {
+            // 3-arg form: no false fallback
+            trueFb = inner.substr(c2 + 1);
+            removeQuotes(trueFb);
+            hasFalseFb = false;
+        } else {
+            // 4-arg form: false fallback present
+            trueFb  = inner.substr(c2 + 1, cl - c2 - 1);
+            falseFb = inner.substr(cl + 1);
+            removeQuotes(trueFb);
+            removeQuotes(falseFb);
+            hasFalseFb = true;
+        }
+        return true;
+    };
+    // compareVersions: alphanumeric version-aware comparison.
+    //   Separators: '.' and '_' are neutral (extra = pre-release, sorts lower).
+    //               '-' introduces pre-release labels  -> sorts LOWER than bare release.
+    //               '+' introduces build/revision labels -> sorts HIGHER than bare release.
+    //   Segments that are both pure digits are compared numerically (so "10" > "9").
+    //   Non-digit segments are compared lexicographically.
+    //   Returns -1 if a < b, 0 if a == b, +1 if a > b.
+    //   Examples: "2.2.4" > "2.0.1",  "1.10.0" > "1.9.0",
+    //             "2.0.1-rc" < "2.0.1",  "2.0.1+r23" > "2.0.1",
+    //             "2.0.1+r23" > "2.0.1-rc"
+    static const auto compareVersions = [](const std::string& a, const std::string& b) -> int {
+        static const auto isSep = [](char c) {
+            return c == '.' || c == '-' || c == '_' || c == '+';
+        };
+        // sepTier: '+ '= build metadata (sorts higher), '-'= pre-release (sorts lower),
+        //          '.'/'_'/' ' = neutral (extra segments = pre-release = lower)
+        static const auto sepTier = [](char c) -> int {
+            if (c == '+') return  1;
+            if (c == '-') return -1;
+            return -1; // '.', '_', or no separator -> pre-release convention
+        };
+        static const auto isAllDigits = [](const std::string& s, size_t start, size_t end) {
+            for (size_t i = start; i < end; ++i)
+                if (!std::isdigit(static_cast<unsigned char>(s[i]))) return false;
+            return start < end;
+        };
+        size_t ai = 0, bi = 0;
+        const size_t alen = a.size(), blen = b.size();
+        char aSep = 0, bSep = 0; // separator that introduced the current segment
+        while (true) {
+            // Skip to start of next segment, recording which separator we crossed
+            while (ai < alen && isSep(a[ai])) { aSep = a[ai]; ++ai; }
+            while (bi < blen && isSep(b[bi])) { bSep = b[bi]; ++bi; }
+            if (ai >= alen && bi >= blen) break;
+            // One side exhausted: the other has extra segments.
+            // The separator that introduced those extra segments determines sort order.
+            if (ai >= alen) return -sepTier(bSep); // b has extra: tier > 0 means b > a -> -1
+            if (bi >= blen) return  sepTier(aSep); // a has extra: tier > 0 means a > b -> +1
+            // Both have segments. If they crossed different separator tiers, tier wins.
+            if (ai > 0 && bi > 0) { // not the very first segment
+                const int ta = sepTier(aSep), tb = sepTier(bSep);
+                if (ta != tb) return (ta > tb) ? 1 : -1;
+            }
+            // Find end of current segment
+            size_t ae = ai; while (ae < alen && !isSep(a[ae])) ++ae;
+            size_t be = bi; while (be < blen && !isSep(b[be])) ++be;
+            if (isAllDigits(a, ai, ae) && isAllDigits(b, bi, be)) {
+                const long va = std::strtol(a.c_str() + ai, nullptr, 10);
+                const long vb = std::strtol(b.c_str() + bi, nullptr, 10);
+                if (va < vb) return -1;
+                if (va > vb) return  1;
+            } else {
+                const int cmp = a.compare(ai, ae - ai, b, bi, be - bi);
+                if (cmp < 0) return -1;
+                if (cmp > 0) return  1;
+            }
+            ai = ae;
+            bi = be;
+        }
+        return 0;
     };
 
-    // Iterate through each command and replace placeholders in one pass
+    // parseNum: true when the whole token parses as a number (int or float).
+    // Leading/trailing spaces are tolerated; inf/nan and non-numeric tokens are
+    // rejected up front so they fall through to lexicographic comparison.
+    static const auto parseNum = [](const std::string& s, double& out) -> bool {
+        const char* c = s.c_str();
+        while (*c == ' ' || *c == '\t') ++c;
+        const char afterSign = (*c == '+' || *c == '-') ? c[1] : *c;
+        if (!((afterSign >= '0' && afterSign <= '9') || afterSign == '.'))
+            return false;
+        char* end = nullptr;
+        out = std::strtod(c, &end);
+        if (end == c) return false;
+        while (*end == ' ' || *end == '\t') ++end;
+        return *end == '\0';
+    };
+    // compareAlnum: numeric compare when both sides are numbers, else
+    // lexicographic. Returns -1 / 0 / +1.
+    static const auto compareAlnum = [](const std::string& a, const std::string& b) -> int {
+        double na, nb;
+        if (parseNum(a, na) && parseNum(b, nb))
+            return (na < nb) ? -1 : (na > nb ? 1 : 0);
+        const int c = a.compare(b);
+        return (c < 0) ? -1 : (c > 0 ? 1 : 0);
+    };
+
+    // Shared {if_...} resolvers. Each placeholder entry below is a thin forwarder
+    // into one of these, so the parse + fallback boilerplate is emitted once
+    // rather than duplicated per operator.
+    //   ifNull   : parse2; true-branch when (value == null) matches wantNull
+    //   ifEqual  : parse3; true-branch when (value == compare) matches wantEqual
+    //   ifCompare: parse3; true-branch when rel(cmp(value, compare)) holds
+    static const auto ifNull = [](const std::string& ph, bool wantNull) -> std::string {
+        std::string v, tFb, fFb; bool hasFb;
+        if (!parse2(ph, v, tFb, fFb, hasFb)) return NULL_STR;
+        return ((v == NULL_STR) == wantNull) ? tFb : (hasFb ? fFb : v);
+    };
+    static const auto ifEqual = [](const std::string& ph, bool wantEqual) -> std::string {
+        std::string v, needle, tFb, fFb; bool hasFb;
+        if (!parse3(ph, v, needle, tFb, fFb, hasFb)) return NULL_STR;
+        return ((v == needle) == wantEqual) ? tFb : (hasFb ? fFb : v);
+    };
+    static const auto ifCompare = [](const std::string& ph,
+                                     int  (*cmp)(const std::string&, const std::string&),
+                                     bool (*rel)(int)) -> std::string {
+        std::string v, needle, tFb, fFb; bool hasFb;
+        if (!parse3(ph, v, needle, tFb, fFb, hasFb)) return NULL_STR;
+        return rel(cmp(v, needle)) ? tFb : (hasFb ? fFb : v);
+    };
+    static const auto relGt = [](int c) { return c >  0; };
+    static const auto relLt = [](int c) { return c <  0; };
+    static const auto relGe = [](int c) { return c >= 0; };
+    static const auto relLe = [](int c) { return c <= 0; };
+
+    std::vector<std::pair<std::string, std::function<std::string(const std::string&)>>> placeholders = {
+        {"{hex_file(", [&](const std::string& placeholder) { 
+            if (hexPath.empty() || !isFileOrDirectory(hexPath)) return NULL_STR;
+            std::string result = replaceHexPlaceholder(placeholder, hexPath);
+            return returnOrNull(result);
+        }},
+        {"{ini_file(", [&](const std::string& placeholder) { 
+            if (iniPath.empty() || !isFileOrDirectory(iniPath)) return NULL_STR;
+            std::string result = placeholder;
+            applyReplaceIniPlaceholder(result, INI_FILE_STR, iniPath); 
+            return result;
+        }},
+        {"{list(", [&](const std::string& placeholder) {
+            std::string indexStr;
+            if (!getPlaceholderContent(placeholder, indexStr) || !isValidNumber(indexStr))
+                return NULL_STR;
+            const auto& items = stringToList(listString);
+            const size_t idx = ult::stoi(indexStr);
+            if (idx >= items.size()) return NULL_STR;
+            return returnOrNull(items[idx]);
+        }},
+        {"{list_file(", [&](const std::string& placeholder) {
+            std::string indexStr;
+            if (!getPlaceholderContent(placeholder, indexStr) || !isValidNumber(indexStr))
+                return NULL_STR;
+            if (listPath.empty() || !isFileOrDirectory(listPath)) return NULL_STR;
+            return returnOrNull(getEntryFromListFile(listPath, ult::stoi(indexStr)));
+        }},
+        {"{json(", [&](const std::string& placeholder) { 
+            return replaceJsonPlaceholder(placeholder, JSON_STR, jsonString);
+        }},
+        {"{json_file(", [&](const std::string& placeholder) { 
+            if (jsonPath.empty() || !isFileOrDirectory(jsonPath)) return NULL_STR;
+            return replaceJsonPlaceholder(placeholder, JSON_FILE_STR, jsonPath);
+        }},
+        {"{timestamp(", [&](const std::string& placeholder) {
+            std::string format;
+            if (!getPlaceholderContent(placeholder, format)) return NULL_STR;
+            if (format.empty()) format = "%Y-%m-%d %H:%M:%S";
+            removeQuotes(format);
+            return returnOrNull(getCurrentTimestamp(format));
+        }},
+        {"{decimal_to_hex(", [&](const std::string& placeholder) {
+            std::string params;
+            if (!getPlaceholderContent(placeholder, params)) return NULL_STR;
+
+            const size_t commaPos = params.find(",");
+            std::string decimalValue, order;
+            if (commaPos != std::string::npos) {
+                decimalValue = params.substr(0, commaPos);
+                order = params.substr(commaPos + 1);
+                order.erase(0, order.find_first_not_of(" \t\n\r"));
+                order.erase(order.find_last_not_of(" \t\n\r") + 1);
+            } else {
+                decimalValue = params;
+            }
+
+            if (order.empty()) {
+                return returnOrNull(decimalToHex(decimalValue));
+            } else {
+                if (!isValidNumber(order)) return NULL_STR;
+                return returnOrNull(decimalToHex(decimalValue, ult::stoi(order)));
+            }
+        }},
+        {"{ascii_to_hex(", [&](const std::string& placeholder) {
+            std::string inner;
+            if (!getPlaceholderContent(placeholder, inner)) return NULL_STR;
+            return returnOrNull(asciiToHex(inner));
+        }},
+        {"{hex_to_rhex(", [&](const std::string& placeholder) {
+            std::string inner;
+            if (!getPlaceholderContent(placeholder, inner)) return NULL_STR;
+            return returnOrNull(hexToReversedHex(inner));
+        }},
+        {"{hex_to_decimal(", [&](const std::string& placeholder) {
+            std::string inner;
+            if (!getPlaceholderContent(placeholder, inner)) return NULL_STR;
+            return returnOrNull(hexToDecimal(inner));
+        }},
+        {"{base64_decode(", [&](const std::string& placeholder) {
+            std::string inner;
+            if (!getPlaceholderContent(placeholder, inner)) return NULL_STR;
+            return returnOrNull(decodeBase64ToString(inner));
+        }},
+        {"{random(", [&](const std::string& placeholder) {
+            std::srand(std::time(0));
+            std::string parameters;
+            if (!getPlaceholderContent(placeholder, parameters)) return NULL_STR;
+            const size_t commaPos = parameters.find(',');
+            if (commaPos == std::string::npos) return returnOrNull(placeholder);
+            std::string lowStr  = parameters.substr(0, commaPos);
+            std::string highStr = parameters.substr(commaPos + 1);
+            if (!isValidNumber(lowStr) || !isValidNumber(highStr)) return NULL_STR;
+            const int lowValue  = ult::stoi(lowStr);
+            const int highValue = ult::stoi(highStr);
+            return returnOrNull(ult::to_string(lowValue + rand() % (highValue - lowValue + 1)));
+        }},
+        {"{slice(", [&](const std::string& placeholder) {
+            const size_t startPos = placeholder.find('(');
+            const size_t endPos = placeholder.rfind(')');
+            if (startPos == std::string::npos || endPos == std::string::npos || endPos <= startPos + 1) {
+                return NULL_STR;
+            }
+        
+            const std::string parameters = placeholder.substr(startPos + 1, endPos - startPos - 1);
+            const size_t firstComma = parameters.find(',');
+            const size_t secondComma = (firstComma == std::string::npos) ? 
+                std::string::npos : parameters.find(',', firstComma + 1);
+            if (firstComma == std::string::npos || secondComma == std::string::npos) {
+                return NULL_STR;
+            }
+        
+            std::string strPart    = parameters.substr(0, firstComma);
+            std::string startIndex = parameters.substr(firstComma + 1, secondComma - firstComma - 1);
+            std::string endIndex   = parameters.substr(secondComma + 1);
+        
+            trim(strPart);
+            removeQuotes(strPart);
+            trim(startIndex);
+            removeQuotes(startIndex);
+            trim(endIndex);
+            removeQuotes(endIndex);
+        
+            if (startIndex.empty() || endIndex.empty() ||
+                !isValidNumber(startIndex) || !isValidNumber(endIndex)) {
+                return NULL_STR;
+            }
+        
+            const size_t sliceStart = static_cast<size_t>(ult::stoi(startIndex));
+            const size_t sliceEnd   = static_cast<size_t>(ult::stoi(endIndex));
+        
+            if (sliceEnd <= sliceStart || sliceStart >= strPart.length()) {
+                return NULL_STR;
+            }
+        
+            return returnOrNull(sliceString(strPart, sliceStart, sliceEnd));
+        }},
+        {"{split(", [&](const std::string& placeholder) {
+            const size_t openParen = placeholder.find('(');
+            const size_t closeParen = placeholder.rfind(')');
+        
+            if (openParen == std::string::npos || closeParen == std::string::npos || 
+                closeParen <= openParen) {
+                return NULL_STR;
+            }
+        
+            const std::string parameters = placeholder.substr(openParen + 1, 
+                closeParen - openParen - 1);
+        
+            const size_t firstCommaPos = parameters.find(',');
+            const size_t lastCommaPos  = parameters.find_last_of(',');
+        
+            if (firstCommaPos == std::string::npos || lastCommaPos == std::string::npos ||
+                firstCommaPos == lastCommaPos) {
+                return NULL_STR;
+            }
+        
+            std::string str = parameters.substr(0, firstCommaPos);
+            std::string delimiter = parameters.substr(firstCommaPos + 1, 
+                lastCommaPos - firstCommaPos - 1);
+            std::string indexStr = parameters.substr(lastCommaPos + 1);
+        
+            trim(str);
+            removeQuotes(str);
+            trim(delimiter);
+            removeQuotes(delimiter);
+            trim(indexStr);
+        
+            if (indexStr.empty() || !isValidNumber(indexStr)) {
+                return NULL_STR;
+            }
+        
+            std::string result = splitStringAtIndex(str, delimiter, ult::stoi(indexStr));
+            return result.empty() ? NULL_STR : result;
+        }},
+        {"{math(", [&](const std::string& placeholder) { return handleMath(placeholder); }},
+        {"{length(", [&](const std::string& placeholder) { return handleLength(placeholder); }},
+        {"{ovl_version(", [&](const std::string& placeholder) {
+            std::string ovlPath;
+            if (!getPlaceholderContent(placeholder, ovlPath)) return NULL_STR;
+            removeQuotes(ovlPath);
+            trim(ovlPath);
+            if (ovlPath.empty()) return NULL_STR;
+            preprocessPath(ovlPath, packagePath);
+            const auto& [result, _ovlName, version, _lib, _ams] = getOverlayInfo(ovlPath);
+            return result != ResultSuccess ? NULL_STR : returnOrNull(version);
+        }},
+        {"{crc32(", [&](const std::string& placeholder) {
+            std::string filePath;
+            if (!getPlaceholderContent(placeholder, filePath)) return NULL_STR;
+            removeQuotes(filePath);
+            trim(filePath);
+            if (filePath.empty()) return NULL_STR;
+            preprocessPath(filePath, packagePath);
+            return crc32File(filePath);
+        }},
+        // Conditional placeholders -- inner args are fully resolved before these fire.
+        // The FALSE_FALLBACK is optional in all forms.  When omitted, the false branch
+        // returns VALUE unchanged.  When present, it is the last comma-delimited arg.
+        //
+        // {if_null(VALUE, TRUE_FALLBACK [, FALSE_FALLBACK])}
+        // {if_!null(VALUE, TRUE_FALLBACK [, FALSE_FALLBACK])}
+        //   "null" is the literal string returned by unresolved/missing placeholders.
+        //
+        // {if_==(VALUE, COMPARE_VALUE, TRUE_FALLBACK [, FALSE_FALLBACK])}
+        // {if_!=(VALUE, COMPARE_VALUE, TRUE_FALLBACK [, FALSE_FALLBACK])}
+        //   Exact string equality after removeQuotes on all args.
+        //
+        // {if_>(VALUE, COMPARE_VALUE, TRUE_FALLBACK [, FALSE_FALLBACK])}
+        // {if_<(VALUE, COMPARE_VALUE, TRUE_FALLBACK [, FALSE_FALLBACK])}
+        // {if_>=(VALUE, COMPARE_VALUE, TRUE_FALLBACK [, FALSE_FALLBACK])}
+        // {if_<=(VALUE, COMPARE_VALUE, TRUE_FALLBACK [, FALSE_FALLBACK])}
+        //   When both values parse as numbers they are compared numerically
+        //   (as floats, so "9" < "10" and "1.5" > "1.05"); otherwise they are
+        //   compared lexicographically, byte by byte and case-sensitive.
+        //
+        // {if_version_>(VALUE, COMPARE_VALUE, TRUE_FALLBACK [, FALSE_FALLBACK])}
+        // {if_version_<(VALUE, COMPARE_VALUE, TRUE_FALLBACK [, FALSE_FALLBACK])}
+        // {if_version_>=(VALUE, COMPARE_VALUE, TRUE_FALLBACK [, FALSE_FALLBACK])}
+        // {if_version_<=(VALUE, COMPARE_VALUE, TRUE_FALLBACK [, FALSE_FALLBACK])}
+        //   Version-aware comparison: numeric segments compared as integers,
+        //   '-' suffix = pre-release (lower), '+' suffix = build metadata (higher).
+        {"{if_null(",       [](const std::string& ph) { return ifNull(ph, true);  }},
+        {"{if_!null(",      [](const std::string& ph) { return ifNull(ph, false); }},
+        {"{if_==(",         [](const std::string& ph) { return ifEqual(ph, true);  }},
+        {"{if_!=(",         [](const std::string& ph) { return ifEqual(ph, false); }},
+        {"{if_>(",          [](const std::string& ph) { return ifCompare(ph, compareAlnum,    relGt); }},
+        {"{if_<(",          [](const std::string& ph) { return ifCompare(ph, compareAlnum,    relLt); }},
+        {"{if_>=(",         [](const std::string& ph) { return ifCompare(ph, compareAlnum,    relGe); }},
+        {"{if_<=(",         [](const std::string& ph) { return ifCompare(ph, compareAlnum,    relLe); }},
+        {"{if_version_>(",  [](const std::string& ph) { return ifCompare(ph, compareVersions, relGt); }},
+        {"{if_version_<(",  [](const std::string& ph) { return ifCompare(ph, compareVersions, relLt); }},
+        {"{if_version_>=(", [](const std::string& ph) { return ifCompare(ph, compareVersions, relGe); }},
+        {"{if_version_<=(", [](const std::string& ph) { return ifCompare(ph, compareVersions, relLe); }},
+    };
+
+    updateGeneralPlaceholders();
+
+    // Iterate through each command and replace placeholders
     for (auto& arg : cmd) {
         // Replace general placeholders
-        replacePlaceholdersInArg(arg, generalPlaceholders);
+        if (replacePlaceholdersInArg(arg, generalPlaceholders)) {
+            replacementsMade = true;
+        }
 
         // Replace button/arrow placeholders from the global map
-        replacePlaceholdersInArg(arg, symbolPlaceholders);
+        if (replacePlaceholdersInArg(arg, symbolPlaceholders)) {
+            replacementsMade = true;
+        }
 
-        // Additionally replace placeholders from your custom map
-        //for (const auto& [placeholder, replacer] : placeholders) {
-        //    replacePlaceholders(arg, placeholder, replacer);
-        //}
+        // Normalize {timestamp} → {timestamp()} so the recursive handler picks it up
+        replaceAllPlaceholders(arg, "{timestamp}", "{timestamp()}");
 
-        // Resolve nested placeholders
-        replacePlaceholdersRecursively(arg, placeholders);
-        //replacePlaceholdersRecursively(arg, secondPassPlaceholders);
+        // Resolve nested placeholders - only if all internals resolve
+        if (replacePlaceholdersRecursively(arg, placeholders)) {
+            replacementsMade = true;
+        }
     }
+    
+    return replacementsMade;
 }
 
 
 
-// forward declarartion
+// forward declarations
 void processCommand(const std::vector<std::string>& cmd, const std::string& packagePath, const std::string& selectedCommand);
-
+inline bool txtLineExists(const std::string& filePath, const std::string& line);
+inline bool hexValMatches(const std::string& filePath, uint32_t offset, std::string expectedHex);
+inline bool moduleExists(u64 programId);
+inline bool moduleIsActive(u64 programId);
 
 
 /**
@@ -2417,139 +3507,146 @@ void processCommand(const std::vector<std::string>& cmd, const std::string& pack
  * This function iterates over a list of commands, where each command is a vector of strings,
  * and applies the `applyPlaceholderReplacements` function to handle the placeholders.
  * It also handles control flow commands like "erista:" and "mariko:".
+ * Optimized for minimal memory usage with in-place compaction.
  *
  * @param commands A list of commands, where each command is represented as a vector of strings.
  * @param packagePath The path to the package (optional).
  * @param selectedCommand A specific command to execute (optional).
  * @return Returns true if the placeholders were successfully applied to the commands, false otherwise.
  */
-bool applyPlaceholderReplacementsToCommands(std::vector<std::vector<std::string>>& commands, const std::string& packagePath = "", const std::string& selectedCommand = "") {
-
+bool applyPlaceholderReplacementsToCommands(std::vector<std::vector<std::string>>& commands, 
+                                           const std::string& packagePath = "", 
+                                           const std::string& selectedCommand = "") {
+    
     std::string listString, listPath, jsonString, jsonPath, hexPath, iniPath;
-
     bool inEristaSection = false;
     bool inMarikoSection = false;
-    bool eraseAtEnd = false;
-
-    // Process commands with control flow and apply replacements
-    for (auto it = commands.begin(); it != commands.end();) {
+    
+    // Two-pointer technique: readIndex reads all commands, writeIndex writes kept commands
+    size_t writeIndex = 0;
+    
+    for (size_t readIndex = 0; readIndex < commands.size(); ++readIndex) {
+        auto& cmd = commands[readIndex];
         
-        auto& cmd = *it; // Get the current command
-
         if (cmd.empty()) {
-            it = commands.erase(it); // Remove empty command
+            // Skip empty commands, don't increment writeIndex
+            cmd.shrink_to_fit();
             continue;
         }
 
-        const std::string& commandName = cmd[0];
+        const std::string_view commandName = cmd[0];
 
-        // Handle control flow commands like "erista:" and "mariko:"
+        // Handle control flow commands
         if (commandName == "erista:") {
             inEristaSection = true;
             inMarikoSection = false;
-            it = commands.erase(it); // Remove processed command
-            continue;
+            cmd = {};
+            continue; // Don't keep this command
         } else if (commandName == "mariko:") {
             inEristaSection = false;
             inMarikoSection = true;
-            it = commands.erase(it); // Remove processed command
-            continue;
-        } else if (commandName.front() == ';' ||
-            (commandName.size() >= 7 && commandName.substr(commandName.size() - 7) == "_source") ||
-            commandName == "logging") { // remove stuff that isn't executable
-            it = commands.erase(it); // Remove processed command
-            continue;
+            cmd = {};
+            continue; // Don't keep this command
+        } else if ((!commandName.empty() && commandName.front() == ';') ||
+                   (commandName.size() >= 7 && commandName.substr(commandName.size() - 7) == "_source") ||
+                   commandName == "logging") {
+            cmd = {};
+            continue; // Don't keep this command
         }
 
-        // If we're in a section not relevant to the current hardware, skip the command
+        // Skip commands not relevant to current hardware
         if ((inEristaSection && !usingErista) || (inMarikoSection && !usingMariko)) {
-            ++it; // Skip this command
-            continue;
+            cmd = {};
+            continue; // Don't keep this command
         }
 
-        // Apply placeholder replacements in the current command
-        applyPlaceholderReplacements(cmd, hexPath, iniPath, listString, listPath, jsonString, jsonPath);
+        // Apply placeholder replacements
+        applyPlaceholderReplacements(cmd, hexPath, iniPath, listString, listPath, jsonString, jsonPath, packagePath);
 
-        // Handle special commands like LIST_STR, LIST_FILE_STR, etc.
-        size_t cmdSize = cmd.size();
+        // Handle special commands
+        const size_t cmdSize = cmd.size();
+        bool shouldKeep = true;
 
         if (commandName == LIST_STR && cmdSize >= 2) {
-            listString = std::string(cmd[1]);  // Make a copy of cmd[1] into listString
+            listString = cmd[1];
             removeQuotes(listString);
-            eraseAtEnd = true;
+            shouldKeep = false;
         } else if (commandName == LIST_FILE_STR && cmdSize >= 2) {
-            listPath = std::string(cmd[1]);  // Make a copy of cmd[1] into listPath
+            listPath = cmd[1];
             preprocessPath(listPath, packagePath);
-            eraseAtEnd = true;
+            shouldKeep = false;
         } else if (commandName == JSON_STR && cmdSize >= 2) {
-            jsonString = std::string(cmd[1]);  // Make a copy of cmd[1] into jsonString
-            eraseAtEnd = true;
+            jsonString = cmd[1];
+            removeQuotes(jsonString);
+            shouldKeep = false;
         } else if (commandName == JSON_FILE_STR && cmdSize >= 2) {
-            jsonPath = std::string(cmd[1]);  // Make a copy of cmd[1] into jsonPath
+            jsonPath = cmd[1];
             preprocessPath(jsonPath, packagePath);
-            eraseAtEnd = true;
+            shouldKeep = false;
         } else if (commandName == INI_FILE_STR && cmdSize >= 2) {
-            iniPath = std::string(cmd[1]);  // Make a copy of cmd[1] into iniPath
+            iniPath = cmd[1];
             preprocessPath(iniPath, packagePath);
-            eraseAtEnd = true;
+            shouldKeep = false;
         } else if (commandName == HEX_FILE_STR && cmdSize >= 2) {
-            hexPath = std::string(cmd[1]);  // Make a copy of cmd[1] into hexPath
+            hexPath = cmd[1];
             preprocessPath(hexPath, packagePath);
-            eraseAtEnd = true;
-        } else if (commandName == "filter" || commandName == "file_name") {
-            eraseAtEnd = true;
-        } else {
-            eraseAtEnd = false;
+            shouldKeep = false;
+        } else if (commandName == "filter" || commandName == "file_name" || 
+                   commandName == "folder_name" || commandName == "sourced_path") {
+            shouldKeep = false;
         }
 
-        logMessage("iniPath: "+iniPath);
+        if (!shouldKeep) {
+            cmd = {};
+            continue; // Don't keep this command
+        }
 
-        // Now, handle adding quotes only if needed
+        // Apply quoting logic to arguments for commands we're keeping
         for (size_t i = 1; i < cmd.size(); ++i) {
             std::string& argument = cmd[i];
 
-            // If the argument is exactly '', skip processing (preserve the empty quotes)
-            if (argument == "") {
+            if (argument.empty()) {
                 argument = "''";
-                //continue;  // Do nothing, preserve as is
+                continue;
             }
 
-            // If the argument already has quotes, skip it
-            if ((argument.front() == '"' && argument.back() == '"') ||
-                (argument.front() == '\'' && argument.back() == '\'')) {
-                continue; // Already quoted, skip
+            if (argument.size() >= 2 &&
+                ((argument.front() == '"' && argument.back() == '"') ||
+                 (argument.front() == '\'' && argument.back() == '\''))) {
+                continue;
             }
 
-            // If the argument contains no spaces, do not add quotes
             if (argument.find(' ') == std::string::npos) {
-                continue;  // No spaces, so no need for quotes
+                continue;
             }
 
-            // If the argument contains a single quote, wrap it in double quotes
-            if (argument.find('\'') != std::string::npos) {
-                argument = "\"" + argument + "\"";  // Wrap in double quotes
-            }
-            // If the argument contains a double quote, wrap it in single quotes
-            else if (argument.find('"') != std::string::npos) {
-                argument = "\'" + argument + "\'";  // Wrap in single quotes
-            }
-            // If the argument contains spaces but no quotes, wrap it in single quotes by default
-            else {
-                argument = "\'" + argument + "\'";
+            // Optimized quoting - fewer string operations
+            const bool hasSingleQuote = argument.find('\'') != std::string::npos;
+            const bool hasDoubleQuote = argument.find('"') != std::string::npos;
+            
+            if (hasSingleQuote && !hasDoubleQuote) {
+                argument.insert(0, 1, '"');
+                argument.push_back('"');
+            } else {
+                argument.insert(0, 1, '\'');
+                argument.push_back('\'');
             }
         }
 
-        // If eraseAtEnd is true, erase the current command
-        if (eraseAtEnd) {
-            it = commands.erase(it);  // Erase and update iterator
-        } else {
-            ++it;  // Move to the next command
+        // Keep this command - move it to the write position
+        if (writeIndex != readIndex) {
+            commands[writeIndex] = std::move(cmd);
+            cmd.shrink_to_fit();
         }
+        ++writeIndex;
     }
+    
+    // Resize to keep only the commands we want
+    commands.resize(writeIndex);
+    commands.shrink_to_fit();  // Always - maximize memory efficiency
 
-    return true;  // Indicating that placeholder replacements have been applied successfully
+    return true;
 }
-
 
 
 
@@ -2557,10 +3654,13 @@ bool applyPlaceholderReplacementsToCommands(std::vector<std::vector<std::string>
  * @brief Interpret and execute a list of commands.
  *
  * This function interprets and executes a list of commands based on their names and arguments.
+ * Optimized for minimal memory usage by clearing processed commands immediately.
  *
  * @param commands A list of commands, where each command is represented as a vector of strings.
  */
-bool interpretAndExecuteCommands(std::vector<std::vector<std::string>>&& commands, const std::string& packagePath="", const std::string& selectedCommand="") {
+bool interpretAndExecuteCommands(std::vector<std::vector<std::string>>&& commands, 
+                                const std::string& packagePath = "", 
+                                const std::string& selectedCommand = "") {
     
     #if USING_LOGGING_DIRECTIVE
     if (!packagePath.empty()) {
@@ -2569,59 +3669,56 @@ bool interpretAndExecuteCommands(std::vector<std::vector<std::string>>&& command
     }
     #endif
 
-    // Load key-value pairs from the "BUFFERS" section of the INI file
-    auto bufferSection = getKeyValuePairsFromSection(ULTRAHAND_CONFIG_INI_PATH, BUFFERS);
+    // Load and apply buffer configuration from INI file
+    const auto bufferSection = getKeyValuePairsFromSection(ULTRAHAND_CONFIG_INI_PATH, MEMORY_STR);
     
     if (!bufferSection.empty()) {
-        // Directly update buffer sizes without a map
-        std::string section;
-    
-        section = "copy_buffer_size";
-        if (bufferSection.count(section) > 0) {
-            COPY_BUFFER_SIZE = ult::stoi(bufferSection[section]);
-        }
-    
-        section = "unzip_buffer_size";
-        if (bufferSection.count(section) > 0) {
-            UNZIP_BUFFER_SIZE = ult::stoi(bufferSection[section]);
-        }
-    
-        section = "download_buffer_size";
-        if (bufferSection.count(section) > 0) {
-            DOWNLOAD_BUFFER_SIZE = ult::stoi(bufferSection[section]);
-        }
-    
-        section = "hex_buffer_size";
-        if (bufferSection.count(section) > 0) {
-            HEX_BUFFER_SIZE = ult::stoi(bufferSection[section]);
+        struct BufferConfig {
+            const char* key;
+            size_t* target;
+        };
+        
+        const BufferConfig configs[] = {
+            {"copy_buffer_size", &COPY_BUFFER_SIZE},
+            {"unzip_read_buffer", &UNZIP_READ_BUFFER},
+            {"unzip_write_buffer", &UNZIP_WRITE_BUFFER},
+            {"download_read_buffer", &DOWNLOAD_READ_BUFFER},
+            {"download_write_buffer", &DOWNLOAD_WRITE_BUFFER},
+            {"hex_buffer_size", &HEX_BUFFER_SIZE}
+        };
+        
+        for (const auto& config : configs) {
+            const auto it = bufferSection.find(config.key);
+            if (it != bufferSection.end()) {
+                *config.target = ult::stoi(it->second);
+            }
         }
     }
 
-    std::string message;
-
+    // Initialize state variables
     bool inEristaSection = false;
     bool inMarikoSection = false;
     bool inTrySection = false;
-    std::string listString, listPath, jsonString, jsonPath, hexPath, iniPath, lastArg;
+    
+    // String buffers for command processing
+    std::string listString, listPath, jsonString, jsonPath, hexPath, iniPath;
+    
+    #if USING_LOGGING_DIRECTIVE
+    std::string messageBuffer;
+    #endif
 
-    //size_t startPos, endPos, listIndex;
-    std::string replacement;
+    // Reset global state
+    commandSuccess.store(true, std::memory_order_release);
+    refreshPage.store(false, std::memory_order_release);
+    refreshPackage.store(false, std::memory_order_release);
+    interpreterLogging.store(false, std::memory_order_release);
 
-    // Overwrite globals
-    commandSuccess = true;
-    refreshPage = false;
-    refreshPackage = false;
-    interpreterLogging = false;
-
-    size_t cmdSize;
-
-    while (!commands.empty()) {
-
-        auto& cmd = commands.front(); // Get the first command for processing
-
-        if (abortCommand.load(std::memory_order_acquire)) {
-            abortCommand.store(false, std::memory_order_release);
-            commandSuccess = false;
+    // Process commands one by one, clearing each after processing
+    for (size_t i = 0; i < commands.size(); ++i) {
+        // Check for abort signal
+        if (abortCommand.exchange(false, std::memory_order_acq_rel)) {
+            commandSuccess.store(false, std::memory_order_release);
+            commands = {};
             #if USING_LOGGING_DIRECTIVE
             disableLogging = true;
             logFilePath = defaultLogFilePath;
@@ -2629,98 +3726,160 @@ bool interpretAndExecuteCommands(std::vector<std::vector<std::string>>&& command
             return commandSuccess;
         }
 
+        auto& cmd = commands[i];
+        
+        // Skip empty commands
         if (cmd.empty()) {
-            commands.erase(commands.begin()); // Remove empty command
             continue;
         }
 
-        const std::string& commandName = cmd[0];
+        // Use string_view to avoid copying command name
+        const std::string_view commandName = cmd[0];
 
+        // Handle control flow commands
         if (commandName == "try:") {
-            if (inTrySection && commandSuccess) break;
-            commandSuccess = true;
-
+            if (inTrySection && commandSuccess.load(std::memory_order_acquire)) {
+                commands = {};
+                #if USING_LOGGING_DIRECTIVE
+                disableLogging = true;
+                logFilePath = defaultLogFilePath;
+                #endif
+                return true;
+            }
+            commandSuccess.store(true, std::memory_order_release);
             inTrySection = true;
-            commands.erase(commands.begin()); // Remove processed command
+            // Clear and continue
+            cmd = {};
             continue;
-        } else if (commandName == "erista:") {
+        }
+        
+        if (commandName == "erista:") {
             inEristaSection = true;
             inMarikoSection = false;
-            commands.erase(commands.begin()); // Remove processed command
+            // Clear and continue
+            cmd = {};
             continue;
-        } else if (commandName == "mariko:") {
+        }
+        
+        if (commandName == "mariko:") {
             inEristaSection = false;
             inMarikoSection = true;
-            commands.erase(commands.begin()); // Remove processed command
+            // Clear and continue
+            cmd = {};
             continue;
         }
 
-        if (!commandSuccess && inTrySection){
-            commands.erase(commands.begin()); // Remove processed command
+        // Skip commands in try section if previous command failed
+        if (!commandSuccess.load(std::memory_order_acquire) && inTrySection) {
+            cmd = {};
             continue;
         }
 
-        if ((inEristaSection && !inMarikoSection && usingErista) || (!inEristaSection && inMarikoSection && usingMariko) || (!inEristaSection && !inMarikoSection)) {
-            if (!inTrySection || (commandSuccess && inTrySection)) {
+        // Determine if command should execute based on platform sections
+        const bool shouldExecute = 
+            (inEristaSection && !inMarikoSection && usingErista) ||
+            (!inEristaSection && inMarikoSection && usingMariko) ||
+            (!inEristaSection && !inMarikoSection);
 
-                applyPlaceholderReplacements(cmd, hexPath, iniPath, listString, listPath, jsonString, jsonPath);
+        if (!shouldExecute) {
+            cmd = {};
+            continue;
+        }
 
-                #if USING_LOGGING_DIRECTIVE
-                if (interpreterLogging) {
-                    disableLogging = false;
-                    message = "Executing command: ";
-                    for (const std::string& token : cmd)
-                        message += token + " ";
-                    logMessage(message);
-                }
-                #endif
+        // Only execute if not in try section or if we're succeeding in try section
+        if (inTrySection && !commandSuccess.load(std::memory_order_acquire)) {
+            cmd = {};
+            continue;
+        }
 
-                cmdSize = cmd.size();
-
-                if (commandName == LIST_STR) {
-                    if (cmdSize >= 2) {
-                        listString = cmd[1];
-                        removeQuotes(listString);
-                    }
-                } else if (commandName == LIST_FILE_STR) {
-                    if (cmdSize >= 2) {
-                        listPath = cmd[1];
-                        preprocessPath(listPath, packagePath);
-                    }
-                } else if (commandName == JSON_STR) {
-                    if (cmdSize >= 2) {
-                        jsonString = cmd[1];
-                    }
-                } else if (commandName == JSON_FILE_STR) {
-                    if (cmdSize >= 2) {
-                        jsonPath = cmd[1];
-                        preprocessPath(jsonPath, packagePath);
-                    }
-                } else if (commandName == INI_FILE_STR) {
-                    if (cmdSize >= 2) {
-                        iniPath = cmd[1];
-                        preprocessPath(iniPath, packagePath);
-                    }
-                } else if (commandName == HEX_FILE_STR) {
-                    if (cmdSize >= 2) {
-                        hexPath = cmd[1];
-                        preprocessPath(hexPath, packagePath);
-                    }
-                } else {
-                    processCommand(cmd, packagePath, selectedCommand);
-                }
+        // Apply placeholder replacements only if needed
+        bool hasPlaceholders = false;
+        for (const auto& arg : cmd) {
+            if (arg.find('{') != std::string::npos) {
+                hasPlaceholders = true;
+                break;
             }
         }
+        
+        if (hasPlaceholders) {
+            applyPlaceholderReplacements(cmd, hexPath, iniPath, listString, listPath, jsonString, jsonPath, packagePath);
+        }
 
-        commands.erase(commands.begin()); // Remove processed command
+        #if USING_LOGGING_DIRECTIVE
+        if (interpreterLogging.load(std::memory_order_acquire)) {
+            disableLogging = false;
+        }
+
+        if (!disableLogging) {
+            // Build log message efficiently
+            messageBuffer.clear();
+            messageBuffer += "Executing command: ";
+            for (const auto& token : cmd) {
+                messageBuffer += token;
+                messageBuffer += ' ';
+            }
+            
+            logMessage(messageBuffer);
+        }
+        #endif
+
+        const size_t cmdSize = cmd.size();
+
+        // Process different command types with direct assignment to reuse string buffers
+        if (commandName == LIST_STR) {
+            if (cmdSize >= 2) {
+                listString = cmd[1]; // Reuses existing string buffer
+                removeQuotes(listString);
+            }
+        } 
+        else if (commandName == LIST_FILE_STR) {
+            if (cmdSize >= 2) {
+                listPath = cmd[1];
+                preprocessPath(listPath, packagePath);
+            }
+        } 
+        else if (commandName == JSON_STR) {
+            if (cmdSize >= 2) {
+                jsonString = cmd[1];
+                removeQuotes(jsonString);  // ADD THIS LINE
+            }
+        } 
+        else if (commandName == JSON_FILE_STR) {
+            if (cmdSize >= 2) {
+                jsonPath = cmd[1];
+                preprocessPath(jsonPath, packagePath);
+            }
+        } 
+        else if (commandName == INI_FILE_STR) {
+            if (cmdSize >= 2) {
+                iniPath = cmd[1];
+                preprocessPath(iniPath, packagePath);
+            }
+        } 
+        else if (commandName == HEX_FILE_STR) {
+            if (cmdSize >= 2) {
+                hexPath = cmd[1];
+                preprocessPath(hexPath, packagePath);
+            }
+        } 
+        else {
+            // Process all other commands
+            processCommand(cmd, packagePath, selectedCommand);
+        }
+        
+        // Clear the processed command immediately to free its memory
+        cmd = {};
     }
+
+    // Final cleanup
+    commands = {};
 
     #if USING_LOGGING_DIRECTIVE
     disableLogging = true;
     logFilePath = defaultLogFilePath;
     #endif
 
-    return commandSuccess;
+    return commandSuccess.load(std::memory_order_acquire);
 }
 
 
@@ -2764,316 +3923,528 @@ void handleMakeDirCommand(const std::vector<std::string>& cmd, const std::string
     }
 }
 
+// If destPath exactly matches a PROTECTED_FILES entry, redirects it to destPath + ".ultra"
+// BEFORE the operation so the live file is never touched.
+// For directory destinations (unzip, dir copy), renames any protected file that landed
+// at its exact path after the operation.
+static inline void redirectIfProtected(std::string& destPath) {
+    for (const std::string& file : PROTECTED_FILES) {
+        if (destPath == file) {
+            destPath += ".ultra";
+            return;
+        }
+    }
+}
+
+static inline void stageProtectedFromDir(const std::string& destPath) {
+    if (destPath.empty() || destPath.back() != '/') return;
+    for (const std::string& file : PROTECTED_FILES) {
+        if (file.compare(0, destPath.size(), destPath) == 0 && isFile(file)) {
+            rename(file.c_str(), (file + ".ultra").c_str());
+        }
+    }
+}
+
 void handleCopyCommand(const std::vector<std::string>& cmd, const std::string& packagePath) {
+    // Declare only the strings we always need
     std::string sourceListPath, destinationListPath, logSource, logDestination, sourcePath, destinationPath, copyFilterListPath, filterListPath;
     parseCommandArguments(cmd, packagePath, sourceListPath, destinationListPath, logSource, logDestination, sourcePath, destinationPath, copyFilterListPath, filterListPath);
-    long long totalBytesCopied, totalSize;
-
+    
     if (!sourceListPath.empty() && !destinationListPath.empty()) {
-        std::vector<std::string> sourceFilesList = readListFromFile(sourceListPath);
-        std::vector<std::string> destinationFilesList = readListFromFile(destinationListPath);
-
-        std::unordered_set<std::string> filterSet;
-        if (!filterListPath.empty())
-            filterSet = readSetFromFile(filterListPath);
-
+        // Process list-based copying
+        auto sourceFilesList = readListFromFile(sourceListPath);
+        auto destinationFilesList = readListFromFile(destinationListPath);
         
-        for (size_t i = 0; i < sourceFilesList.size(); ++i) {
-            sourcePath = sourceFilesList[i];
+        // Only create filterSet if filter file exists
+        std::unique_ptr<std::unordered_set<std::string>> filterSet;
+        if (!filterListPath.empty()) {
+            filterSet = std::make_unique<std::unordered_set<std::string>>(readSetFromFile(filterListPath, packagePath));
+        }
+        
+        const size_t listSize = std::min(sourceFilesList.size(), destinationFilesList.size());
+        for (size_t i = 0; i < listSize; ++i) {
+            // Reuse existing sourcePath and destinationPath strings
+            sourcePath = std::move(sourceFilesList[i]);
+            sourceFilesList[i].shrink_to_fit();     // Free the capacity
             preprocessPath(sourcePath, packagePath);
-            destinationPath = destinationFilesList[i];
+            
+            destinationPath = std::move(destinationFilesList[i]);
+            destinationFilesList[i].shrink_to_fit(); // Free the capacity
             preprocessPath(destinationPath, packagePath);
-            if (filterListPath.empty() || (!filterListPath.empty() && filterSet.find(sourcePath) == filterSet.end())) {
-                totalBytesCopied = 0;
-                totalSize = getTotalSize(sourcePath);  // Ensure this is calculated if needed.
+            
+            // Only check filter if it exists
+            const bool shouldCopy = !filterSet || filterSet->find(sourcePath) == filterSet->end();
+            
+            if (shouldCopy) {
+                redirectIfProtected(destinationPath);
+                const long long totalSize = getTotalSize(sourcePath);
+                long long totalBytesCopied = 0;
                 copyFileOrDirectory(sourcePath, destinationPath, &totalBytesCopied, totalSize);
             }
         }
+        
     } else {
-        // Ensure source and destination paths are set
+        // Single file/directory copying - early returns to avoid unnecessary work
         if (sourcePath.empty() || destinationPath.empty()) {
             #if USING_LOGGING_DIRECTIVE
-            logMessage("Source and destination paths must be specified.");
+            if (!disableLogging)
+                logMessage("Source and destination paths must be specified.");
             #endif
-        } else {
-            // Perform the copy operation
-            if (!isFileOrDirectory(sourcePath)) {
-                #if USING_LOGGING_DIRECTIVE
+            return;
+        }
+        
+        if (!isFileOrDirectory(sourcePath)) {
+            #if USING_LOGGING_DIRECTIVE
+            if (!disableLogging)
                 logMessage("Source file or directory doesn't exist: " + sourcePath);
-                #endif
-            } else {
-                if (sourcePath.find('*') != std::string::npos) {
-                    copyFileOrDirectoryByPattern(sourcePath, destinationPath, logSource, logDestination); // Copy files by pattern
-                } else {
-                    totalBytesCopied = 0;
-                    totalSize = getTotalSize(sourcePath);  // Ensure this is calculated if needed.
-                    copyFileOrDirectory(sourcePath, destinationPath, &totalBytesCopied, totalSize, logSource, logDestination);
-                }
+            #endif
+            return;
+        }
+        
+        if (sourcePath.find('*') != std::string::npos) {
+            std::unique_ptr<std::unordered_set<std::string>> filterSet;
+            if (!filterListPath.empty()) {
+                filterSet = std::make_unique<std::unordered_set<std::string>>(readSetFromFile(filterListPath, packagePath));
             }
+            copyFileOrDirectoryByPattern(sourcePath, destinationPath, logSource, logDestination, filterSet.get());
+            stageProtectedFromDir(destinationPath);
+        } else {
+            redirectIfProtected(destinationPath);
+            const long long totalSize = getTotalSize(sourcePath);
+            long long totalBytesCopied = 0;
+            copyFileOrDirectory(sourcePath, destinationPath, &totalBytesCopied, totalSize, logSource, logDestination);
         }
     }
 }
 
 void handleDeleteCommand(const std::vector<std::string>& cmd, const std::string& packagePath) {
+    // Declare only the strings we need
     std::string sourceListPath, destinationListPath, logSource, logDestination, sourcePath, destinationPath, copyFilterListPath, filterListPath;
     parseCommandArguments(cmd, packagePath, sourceListPath, destinationListPath, logSource, logDestination, sourcePath, destinationPath, copyFilterListPath, filterListPath);
-
+    
     if (!sourceListPath.empty()) {
-        std::vector<std::string> sourceFilesList = readListFromFile(sourceListPath);
-        std::unordered_set<std::string> filterSet;
-        if (!filterListPath.empty())
-            filterSet = readSetFromFile(filterListPath);
-
-        for (size_t i = 0; i < sourceFilesList.size(); ++i) {
-            sourcePath = sourceFilesList[i];
-            preprocessPath(sourcePath, packagePath);
-            if (filterListPath.empty() || (!filterListPath.empty() && filterSet.find(sourcePath) == filterSet.end()))
-                deleteFileOrDirectory(sourcePath);
+        // Process list-based deletion
+        auto sourceFilesList = readListFromFile(sourceListPath);
+        
+        // Only create filterSet if filter file exists
+        std::unique_ptr<std::unordered_set<std::string>> filterSet;
+        if (!filterListPath.empty()) {
+            filterSet = std::make_unique<std::unordered_set<std::string>>(readSetFromFile(filterListPath, packagePath));
         }
+        
+        for (size_t i = 0; i < sourceFilesList.size(); ++i) {
+            // Move string to avoid copy
+            sourcePath = std::move(sourceFilesList[i]);
+            sourceFilesList[i].shrink_to_fit();     // Free the capacity
+            preprocessPath(sourcePath, packagePath);
+            
+            // Only check filter if it exists
+            const bool shouldDelete = !filterSet || filterSet->find(sourcePath) == filterSet->end();
+            
+            if (shouldDelete) {
+                deleteFileOrDirectory(sourcePath, logSource);
+            }
+        }
+        
     } else {
-
-        // Ensure source path is set
+        // Single file/directory deletion - early returns for error conditions
         if (sourcePath.empty()) {
             #if USING_LOGGING_DIRECTIVE
-            logMessage("Source path must be specified.");
+            if (!disableLogging)
+                logMessage("Source path must be specified.");
             #endif
-        } else {
-            // Perform the delete operation
-            if (!isDangerousCombination(sourcePath)) {
-                if (sourcePath.find('*') != std::string::npos)
-                    deleteFileOrDirectoryByPattern(sourcePath, logSource); // Delete files by pattern
-                else
-                    deleteFileOrDirectory(sourcePath, logSource); // Delete single file or directory
-            } else {
-                #if USING_LOGGING_DIRECTIVE
+            return;
+        }
+        
+        if (isDangerousCombination(sourcePath)) {
+            #if USING_LOGGING_DIRECTIVE
+            if (!disableLogging)
                 logMessage("Dangerous combination detected.");
-                #endif
+            #endif
+            return;
+        }
+        
+        // Perform the delete operation
+        if (sourcePath.find('*') != std::string::npos) {
+            // Load filterSet for single path operations
+            std::unique_ptr<std::unordered_set<std::string>> filterSet;
+            if (!filterListPath.empty()) {
+                filterSet = std::make_unique<std::unordered_set<std::string>>(readSetFromFile(filterListPath, packagePath));
             }
+            deleteFileOrDirectoryByPattern(sourcePath, logSource, filterSet.get());
+        } else {
+            deleteFileOrDirectory(sourcePath, logSource);
         }
     }
 }
 
 
 void handleMirrorCommand(const std::vector<std::string>& cmd, const std::string& packagePath) {
-    if (cmd.size() >= 2) {
-        std::string sourcePath = cmd[1];
-        preprocessPath(sourcePath, packagePath);
-        std::string destinationPath;
-        if (cmd.size() >= 3) {
-            destinationPath = cmd[2];   // Extract the path first
-            preprocessPath(destinationPath, packagePath);  // Preprocess it
-        } else {
-            destinationPath = ROOT_PATH;  // Default value if cmd.size() < 3
-        }
-        std::string operation = (cmd[0] == "mirror_copy" || cmd[0] == "mirror_cp") ? "copy" : "delete";
-
-        if (sourcePath.find('*') == std::string::npos) {
-            mirrorFiles(sourcePath, destinationPath, operation);
-        } else {
-            auto fileList = getFilesListByWildcards(sourcePath);
-            for (const auto& sourceDirectory : fileList) {
-                mirrorFiles(sourceDirectory, destinationPath, operation);
-            }
+    // Early validation
+    if (cmd.size() < 2) {
+        #if USING_LOGGING_DIRECTIVE
+        if (!disableLogging)
+            logMessage("Mirror command requires at least a source path.");
+        #endif
+        return;
+    }
+    
+    // Extract and preprocess source path
+    std::string sourcePath = cmd[1];
+    preprocessPath(sourcePath, packagePath);
+    
+    // Extract destination path or use default
+    std::string destinationPath;
+    if (cmd.size() >= 3) {
+        destinationPath = cmd[2];
+        preprocessPath(destinationPath, packagePath);
+    } else {
+        destinationPath = ROOT_PATH;
+    }
+    
+    // Determine operation type using string_view to avoid string creation
+    const std::string_view commandName = cmd[0];
+    const std::string operation =
+        (commandName == "mirror-copy" || commandName == "mirror-cp" ||
+         commandName == "mirror_copy" || commandName == "mirror_cp") ? "copy" : "delete";
+    
+    if (sourcePath.find('*') == std::string::npos) {
+        // Single directory mirror
+        mirrorFiles(sourcePath, destinationPath, operation);
+    } else {
+        // Wildcard mirror - get file list and process with immediate cleanup
+        auto fileList = getFilesListByWildcards(sourcePath);
+        
+        // Process files one by one, freeing memory as we go
+        for (size_t i = 0; i < fileList.size(); ++i) {
+            // Move the string to avoid copy
+            const auto sourceDirectory = std::move(fileList[i]);
+            fileList[i].shrink_to_fit();     // Free the capacity
+            mirrorFiles(sourceDirectory, destinationPath, operation);
         }
     }
 }
 
 void handleMoveCommand(const std::vector<std::string>& cmd, const std::string& packagePath) {
+    // Declare only the strings we need
     std::string sourceListPath, destinationListPath, logSource, logDestination, sourcePath, destinationPath, copyFilterListPath, filterListPath;
     parseCommandArguments(cmd, packagePath, sourceListPath, destinationListPath, logSource, logDestination, sourcePath, destinationPath, copyFilterListPath, filterListPath);
-
-    long long totalBytesCopied, totalSize;
-
+    
     if (!sourceListPath.empty() && !destinationListPath.empty()) {
-        std::vector<std::string> sourceFilesList = readListFromFile(sourceListPath);
-        std::vector<std::string> destinationFilesList = readListFromFile(destinationListPath);
-        if (sourceFilesList.size() != destinationFilesList.size()) {
+        // Load filter sets (these are typically small)
+        std::unique_ptr<std::unordered_set<std::string>> copyFilterSet;
+        if (!copyFilterListPath.empty()) {
+            copyFilterSet = std::make_unique<std::unordered_set<std::string>>(readSetFromFile(copyFilterListPath, packagePath));
+        }
+        
+        std::unique_ptr<std::unordered_set<std::string>> filterSet;
+        if (!filterListPath.empty()) {
+            filterSet = std::make_unique<std::unordered_set<std::string>>(readSetFromFile(filterListPath, packagePath));
+        }
+
+        // Stream process both files line by line
+        FILE* sourceFile = fopen(sourceListPath.c_str(), "r");
+        FILE* destFile = fopen(destinationListPath.c_str(), "r");
+        
+        if (!sourceFile || !destFile) {
+            if (sourceFile) fclose(sourceFile);
+            if (destFile) fclose(destFile);
             #if USING_LOGGING_DIRECTIVE
-            logMessage("Source and destination lists must have the same number of entries.");
+            if (!disableLogging)
+                logMessage("Failed to open source or destination list files");
             #endif
-        } else {
-            std::unordered_set<std::string> copyFilterSet;
-            if (!copyFilterListPath.empty())
-                copyFilterSet = readSetFromFile(copyFilterListPath);
-
-            std::unordered_set<std::string> filterSet;
-            if (!filterListPath.empty())
-                filterSet = readSetFromFile(filterListPath);
-
-            for (size_t i = 0; i < sourceFilesList.size(); ++i) {
-                sourcePath = sourceFilesList[i];
-                preprocessPath(sourcePath, packagePath);
-                destinationPath = destinationFilesList[i];
-                preprocessPath(destinationPath, packagePath);
-                if (filterListPath.empty() || (!filterListPath.empty() && filterSet.find(sourcePath) == filterSet.end())) {
-                    if (!copyFilterListPath.empty() && copyFilterSet.find(sourcePath) != copyFilterSet.end()) {
-                        totalBytesCopied = 0;
-                        totalSize = getTotalSize(sourcePath);  // Ensure this is calculated if needed.
+            return;
+        }
+        
+        // Set larger buffers for better I/O performance
+        static constexpr size_t FILE_BUFFER_SIZE = 8192;
+        setvbuf(sourceFile, nullptr, _IOFBF, FILE_BUFFER_SIZE);
+        setvbuf(destFile, nullptr, _IOFBF, FILE_BUFFER_SIZE);
+        
+        static constexpr size_t BUFFER_SIZE = 8192;
+        char sourceBuffer[BUFFER_SIZE];
+        char destBuffer[BUFFER_SIZE];
+        
+        // Static string for repeated log messages to reduce allocations
+        #if USING_LOGGING_DIRECTIVE
+        static const std::string skipDirMsg = "Skipping non-empty directory: ";
+        #endif
+        
+        // Process files line by line simultaneously
+        while (fgets(sourceBuffer, BUFFER_SIZE, sourceFile) && 
+               fgets(destBuffer, BUFFER_SIZE, destFile)) {
+            
+            // Optimized newline removal - scan once instead of using strlen
+            char* srcEnd = sourceBuffer;
+            while (*srcEnd && *srcEnd != '\n') ++srcEnd;
+            const size_t sourceLen = srcEnd - sourceBuffer;
+            *srcEnd = '\0';
+            
+            char* destEnd = destBuffer;
+            while (*destEnd && *destEnd != '\n') ++destEnd;
+            const size_t destLen = destEnd - destBuffer;
+            *destEnd = '\0';
+            
+            // Clear and append to reuse existing string capacity
+            sourcePath.clear();
+            sourcePath.append(sourceBuffer, sourceLen);
+            
+            destinationPath.clear();
+            destinationPath.append(destBuffer, destLen);
+            
+            preprocessPath(sourcePath, packagePath);
+            preprocessPath(destinationPath, packagePath);
+            
+            // Cache filter lookup result
+            const bool shouldProcess = !filterSet || filterSet->find(sourcePath) == filterSet->end();
+            
+            if (shouldProcess) {
+                // Check if it's a directory using the buffer directly (avoid string access)
+                const bool isDirectory = sourceLen > 0 && sourcePath[sourceLen - 1] == '/';
+                
+                if (!isDirectory) {
+                    // Check copy filter once and cache result
+                    const bool shouldCopy = copyFilterSet && copyFilterSet->find(sourcePath) != copyFilterSet->end();
+                    
+                    if (shouldCopy) {
+                        redirectIfProtected(destinationPath);
+                        const long long totalSize = getTotalSize(sourcePath);
+                        long long totalBytesCopied = 0;
                         copyFileOrDirectory(sourcePath, destinationPath, &totalBytesCopied, totalSize);
                     } else {
-                        moveFileOrDirectory(sourcePath, destinationPath, "", "");
+                        redirectIfProtected(destinationPath);
+                        moveFileOrDirectory(sourcePath, destinationPath, logSource, logDestination);
                     }
+                } else {
+                    if (isDirectoryEmpty(sourcePath)) {
+                        moveFileOrDirectory(sourcePath, destinationPath, logSource, logDestination);
+                    }
+                    #if USING_LOGGING_DIRECTIVE
+                    else if (!disableLogging) {
+                        logMessage(skipDirMsg + sourcePath);
+                    }
+                    #endif
                 }
             }
         }
+        
+        fclose(sourceFile);
+        fclose(destFile);
+        
     } else {
-        // Ensure source and destination paths are set
+        // Single file/directory moving - early returns for error conditions
         if (sourcePath.empty() || destinationPath.empty()) {
             #if USING_LOGGING_DIRECTIVE
-            logMessage("Source and destination paths must be specified.");
+            if (!disableLogging)
+                logMessage("Source and destination paths must be specified.");
             #endif
-        } else {
-            // Perform the move operation
-            if (!isDangerousCombination(sourcePath)) {
-                if (sourcePath.find('*') != std::string::npos)
-                    moveFilesOrDirectoriesByPattern(sourcePath, destinationPath, logSource, logDestination); // Move files by pattern
-                else
-                    moveFileOrDirectory(sourcePath, destinationPath, logSource, logDestination); // Move single file or directory
-            } else {
-                #if USING_LOGGING_DIRECTIVE
+            return;
+        }
+        
+        if (isDangerousCombination(sourcePath)) {
+            #if USING_LOGGING_DIRECTIVE
+            if (!disableLogging)
                 logMessage("Dangerous combination detected.");
-                #endif
+            #endif
+            return;
+        }
+        
+        // Perform the move operation
+        if (sourcePath.find('*') != std::string::npos) {
+            std::unique_ptr<std::unordered_set<std::string>> filterSet;
+            if (!filterListPath.empty()) {
+                filterSet = std::make_unique<std::unordered_set<std::string>>(readSetFromFile(filterListPath, packagePath));
             }
+            moveFilesOrDirectoriesByPattern(sourcePath, destinationPath, logSource, logDestination, filterSet.get());
+            stageProtectedFromDir(destinationPath);
+        } else {
+            redirectIfProtected(destinationPath);
+            moveFileOrDirectory(sourcePath, destinationPath, logSource, logDestination);
         }
     }
 }
 
 void handleIniCommands(const std::vector<std::string>& cmd, const std::string& packagePath) {
-    if (cmd[0] == "add-ini-section" && cmd.size() >= 2) {
-        std::string sourcePath = cmd[1];
-        preprocessPath(sourcePath, packagePath);
-        std::string desiredSection = cmd[2];
-        removeQuotes(desiredSection);
+    const std::string& command = cmd[0];
+    const size_t cmdSize = cmd.size();
+    
+    // All commands need at least sourcePath and section
+    if (cmdSize < 3)
+        return;
+    
+    std::string sourcePath = cmd[1];
+    preprocessPath(sourcePath, packagePath);
+    std::string desiredSection = cmd[2];
+    removeQuotes(desiredSection);
+    
+    if (command == "add-ini-section") {
         addIniSection(sourcePath, desiredSection);
-    } else if (cmd[0] == "rename-ini-section" && cmd.size() >= 3) {
-        std::string sourcePath = cmd[1];
-        preprocessPath(sourcePath, packagePath);
-        std::string desiredSection = cmd[2];
-        removeQuotes(desiredSection);
+        
+    } else if (command == "rename-ini-section" && cmdSize >= 4) {
         std::string desiredNewSection = cmd[3];
         removeQuotes(desiredNewSection);
         renameIniSection(sourcePath, desiredSection, desiredNewSection);
-    } else if (cmd[0] == "remove-ini-section" && cmd.size() >= 2) {
-        std::string sourcePath = cmd[1];
-        preprocessPath(sourcePath, packagePath);
-        std::string desiredSection = cmd[2];
-        removeQuotes(desiredSection);
+        
+    } else if (command == "remove-ini-section") {
         removeIniSection(sourcePath, desiredSection);
-    } else if (cmd[0] == "remove-ini-key" && cmd.size() >= 3) {
-        std::string sourcePath = cmd[1];
-        preprocessPath(sourcePath, packagePath);
-        std::string desiredSection = cmd[2];
-        removeQuotes(desiredSection);
+        
+    } else if (command == "remove-ini-key" && cmdSize >= 4) {
         std::string desiredKey = cmd[3];
         removeQuotes(desiredKey);
         removeIniKey(sourcePath, desiredSection, desiredKey);
-    } else if ((cmd[0] == "set-ini-val" || cmd[0] == "set-ini-value") && cmd.size() >= 5) {
-        std::string sourcePath = cmd[1];
-        preprocessPath(sourcePath, packagePath);
-        std::string desiredSection = cmd[2];
-        removeQuotes(desiredSection);
+        
+    } else if ((command == "set-ini-val" || command == "set-ini-value") && cmdSize >= 5) {
         std::string desiredKey = cmd[3];
         removeQuotes(desiredKey);
-        std::string desiredValue = std::accumulate(cmd.begin() + 4, cmd.end(), std::string(""), [](const std::string& a, const std::string& b) -> std::string {
-            std::string returnStr = (a.empty() ? b : a + " " + b);
-            removeQuotes(returnStr);
-            return returnStr;
-        });
+        
+        std::string desiredValue = cmd[4];
+        removeQuotes(desiredValue);
+        
         setIniFileValue(sourcePath, desiredSection, desiredKey, desiredValue);
-    } else if (cmd[0] == "set-ini-key" && cmd.size() >= 5) {
-        std::string sourcePath = cmd[1];
-        preprocessPath(sourcePath, packagePath);
-        std::string desiredSection = cmd[2];
-        removeQuotes(desiredSection);
+        
+    } else if (command == "set-ini-key" && cmdSize >= 5) {
         std::string desiredKey = cmd[3];
         removeQuotes(desiredKey);
-        std::string desiredNewKey = std::accumulate(cmd.begin() + 4, cmd.end(), std::string(""), [](const std::string& a, const std::string& b) -> std::string {
-            std::string returnStr = (a.empty() ? b : a + " " + b);
-            removeQuotes(returnStr);
-            return returnStr;
-        });
+        
+        std::string desiredNewKey = cmd[4];
+        removeQuotes(desiredNewKey);
+        
         setIniFileKey(sourcePath, desiredSection, desiredKey, desiredNewKey);
+    } else if (command == "set-ini-val-matching-key" && cmdSize >= 5) {
+        // set-ini-val-matching-key <file> <patternKey> <newKey> <newValue>
+        // desiredSection is used as patternKey here (empty string = all sections)
+        std::string desiredKey = cmd[3];
+        removeQuotes(desiredKey);
+        
+        std::string desiredValue = cmd[4];
+        removeQuotes(desiredValue);
+        
+        if (!ult::isFile(sourcePath))
+            setCommandFailed();
+
+        // desiredSection here is the pattern key
+        addKeyToMatchingSections(sourcePath, desiredSection, desiredKey, desiredValue);
+        
+    } else if (command == "remove-ini-key-matching-key" && cmdSize >= 4) {
+        // remove-ini-key-matching-key <file> <patternKey> <keyToRemove>
+        // desiredSection is used as patternKey here (empty string = all sections)
+        std::string desiredKey = cmd[3];
+        removeQuotes(desiredKey);
+        
+        if (!ult::isFile(sourcePath))
+            setCommandFailed();
+
+        // desiredSection here is the pattern key
+        removeKeyFromMatchingSections(sourcePath, desiredSection, desiredKey);
+    }
+}
+
+void handleJsonCommands(const std::vector<std::string>& cmd, const std::string& packagePath) {
+    const std::string& command = cmd[0];
+    const size_t cmdSize = cmd.size();
+    
+    if (cmdSize < 4)
+        return;
+    
+    std::string sourcePath = cmd[1];
+    preprocessPath(sourcePath, packagePath);
+    
+    std::string key = cmd[2];
+    removeQuotes(key);
+    
+    std::string value;
+    for (size_t i = 3; i < cmdSize; ++i) {
+        if (i > 3)
+            value += ' ';
+        value += cmd[i];
+    }
+    removeQuotes(value);
+    
+    if (command == "set-json-key") {
+        ult::renameJsonKey(sourcePath, key, value);
+    } else if (command == "set-json-val" || command == "set-json-value") {
+        ult::setJsonValue(sourcePath, key, value, true);
     }
 }
 
 void handleHexEdit(const std::string& sourcePath, const std::string& secondArg, const std::string& thirdArg, const std::string& fourthArg, const std::string& fifthArg, const std::string& commandName, const std::vector<std::string>& cmd) {
+    
     if (commandName == "hex-by-offset") {
         hexEditByOffset(sourcePath, secondArg, thirdArg);
-    } else if (commandName == "hex-by-swap") {
-        if (cmd.size() >= 5) {
-            size_t occurrence = std::stoul(fourthArg);
-            hexEditFindReplace(sourcePath, secondArg, thirdArg, occurrence);
-        } else {
-            hexEditFindReplace(sourcePath, secondArg, thirdArg);
-        }
+        return;
+    }
+    
+    std::string hexDataToReplace;
+    std::string hexDataReplacement;
+    size_t occurrenceArgIndex = 0;
+    
+    if (commandName == "hex-by-swap") {
+        hexDataToReplace = secondArg;
+        hexDataReplacement = thirdArg;
+        occurrenceArgIndex = 4;
+        
     } else if (commandName == "hex-by-string") {
-        std::string hexDataToReplace = asciiToHex(secondArg);
-        std::string hexDataReplacement = asciiToHex(thirdArg);
+        hexDataToReplace = asciiToHex(secondArg);
+        hexDataReplacement = asciiToHex(thirdArg);
+        
+        // Pad to same length
+        const size_t lenDiff = (hexDataToReplace.length() > hexDataReplacement.length()) 
+            ? hexDataToReplace.length() - hexDataReplacement.length()
+            : hexDataReplacement.length() - hexDataToReplace.length();
+        
         if (hexDataReplacement.length() < hexDataToReplace.length()) {
-            hexDataReplacement += std::string(hexDataToReplace.length() - hexDataReplacement.length(), '\0');
-        } else if (hexDataReplacement.length() > hexDataToReplace.length()) {
-            hexDataToReplace += std::string(hexDataReplacement.length() - hexDataToReplace.length(), '\0');
+            hexDataReplacement.append(lenDiff, '\0');
+        } else if (hexDataToReplace.length() < hexDataReplacement.length()) {
+            hexDataToReplace.append(lenDiff, '\0');
         }
-        if (cmd.size() >= 5) {
-            std::string selectedStr = cmd[4];
-            removeQuotes(selectedStr);
-            size_t occurrence = std::stoul(selectedStr);
-            hexEditFindReplace(sourcePath, hexDataToReplace, hexDataReplacement, occurrence);
-        } else {
-            hexEditFindReplace(sourcePath, hexDataToReplace, hexDataReplacement);
-        }
-    } else if (commandName == "hex-by-decimal") {
-
-        std::string hexDataToReplace;
-        std::string hexDataReplacement;
-    
+        occurrenceArgIndex = 4;
+        
+    } else if (commandName == "hex-by-decimal" || commandName == "hex-by-rdecimal") {
+        const bool isReversed = (commandName == "hex-by-rdecimal");
         if (fourthArg.empty()) {
-            hexDataToReplace = decimalToHex(secondArg);
-            hexDataReplacement = decimalToHex(thirdArg);
+            hexDataToReplace   = isReversed ? decimalToReversedHex(secondArg) : decimalToHex(secondArg);
+            hexDataReplacement = isReversed ? decimalToReversedHex(thirdArg)  : decimalToHex(thirdArg);
         } else {
-            hexDataToReplace = decimalToHex(secondArg, std::stoi(fourthArg));
-            hexDataReplacement = decimalToHex(thirdArg, std::stoi(fourthArg));
+            if (!isValidNumber(fourthArg))
+                return;
+            const size_t byteSize = ult::stoi(fourthArg);
+            hexDataToReplace   = isReversed ? decimalToReversedHex(secondArg, byteSize) : decimalToHex(secondArg, byteSize);
+            hexDataReplacement = isReversed ? decimalToReversedHex(thirdArg,  byteSize) : decimalToHex(thirdArg,  byteSize);
         }
+        occurrenceArgIndex = 5;
+        
+    } else {
+        return;
+    }
     
-        if (cmd.size() >= 6) {
-            size_t occurrence = std::stoul(fifthArg);
-            hexEditFindReplace(sourcePath, hexDataToReplace, hexDataReplacement, occurrence);
-        } else {
-            hexEditFindReplace(sourcePath, hexDataToReplace, hexDataReplacement);
-        }
-    } else if (commandName == "hex-by-rdecimal") {
-        std::string hexDataToReplace;
-        std::string hexDataReplacement;
-    
-        if (fourthArg.empty()) {
-            hexDataToReplace = decimalToReversedHex(secondArg);
-            hexDataReplacement = decimalToReversedHex(thirdArg);
-        } else {
-            hexDataToReplace = decimalToReversedHex(secondArg, std::stoi(fourthArg));
-            hexDataReplacement = decimalToReversedHex(thirdArg, std::stoi(fourthArg));
-        }
-    
-        if (cmd.size() >= 6) {
-            size_t occurrence = std::stoul(fifthArg);
-            hexEditFindReplace(sourcePath, hexDataToReplace, hexDataReplacement, occurrence);
-        } else {
-            hexEditFindReplace(sourcePath, hexDataToReplace, hexDataReplacement);
-        }
+    // Handle occurrence parameter if present
+    if (cmd.size() >= occurrenceArgIndex + 1) {
+        std::string occurrenceStr = cmd[occurrenceArgIndex];
+        removeQuotes(occurrenceStr);
+        if (!isValidNumber(occurrenceStr))
+            return;
+        const size_t occurrence = ult::stoi(occurrenceStr);
+        hexEditFindReplace(sourcePath, hexDataToReplace, hexDataReplacement, occurrence);
+    } else {
+        hexEditFindReplace(sourcePath, hexDataToReplace, hexDataReplacement);
     }
 }
 
 void handleHexByCustom(const std::string& sourcePath, const std::string& customPattern, const std::string& offset, std::string hexDataReplacement, const std::string& commandName, std::string byteGroupSize) {
     if (hexDataReplacement != NULL_STR) {
-        if (commandName == "hex-by-custom-decimal-offset") {
-            if (!byteGroupSize.empty())
-                hexDataReplacement = decimalToHex(hexDataReplacement, std::stoi(byteGroupSize));
-            else
-                hexDataReplacement = decimalToHex(hexDataReplacement);
-        } else if (commandName == "hex-by-custom-rdecimal-offset") {
-            if (!byteGroupSize.empty())
-                hexDataReplacement = decimalToReversedHex(hexDataReplacement, std::stoi(byteGroupSize));
-            else
-                hexDataReplacement = decimalToReversedHex(hexDataReplacement);
+        if (commandName == "hex-by-custom-decimal-offset" || commandName == "hex-by-custom-rdecimal-offset") {
+            const bool isReversed = (commandName == "hex-by-custom-rdecimal-offset");
+            if (!byteGroupSize.empty()) {
+                if (!isValidNumber(byteGroupSize))
+                    return;
+                hexDataReplacement = isReversed
+                    ? decimalToReversedHex(hexDataReplacement, ult::stoi(byteGroupSize))
+                    : decimalToHex(hexDataReplacement, ult::stoi(byteGroupSize));
+            } else {
+                hexDataReplacement = isReversed
+                    ? decimalToReversedHex(hexDataReplacement)
+                    : decimalToHex(hexDataReplacement);
+            }
         }
         hexEditByCustomOffset(sourcePath, customPattern, offset, hexDataReplacement);
     }
@@ -3083,8 +4454,10 @@ void handleHexByCustom(const std::string& sourcePath, const std::string& customP
 void rebootToHekateConfig(Payload::HekateConfigList& configList, const std::string& option, bool isIni) {
     int rebootIndex = -1;  // Initialize rebootIndex to -1, indicating no match found
     auto configIterator = configList.begin();
-
     if (std::all_of(option.begin(), option.end(), ::isdigit)) {
+        if (!isValidNumber(option)) {
+            return;
+        }
         rebootIndex = ult::stoi(option);
         std::advance(configIterator, rebootIndex);
     } else {
@@ -3096,353 +4469,22 @@ void rebootToHekateConfig(Payload::HekateConfigList& configList, const std::stri
             }
         }
     }
-
     if (rebootIndex != -1) {
         Payload::RebootToHekateConfig(*configIterator, isIni);
     }
 }
 
-// Main processCommand function
-void processCommand(const std::vector<std::string>& cmd, const std::string& packagePath = "", const std::string& selectedCommand = "") {
-    const std::string& commandName = cmd[0];
+inline std::string getUnquoted(const std::vector<std::string>& cmd, size_t index) {
+    std::string value = cmd[index];
+    removeQuotes(value);
+    return value;
+}
 
-    if (commandName == "mkdir" || commandName == "make") {
-        handleMakeDirCommand(cmd, packagePath);
-    } else if (commandName == "cp" || commandName == "copy") {
-        handleCopyCommand(cmd, packagePath);
-    } else if (commandName == "del" || commandName == "delete") {
-        handleDeleteCommand(cmd, packagePath);
-    } else if (commandName.substr(0, 7) == "mirror_") {
-        handleMirrorCommand(cmd, packagePath);
-    } else if (commandName == "mv" || commandName == "move" || commandName == "rename") {
-        handleMoveCommand(cmd, packagePath);
-    } else if (commandName == "add-ini-section" || commandName == "rename-ini-section" || commandName == "remove-ini-section" || commandName == "remove-ini-key" || commandName == "set-ini-val" || commandName == "set-ini-value" || commandName == "set-ini-key") {
-        handleIniCommands(cmd, packagePath);
-    } else if (commandName == "set-footer") {
-        if (cmd.size() >= 2) {
-            std::string desiredValue = cmd[1];
-            removeQuotes(desiredValue);
-            if (desiredValue.find(NULL_STR) != std::string::npos)
-                commandSuccess = false;
-            else
-                setIniFileValue((packagePath + CONFIG_FILENAME), selectedCommand, FOOTER_STR, desiredValue);
-        }
-    } else if (commandName == "compare") {
-        if (cmd.size() >= 4) {
-            std::string path1 = cmd[1];
-            preprocessPath(path1, packagePath);
-            std::string path2 = cmd[2];
-            preprocessPath(path2, packagePath);
-            std::string outputPath = cmd[3];
-            preprocessPath(outputPath, packagePath);
-            if (path1.find('*') != std::string::npos)
-                compareWildcardFilesLists(path1, path2, outputPath);
-            else
-                compareFilesLists(path1, path2, outputPath);
-        }
-    } else if (commandName.substr(0, 7) == "hex-by-") {
-        if (cmd.size() >= 4) {
-            std::string sourcePath = cmd[1];
-            preprocessPath(sourcePath, packagePath);
-    
-            std::string secondArg = cmd[2];
-            removeQuotes(secondArg);
-            std::string thirdArg = cmd[3];
-            removeQuotes(thirdArg);
-            
-            std::string fourthArg;  // optional paramter, default empty
-            if (cmd.size() >= 5) {
-                fourthArg = cmd[4];
-                removeQuotes(fourthArg);
-            }
-
-            std::string fifthArg;  // optional paramter, default empty
-            if (cmd.size() >= 6) {
-                fifthArg = cmd[5];
-                removeQuotes(fifthArg);
-            }
-    
-            if (commandName == "hex-by-custom-offset" || commandName == "hex-by-custom-decimal-offset" || commandName == "hex-by-custom-rdecimal-offset") {
-                if (cmd.size() >= 5) {
-
-                    std::string customPattern = cmd[2];
-                    std::string offset = cmd[3];
-                    std::string hexDataReplacement = cmd[4];
-            
-                    removeQuotes(customPattern);
-                    removeQuotes(offset);
-                    removeQuotes(hexDataReplacement);
-            
-                    std::string byteGroupSize;  // optional
-                    if (cmd.size() >= 6) {
-                        byteGroupSize = cmd[5];
-                        removeQuotes(byteGroupSize);
-                    }
-            
-                    handleHexByCustom(sourcePath, customPattern, offset, hexDataReplacement, commandName, byteGroupSize);
-                }
-            } else {
-                handleHexEdit(sourcePath, secondArg, thirdArg, fourthArg, fifthArg, commandName, cmd);
-            }
-        }
-    } else if (commandName == "download") {
-        if (cmd.size() >= 3) {
-            std::string fileUrl = cmd[1];
-            preprocessUrl(fileUrl);
-            std::string destinationPath = cmd[2];
-            preprocessPath(destinationPath, packagePath);
-            bool downloadSuccess = false;
-            for (size_t i = 0; i < 3; ++i) {
-                downloadSuccess = downloadFile(fileUrl, destinationPath);
-                if (abortDownload.load(std::memory_order_acquire)) {
-                    downloadSuccess = false;
-                    break;
-                }
-                if (downloadSuccess) break;
-            }
-            commandSuccess = downloadSuccess && commandSuccess;
-        }
-    } else if (commandName == "unzip") {
-        if (cmd.size() >= 3) {
-            std::string sourcePath = cmd[1];
-            preprocessPath(sourcePath, packagePath);
-            std::string destinationPath = cmd[2];
-            preprocessPath(destinationPath, packagePath);
-            commandSuccess = unzipFile(sourcePath, destinationPath) && commandSuccess;
-        }
-    } else if (commandName == "pchtxt2ips") {
-        if (cmd.size() >= 3) {
-            std::string sourcePath = cmd[1];
-            preprocessPath(sourcePath, packagePath);
-            std::string destinationPath = cmd[2];
-            preprocessPath(destinationPath, packagePath);
-            commandSuccess = pchtxt2ips(sourcePath, destinationPath) && commandSuccess;
-        }
-    } else if (commandName == "pchtxt2cheat") {
-        if (cmd.size() >= 2) {
-            std::string sourcePath = cmd[1];
-            preprocessPath(sourcePath, packagePath);
-            commandSuccess = pchtxt2cheat(sourcePath) && commandSuccess;
-        }
-    } else if (commandName == "exec") {
-        if (cmd.size() >= 2) {
-            std::string bootCommandName = cmd[1];
-            removeQuotes(bootCommandName);
-            if (isFileOrDirectory(packagePath + BOOT_PACKAGE_FILENAME)) {
-                // Load only the commands from the specific section (bootCommandName)
-                auto bootCommands = loadSpecificSectionFromIni(packagePath + BOOT_PACKAGE_FILENAME, bootCommandName);
-            
-                if (!bootCommands.empty()) {
-                    bool resetCommandSuccess = false;
-                    if (!commandSuccess) resetCommandSuccess = true;
-            
-                    interpretAndExecuteCommands(std::move(bootCommands), packagePath, bootCommandName);
-                    resetPercentages();
-                    if (resetCommandSuccess) {
-                        commandSuccess = false;
-                    }
-                }
-            }
-
-        }
-    } else if (commandName == "reboot") { // credits to Studious Pancake for the Payload and utils methods
-        //spsmInitialize();
-        //i2cInitialize();
-        if (util::IsErista() || util::SupportsMarikoRebootToConfig()) {
-            std::string rebootOption;
-            if (cmd.size() >= 2) {
-                rebootOption = cmd[1];
-                removeQuotes(rebootOption);
-                if (cmd.size() >= 3) {
-                    std::string option = cmd[2];
-                    removeQuotes(option);
-                    if (rebootOption == "boot") {
-                        Payload::HekateConfigList bootConfigList = Payload::LoadHekateConfigList();
-                        rebootToHekateConfig(bootConfigList, option, false);
-                    } else if (rebootOption == "ini") {
-                        Payload::HekateConfigList iniConfigList = Payload::LoadIniConfigList();
-                        rebootToHekateConfig(iniConfigList, option, true);
-                    }
-                }
-                if (rebootOption == "UMS") {
-                    Payload::RebootToHekateUMS(Payload::UmsTarget_Sd);
-                } else if (rebootOption == "HEKATE" || rebootOption == "hekate") {
-                    Payload::RebootToHekateMenu();
-                } else if (isFileOrDirectory(rebootOption)) {
-                    std::string fileName = getNameFromPath(rebootOption);
-                    if (util::IsErista()) {
-                        Payload::PayloadConfig reboot_payload = {fileName, rebootOption};
-                        Payload::RebootToPayload(reboot_payload);
-                    } else {
-                        setIniFileValue("/bootloader/ini/" + fileName + ".ini", fileName, "payload", rebootOption);
-                        Payload::HekateConfigList iniConfigList = Payload::LoadIniConfigList();
-                        rebootToHekateConfig(iniConfigList, fileName, true);
-                    }
-                }
-            }
-            if (rebootOption.empty()) {
-                Payload::RebootToHekate();
-            }
-        }
-        
-        i2cExit();
-        splExit();
-        fsdevUnmountAll();
-        spsmShutdown(SpsmShutdownMode_Reboot);
-        spsmExit();
-    } else if (commandName == "shutdown") {
-        if (cmd.size() >= 2) {
-            std::string selection = cmd[1];
-            removeQuotes(selection);
-            if (selection == "controllers") {
-                powerOffAllControllers();
-            }
-        } else {
-            //spsmInitialize();
-            splExit();
-            fsdevUnmountAll();
-            spsmShutdown(SpsmShutdownMode_Normal);
-            spsmExit();
-        }
-        //if (cmd.size() >= 1) {
-        //    splExit();
-        //    fsdevUnmountAll();
-        //    spsmShutdown(SpsmShutdownMode_Normal);
-        //}
-    } else if (commandName == "exit") {
-        //triggerExit.store(true, std::memory_order_release);
-        if (cmd.size() >= 2) {
-            std::string selection = cmd[1];
-            removeQuotes(selection);
-            if (selection == "overlays") {
-                setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, IN_OVERLAY_STR, TRUE_STR); // this is handled within tesla.hpp
-            } else if (selection == "packages") {
-                setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "to_packages", TRUE_STR); // this is handled within tesla.hpp
-                setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, IN_OVERLAY_STR, TRUE_STR); // this is handled within tesla.hpp
-            }
-        }
-        exitingUltrahand = true;
-        //setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, IN_OVERLAY_STR, TRUE_STR); // this is handled within tesla.hpp
-        tsl::setNextOverlay(OVERLAY_PATH+"ovlmenu.ovl");
-        tsl::Overlay::get()->close();
-        return;
-    } else if (commandName == "backlight") {
-        if (cmd.size() >= 2) {
-            std::string togglePattern = cmd[1];
-            removeQuotes(togglePattern);
-            lblInitialize();
-            if (togglePattern == "auto") {
-                if (cmd.size() >= 3) {
-                    togglePattern = cmd[2];
-                    if (togglePattern == ON_STR)
-                        lblEnableAutoBrightnessControl();
-                    else if (togglePattern == OFF_STR)
-                        lblDisableAutoBrightnessControl();
-                }
-            }
-            else if (togglePattern == ON_STR)
-                lblSwitchBacklightOn(0);
-            else if (togglePattern == OFF_STR)
-                lblSwitchBacklightOff(0);
-            else if (isValidNumber(togglePattern)) {
-                lblSetCurrentBrightnessSetting(ult::stof(togglePattern) / 100.0f);
-            }
-            lblExit();
-        }
-    } else if (commandName == "volume") {
-        if (cmd.size() >= 2) {
-            std::string volumeInput = cmd[1];
-            removeQuotes(volumeInput);  // Sanitize input by removing quotes
-            
-            if (isValidNumber(volumeInput)) {
-                //logMessage("Volume input is a valid number: " + volumeInput);  // Log valid number
-                
-                // Convert input string to a float for percentage (0-100)
-                float volumePercentage = ult::stof(volumeInput);
-                //logMessage("Converted volume to percentage: " + ult::to_string(volumePercentage));  // Log the percentage
-                
-                // Ensure the volume is within valid range 0 to 100
-                if (volumePercentage < 0.0f || volumePercentage > 150.0f) {
-                    //logMessage("Volume percentage out of bounds: " + ult::to_string(volumePercentage));
-                    return;  // Exit if invalid percentage
-                }
-                
-                // Convert percentage (0-100) to volume scale (0-1)
-                float masterVolume = volumePercentage / 100.0f;
-                
-
-                //logMessage("Initializing settings service...");
-                audctlInitialize();
-
-                // Set the master volume
-                audctlSetSystemOutputMasterVolume(masterVolume);
-
-                audctlExit();
-            }
-        } else {
-            #if USING_LOGGING_DIRECTIVE
-            logMessage("Volume command missing required argument.");
-            #endif
-        }
-    //} else if (commandName == "wifi") {
-    //    disableLogging = false;
-    //    if (cmd.size() >= 2) {
-    //        std::string togglePattern = cmd[1];
-    //        removeQuotes(togglePattern);
-    //
-    //        Result rc;
-    //
-    //        if (togglePattern == ON_STR) {
-    //            logMessage("Turning Wi-Fi ON...");
-    //            rc = nifmSetWirelessCommunicationEnabled(true);  // Turn Wi-Fi on
-    //            if (R_SUCCEEDED(rc)) {
-    //                logMessage("Wi-Fi enabled successfully.");
-    //            } else {
-    //                logMessage("Failed to enable Wi-Fi. Error code: " + ult::to_string(rc));
-    //            }
-    //        } else if (togglePattern == OFF_STR) {
-    //            logMessage("Turning Wi-Fi OFF...");
-    //            rc = nifmSetWirelessCommunicationEnabled(false);  // Turn Wi-Fi off
-    //            if (R_SUCCEEDED(rc)) {
-    //                logMessage("Wi-Fi disabled successfully.");
-    //            } else {
-    //                logMessage("Failed to disable Wi-Fi. Error code: " + ult::to_string(rc));
-    //            }
-    //        } else {
-    //            logMessage("Invalid Wi-Fi toggle command: " + togglePattern);
-    //        }
-    //    } else {
-    //        logMessage("Wi-Fi command missing required argument.");
-    //    }
-    //
-    } else if (commandName == "refresh") {
-        if (cmd.size() == 1)
-            refreshPage = true;
-        else if (cmd.size() > 1) {
-            std::string refreshPattern = cmd[1];
-            removeQuotes(refreshPattern);
-            if (refreshPattern == "theme")
-                tsl::initializeThemeVars();
-            else if (refreshPattern == "package")
-                refreshPackage = true;
-            else if (refreshPattern == "wallpaper") {
-                reloadWallpaper();
-            }
-        }
-    } else if (commandName == "logging") {
-        interpreterLogging = true;
-    } else if (commandName == "clear") {
-        if (cmd.size() >= 2) {
-            std::string clearOption = cmd[1];
-            removeQuotes(clearOption);
-            if (clearOption == "log") {
-                #if USING_LOGGING_DIRECTIVE
-                deleteFileOrDirectory(defaultLogFilePath);
-                #endif
-            }
-            else if (clearOption == "hex_sum_cache") hexSumCache.clear();
-        }
-    }
+inline void setCommandFailed() {
+    commandSuccess.store(false, std::memory_order_release);
+}
+inline void setCommandResult(bool result) {
+    commandSuccess.store(result, std::memory_order_release);
 }
 
 void executeCommands(std::vector<std::vector<std::string>> commands) {
@@ -3450,128 +4492,1394 @@ void executeCommands(std::vector<std::vector<std::string>> commands) {
     resetPercentages();
 }
 
-void executeIniCommands(const std::string &iniPath, const std::string &section) {
-    if (isFileOrDirectory(iniPath)) {
+void executeIniCommands(const std::string &iniPath, const std::string &section, const std::string &packagePath = PACKAGE_PATH) {
+    if (isFile(iniPath)) {
         auto commands = loadSpecificSectionFromIni(iniPath, section);
         if (!commands.empty()) {
-            interpretAndExecuteCommands(std::move(commands), PACKAGE_PATH, section);
+            interpretAndExecuteCommands(std::move(commands), packagePath, section);
             resetPercentages();
         }
     }
+}
+
+// ---------------------------------------------------------------------------
+// ipcDispatch — open a service via smGetServiceOriginal (non-blocking), send
+// a void->void command, close the session, and return the dispatch Result.
+// Returns a failed Result immediately if the service is not registered.
+// ---------------------------------------------------------------------------
+static inline Result ipcDispatch(const char* svcName, u32 enumCmd) {
+    Handle handle = INVALID_HANDLE;
+    Result rc = smGetServiceOriginal(&handle, smEncodeName(svcName));
+    if (R_FAILED(rc)) return rc;
+    Service srv = {};
+    serviceCreate(&srv, handle);
+    rc = serviceDispatch(&srv, enumCmd);
+    serviceClose(&srv);
+    return rc;
+}
+
+// ---------------------------------------------------------------------------
+// Parse a TID string (bare 16-hex-char or 0x-prefixed) to u64.
+// Returns 0 on empty / invalid input.
+static inline u64 parseTid(const std::string& s) {
+    if (s.empty()) return 0;
+    const char* p = s.c_str();
+    if (s.size() > 2 && p[0] == '0' && (p[1] == 'x' || p[1] == 'X')) p += 2;
+    return static_cast<u64>(std::strtoull(p, nullptr, 16));
+}
+
+// Returns true when the module's content folder exists under /atmosphere/contents/.
+// This is true whether the module is currently running or not.
+inline bool moduleExists(u64 programId) {
+    if (programId == 0) return false;
+    char path[FS_MAX_PATH];
+    std::snprintf(path, sizeof(path), "/atmosphere/contents/%016lX", programId);
+    return isDirectory(path);
+}
+
+// Returns true when the module is currently running (has an active process ID).
+inline bool moduleIsActive(u64 programId) {
+    if (programId == 0) return false;
+    u64 pid = 0;
+    return R_SUCCEEDED(pmdmntGetProcessId(&pid, programId)) && pid != 0;
+}
+
+// ipcPollExit — poll pmdmnt every 50 ms for up to 200 ms waiting for a
+// process to disappear. Returns true as soon as the process is gone.
+// ---------------------------------------------------------------------------
+static inline bool ipcPollExit(u64 programId) {
+    constexpr u64 kInterval = 50'000'000ULL;
+    constexpr u64 kTimeout  = 200'000'000ULL;
+    u64 elapsed = 0;
+    while (elapsed < kTimeout) {
+        u64 pid = 0;
+        if (R_FAILED(pmdmntGetProcessId(&pid, programId)) || pid == 0)
+            return true;
+        svcSleepThread(kInterval);
+        elapsed += kInterval;
+    }
+    return false;
+}
+
+// Main processCommand function
+void processCommand(const std::vector<std::string>& cmd, const std::string& packagePath = "", const std::string& selectedCommand = "") {
+    const std::string& commandName = cmd[0];
+    const size_t cmdSize = cmd.size();
+    
+    // Fast path dispatch by first character
+    switch (commandName[0]) {
+        case 'a':
+            if (commandName == "add-ini-section") {
+                handleIniCommands(cmd, packagePath);
+                return;
+            }
+            break;
+            
+        case 'b':
+            if (commandName == "back") {
+                goBackAfter.store(true, std::memory_order_release);
+                return;
+            }
+            if (cmdSize >= 2 && commandName == "backlight") {
+                std::string togglePattern = getUnquoted(cmd, 1);
+                lblInitialize();
+                if (togglePattern == "auto") {
+                    if (cmdSize >= 3) {
+                        togglePattern = cmd[2];
+                        if (togglePattern == ON_STR)
+                            lblEnableAutoBrightnessControl();
+                        else if (togglePattern == OFF_STR)
+                            lblDisableAutoBrightnessControl();
+                    }
+                } else if (togglePattern == ON_STR) {
+                    lblSwitchBacklightOn(0);
+                } else if (togglePattern == OFF_STR) {
+                    lblSwitchBacklightOff(0);
+                } else if (isValidNumber(togglePattern)) {
+                    lblSetCurrentBrightnessSetting(ult::stof(togglePattern) / 100.0f);
+                }
+                lblExit();
+                return;
+            }
+            break;
+            
+        case 'c':
+            if (commandName == "cp" || commandName == "copy") {
+                handleCopyCommand(cmd, packagePath);
+                return;
+            }
+            if (commandName == "compare") {
+                if (cmdSize >= 4) {
+                    std::string path1 = cmd[1];
+                    preprocessPath(path1, packagePath);
+                    std::string path2 = cmd[2];
+                    preprocessPath(path2, packagePath);
+                    std::string outputPath = cmd[3];
+                    preprocessPath(outputPath, packagePath);
+                    if (path1.find('*') != std::string::npos)
+                        compareWildcardFilesLists(path1, path2, outputPath);
+                    else
+                        compareFilesLists(path1, path2, outputPath);
+                }
+                return;
+            }
+            if (cmdSize >= 2 && commandName == "clear") {
+                const std::string clearOption = getUnquoted(cmd, 1);
+                if (clearOption == "log") {
+                    #if USING_LOGGING_DIRECTIVE
+                    deleteFileOrDirectory(defaultLogFilePath);
+                    #endif
+                } else if (clearOption == "hex_sum_cache") {
+                    hexSumCache.clear();
+                }
+                return;
+            }
+            break;
+            
+        case 'd':
+            if (commandName == "del" || commandName == "delete") {
+                handleDeleteCommand(cmd, packagePath);
+                return;
+            }
+            if (commandName == "download" || commandName == "download-no-retry") {
+                if (cmdSize >= 3) {
+                    std::string fileUrl = cmd[1];
+                    preprocessUrl(fileUrl);
+                    std::string destinationPath = cmd[2];
+                    preprocessPath(destinationPath, packagePath);
+                    bool downloadSuccess = false;
+                    
+                    const bool shouldRetry = (commandName == "download");
+                    const size_t maxAttempts = shouldRetry ? 3 : 1;
+                    
+                    for (size_t i = 0; i < maxAttempts; ++i) {
+                        downloadSuccess = downloadFile(fileUrl, destinationPath);
+                        if (abortDownload.load(std::memory_order_acquire)) {
+                            downloadSuccess = false;
+                            break;
+                        }
+                        if (downloadSuccess) break;
+                        
+                        if (shouldRetry && i < maxAttempts - 1) {
+                            svcSleepThread(200'000'000);
+                        }
+                    }
+                    
+                    commandSuccess.store(
+                        downloadSuccess && commandSuccess.load(std::memory_order_acquire),
+                        std::memory_order_release
+                    );
+                }
+                return;
+            }
+            if (cmdSize >= 2 && commandName == "dot-clean") {
+                std::string path = cmd[1];
+                preprocessPath(path, packagePath);
+                dotCleanDirectory(path);
+                return;
+            }
+            break;
+            
+        case 'e':
+            if (cmdSize >= 2 && commandName == "exec") {
+                const std::string sectionName = getUnquoted(cmd, 1);
+                
+                if (cmdSize >= 3) {
+                    const std::string secondArg = getUnquoted(cmd, 2);
+                    
+                    if (secondArg.length() >= 4 && secondArg.substr(secondArg.length() - 4) == ".ini") {
+                        std::string iniPath = secondArg;
+                        preprocessPath(iniPath, packagePath);
+                        
+                        const size_t lastSlash = iniPath.find_last_of('/');
+                        const std::string iniPackagePath = (lastSlash != std::string::npos)
+                            ? iniPath.substr(0, lastSlash + 1) : packagePath;
+                        
+                        bool resetCommandSuccess = false;
+                        if (!commandSuccess.load(std::memory_order_acquire))
+                            resetCommandSuccess = true;
+                        
+                        executeIniCommands(iniPath, sectionName, iniPackagePath);
+                        
+                        if (resetCommandSuccess)
+                            setCommandFailed();
+                    } else {
+                        setCommandFailed();
+                    }
+                } else {
+                    bool resetCommandSuccess = false;
+                    if (!commandSuccess.load(std::memory_order_acquire))
+                        resetCommandSuccess = true;
+                    
+                    executeIniCommands(packagePath + BOOT_PACKAGE_FILENAME, sectionName, packagePath);
+                    
+                    if (resetCommandSuccess)
+                        setCommandFailed();
+                }
+                return;
+            }
+            if (commandName == "exit") {
+                if (cmdSize >= 2) {
+                    // Explicit destination: close overlay and relaunch into the requested tab.
+                    const std::string selection = getUnquoted(cmd, 1);
+                    if (selection == "to_overlays") {
+                        setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, IN_OVERLAY_STR, TRUE_STR);
+                        exitingUltrahand.store(true, std::memory_order_release);
+                        ult::launchingOverlay.store(true, std::memory_order_release);
+                        tsl::setNextOverlay(OVERLAY_PATH+"ovlmenu.ovl");
+                        tsl::Overlay::get()->close(true);
+                    } else if (selection == "to_packages") {
+                        setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "to_packages", TRUE_STR);
+                        setIniFileValue(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, IN_OVERLAY_STR, TRUE_STR);
+                        exitingUltrahand.store(true, std::memory_order_release);
+                        ult::launchingOverlay.store(true, std::memory_order_release);
+                        tsl::setNextOverlay(OVERLAY_PATH+"ovlmenu.ovl");
+                        tsl::Overlay::get()->close(true);
+                    } else if (selection == "package") {
+                        // Bare `exit package`: signal the UI thread to return to the packages menu instantly.
+                        // PackageMenu::handleInput() will drain returnContextStack, identify the
+                        // originating package folder, and swapTo<MainMenu> on the packages tab with
+                        // the cursor positioned on the correct package entry.
+                        triggerReturnToPackages.store(true, std::memory_order_release);
+                    } if (selection == "ovlloader") {
+                        if (requestOverlayExit()) {
+                            exitingUltrahand.store(true, std::memory_order_release);
+                            ult::launchingOverlay.store(true, std::memory_order_release);
+                            tsl::setNextOverlay(OVERLAY_PATH+"ovlmenu.ovl");
+                            tsl::Overlay::get()->close(true);
+                        }
+                    }
+                    // Unknown arg: no-op (fall through to return)
+                } else {
+                    exitingUltrahand.store(true, std::memory_order_release);
+                    ult::launchingOverlay.store(true, std::memory_order_release);
+                    tsl::setNextOverlay(OVERLAY_PATH+"ovlmenu.ovl");
+                    tsl::Overlay::get()->close(true);
+                }
+                return;
+            }
+
+            break;
+            
+        case 'f':
+            if (commandName == "force_failure") {
+                setCommandFailed();
+                return;
+            } if (commandName == "flag") {
+                if (cmdSize >= 3) {
+                    std::string wildcardPattern = cmd[1];
+                    preprocessPath(wildcardPattern, packagePath);
+                    std::string outputDir = cmd[2];
+                    preprocessPath(outputDir, packagePath);
+                    createFlagFiles(wildcardPattern, outputDir);
+                } else {
+                    #if USING_LOGGING_DIRECTIVE
+                    if (!disableLogging)
+                        logMessage("Usage: flag <wildcardPattern> <outputDir>");
+                    #endif
+                }
+                return;
+            }
+            break;
+            
+        case 'h':
+            if (commandName.compare(0, 7, "hex-by-") == 0) {
+                if (cmdSize >= 4) {
+                    std::string sourcePath = cmd[1];
+                    preprocessPath(sourcePath, packagePath);
+                    
+                    const std::string secondArg = getUnquoted(cmd, 2);
+                    const std::string thirdArg = getUnquoted(cmd, 3);
+                    
+                    std::string fourthArg;
+                    if (cmdSize >= 5)
+                        fourthArg = getUnquoted(cmd, 4);
+                    
+                    std::string fifthArg;
+                    if (cmdSize >= 6)
+                        fifthArg = getUnquoted(cmd, 5);
+                    
+                    if (commandName == "hex-by-custom-offset" || 
+                        commandName == "hex-by-custom-decimal-offset" || 
+                        commandName == "hex-by-custom-rdecimal-offset") {
+                        if (cmdSize >= 5) {
+                            const std::string customPattern = getUnquoted(cmd, 2);
+                            const std::string offset = getUnquoted(cmd, 3);
+                            const std::string hexDataReplacement = getUnquoted(cmd, 4);
+                            
+                            std::string byteGroupSize;
+                            if (cmdSize >= 6)
+                                byteGroupSize = getUnquoted(cmd, 5);
+                            
+                            handleHexByCustom(sourcePath, customPattern, offset, hexDataReplacement, commandName, byteGroupSize);
+                        }
+                    } else {
+                        handleHexEdit(sourcePath, secondArg, thirdArg, fourthArg, fifthArg, commandName, cmd);
+                    }
+                }
+                return;
+            }
+            break;
+            
+        case 'i':
+            if (commandName == "ipc_exists") {
+                // ipc_exists <SERVICE_NAME>  — success when service is registered.
+                // smGetServiceOriginal never blocks on an unregistered name.
+                if (cmdSize >= 2) {
+                    Handle handle = INVALID_HANDLE;
+                    const bool registered = R_SUCCEEDED(
+                        smGetServiceOriginal(&handle, smEncodeName(cmd[1].c_str())));
+                    if (registered) svcCloseHandle(handle);
+                    setCommandResult(registered);
+                }
+                return;
+            }
+            if (commandName == "ipc-exec") {
+                // ipc-exec <SERVICE_NAME> <ENUM_CMD>
+                // Sends a void->void IPC command. Success = dispatch accepted.
+                if (cmdSize >= 3) {
+                    const u32 enumCmd = static_cast<u32>(ult::stoi(cmd[2]));
+                    commandSuccess.store(
+                        R_SUCCEEDED(ipcDispatch(cmd[1].c_str(), enumCmd)),
+                        std::memory_order_release);
+                } else {
+                    setCommandFailed();
+                }
+                return;
+            }
+            break;
+
+        case 'l':
+            if (commandName == "logging") {
+                interpreterLogging.store(true, std::memory_order_release);
+                return;
+            }
+            break;
+            
+        case 'm':
+            if (commandName == "mkdir" || commandName == "make") {
+                handleMakeDirCommand(cmd, packagePath);
+                return;
+            }
+            if (commandName == "mv" || commandName == "move") {
+                handleMoveCommand(cmd, packagePath);
+                return;
+            }
+            // legacy support for `mirror_`
+            if ((commandName.compare(0, 7, "mirror_") == 0) || (commandName.compare(0, 7, "mirror-") == 0)) {
+                handleMirrorCommand(cmd, packagePath);
+                return;
+            }
+            if (commandName == "matching_txt_line") {
+                // [!]matching_txt_line <path> <line...>
+                if (cmdSize >= 3) {
+                    std::string path = cmd[1];
+                    preprocessPath(path, packagePath);
+                    std::string line = getUnquoted(cmd, 2);
+                    for (size_t i = 3; i < cmdSize; ++i) { line += ' '; line += getUnquoted(cmd, i); }
+                    const bool match = txtLineExists(path, line);
+                    setCommandResult(match);
+                } else { setCommandFailed(); }
+                return;
+            }
+            if (commandName == "matching_hex_val") {
+                // [!]matching_hex_val <path> <offset> <hex>
+                if (cmdSize >= 4) {
+                    std::string path = cmd[1];
+                    preprocessPath(path, packagePath);
+                    const uint32_t offset = static_cast<uint32_t>(
+                        isValidNumber(cmd[2]) ? std::strtoul(cmd[2].c_str(), nullptr, 0) : 0u);
+                    const bool match = hexValMatches(path, offset, getUnquoted(cmd, 3));
+                    setCommandResult(match);
+                } else { setCommandFailed(); }
+                return;
+            }
+            if (commandName == "matching_ini_val") {
+                // [!]matching_ini_val <path> <section> <key> <value...>
+                if (cmdSize >= 5) {
+                    std::string path = cmd[1];
+                    preprocessPath(path, packagePath);
+                    std::string expected = getUnquoted(cmd, 4);
+                    for (size_t i = 5; i < cmdSize; ++i) { expected += ' '; expected += getUnquoted(cmd, i); }
+                    std::string actual = parseValueFromIniSection(path, getUnquoted(cmd, 2), getUnquoted(cmd, 3));
+                    removeQuotes(actual);
+                    setCommandResult(actual == expected);
+                } else { setCommandFailed(); }
+                return;
+            }
+            if (commandName == "module_exists") {
+                const bool exists = cmdSize >= 2 && moduleExists(parseTid(cmd[1]));
+                setCommandResult(exists);
+                return;
+            }
+            if (commandName == "module_is_active") {
+                const bool active = cmdSize >= 2 && moduleIsActive(parseTid(cmd[1]));
+                setCommandResult(active);
+                return;
+            }
+            if (commandName == "module") {
+                // module start <TID> — launch a sysmodule by program ID.
+                // module stop  <TID> — stop a sysmodule, graceful-first with
+                //                      force-kill fallback for dynamic modules.
+                // Refuses start/stop of static modules with no graceful contract.
+                // <TID>: bare 16-hex-char folder name or 0x-prefixed program ID.
+                if (cmdSize >= 3) {
+                    const std::string& subcmd = cmd[1];
+                    const char* tidCStr = cmd[2].c_str();
+                    if (cmd[2].size() > 2 && tidCStr[0] == '0' &&
+                        (tidCStr[1] == 'x' || tidCStr[1] == 'X'))
+                        tidCStr += 2;
+                    const u64 programId = static_cast<u64>(
+                        std::strtoull(tidCStr, nullptr, 16));
+                    if (programId == 0) {
+                        setCommandFailed();
+                        return;
+                    }
+
+                    // Read toolbox.json — safe defaults if absent.
+                    bool needReboot  = true;
+                    bool hasGraceful = false;
+                    char gracefulSvc[16] = {};
+                    u32  gracefulCmd = 0;
+                    {
+                        char tbPath[FS_MAX_PATH];
+                        std::snprintf(tbPath, sizeof(tbPath),
+                            "/atmosphere/contents/%016lX/toolbox.json", programId);
+                        FILE* fp = std::fopen(tbPath, "rb");
+                        if (fp) {
+                            std::fseek(fp, 0, SEEK_END);
+                            const long sz = std::ftell(fp);
+                            if (sz > 0 && sz <= 4096) {
+                                std::fseek(fp, 0, SEEK_SET);
+                                char tbBuf[4096];
+                                if (std::fread(tbBuf, 1, sz, fp) == static_cast<size_t>(sz)) {
+                                    tbBuf[sz] = '\0';
+                                    cJSON* tb = cJSON_ParseWithLength(tbBuf, sz);
+                                    if (tb) {
+                                        cJSON* ri = cJSON_GetObjectItem(tb, "requires_reboot");
+                                        if (ri && cJSON_IsBool(ri))
+                                            needReboot = static_cast<bool>(cJSON_IsTrue(ri));
+                                        cJSON* si = cJSON_GetObjectItem(tb, "shutdown_service");
+                                        cJSON* ci = cJSON_GetObjectItem(tb, "shutdown_cmd");
+                                        if (si && cJSON_IsString(si) && ci && cJSON_IsNumber(ci)) {
+                                            const size_t svcLen = std::strlen(si->valuestring);
+                                            if (svcLen > 0 && svcLen <= 8 && ci->valueint >= 0) {
+                                                std::memcpy(gracefulSvc, si->valuestring, svcLen);
+                                                gracefulSvc[svcLen] = '\0';
+                                                gracefulCmd = static_cast<u32>(ci->valueint);
+                                                hasGraceful = true;
+                                            }
+                                        }
+                                        cJSON_Delete(tb);
+                                    }
+                                }
+                            }
+                            std::fclose(fp);
+                        }
+                    }
+
+                    // Static modules with no graceful contract cannot be toggled.
+                    if (needReboot && !hasGraceful) {
+                        setCommandFailed();
+                        return;
+                    }
+
+                    if (subcmd == "start") {
+                        pmshellInitialize();
+                        const NcmProgramLocation loc{
+                            .program_id = programId,
+                            .storageID  = NcmStorageId_None,
+                        };
+                        u64 pid = 0;
+                        const bool ok = R_SUCCEEDED(pmshellLaunchProgram(0, &loc, &pid));
+                        pmshellExit();
+                        setCommandResult(ok);
+
+                    } else if (subcmd == "stop") {
+                        bool stopped = false;
+                        if (hasGraceful &&
+                            R_SUCCEEDED(ipcDispatch(gracefulSvc, gracefulCmd)))
+                            stopped = ipcPollExit(programId);
+                        if (!stopped && !needReboot) {
+                            pmshellInitialize();
+                            stopped = R_SUCCEEDED(pmshellTerminateProgram(programId));
+                            pmshellExit();
+                        }
+                        setCommandResult(stopped);
+
+                    } else {
+                        setCommandFailed();
+                    }
+                } else {
+                    setCommandFailed();
+                }
+                return;
+            }
+            break;
+            
+        case 'n':
+            if (commandName == "notify" || commandName == "notify-now" ||
+                commandName == "notification" || commandName == "notification-now") {
+                if (cmdSize > 1 && tsl::notification) {
+                    const std::string text = getUnquoted(cmd, 1);
+                    size_t argIdx = 2;
+            
+                    // Helper: peek next arg, consume and advance only if predicate is true
+                    auto tryConsume = [&](auto pred) -> std::string {
+                        if (argIdx < cmdSize) {
+                            const std::string val = getUnquoted(cmd, argIdx);
+                            if (pred(val)) { ++argIdx; return val; }
+                        }
+                        return {};
+                    };
+            
+                    const std::string fontStr = tryConsume([](const std::string& s){ 
+                        return isValidNumber(s) && ult::stoi(s) >= 1 && ult::stoi(s) <= 34; 
+                    });
+                    const std::string alignStr = tryConsume([](const std::string& s){ return s == LEFT_STR || s == CENTER_STR || s == RIGHT_STR; });
+                    const std::string splitStr = tryConsume([](const std::string& s){ return s == WORD_STR || s == CHAR_STR; });
+                    const std::string durStr = tryConsume([](const std::string& s){ return isValidNumber(s); });
+                    const std::string title    = tryConsume([](const std::string& s){ return s != TRUE_STR && s != FALSE_STR; });
+                    const std::string showTimeStr = tryConsume([](const std::string& s){ return s == TRUE_STR || s == FALSE_STR; });
+                    const std::string appId    = (argIdx < cmdSize) ? getUnquoted(cmd, argIdx) : "";
+            
+                    const bool hasTitle = !title.empty();
+                    const int  fontSize = !fontStr.empty()  ? std::clamp(ult::stoi(fontStr), 1, 34)
+                                                             : (hasTitle ? 24 : 26);
+                    const std::string_view alignment = !alignStr.empty() ? std::string_view(alignStr)
+                                                                          : (hasTitle ? LEFT_STR : CENTER_STR);
+                    const bool showTime = showTimeStr.empty() || showTimeStr == TRUE_STR;
+            
+                    const bool now = commandName.size() > 4 &&
+                                     commandName.compare(commandName.size() - 4, 4, "-now") == 0;
+                    
+                    const u32 duration = durStr.empty()    ? (!now ? 4000u : 3000u)
+                                       : durStr == "0"     ? 0u
+                                       : static_cast<u32>(std::clamp(ult::stoi(durStr), 500, 30000));
+                    tsl::notification->show(text, fontSize, 20,
+                                            appId, title, duration,
+                                            now, false, showTime,
+                                            alignment,
+                                            splitStr);
+                }
+                return;
+            }
+            if (commandName == "ntp-sync") {
+                // ntp-sync <url>  — on-demand clock sync; checks internet access internally
+                if (cmdSize >= 2) {
+                    std::string url = getUnquoted(cmd, 1);
+                    setCommandResult(ult::syncNtp(url));
+                } else { setCommandFailed(); }
+                return;
+            }
+            break;
+            
+        case 'o':
+            if (commandName == "open") {
+                if (cmdSize >= 2) {
+                    std::string overlayPath = getUnquoted(cmd, 1);
+                    preprocessPath(overlayPath, packagePath);
+                    
+                    if (!isFile(overlayPath)) {
+                        #if USING_LOGGING_DIRECTIVE
+                        if (!disableLogging)
+                            logMessage("Overlay file not found: " + overlayPath);
+                        #endif
+                        setCommandFailed();
+                        return;
+                    }
+                    
+                    std::string launchArgs;
+                    if (cmdSize > 2) {
+                        for (size_t i = 2; i < cmdSize; ++i) {
+                            if (i > 2) launchArgs += " ";
+                            launchArgs += getUnquoted(cmd, i);
+                        }
+                    }
+                    
+                    {
+                        std::lock_guard<std::mutex> lock(ult::overlayLaunchMutex);
+                        ult::requestedOverlayPath = overlayPath;
+                        ult::requestedOverlayArgs = launchArgs;
+                        ult::overlayLaunchRequested.store(true, std::memory_order_release);
+                    }
+                    
+                    #if USING_LOGGING_DIRECTIVE
+                    if (!disableLogging)
+                        logMessage("Requesting overlay launch: " + overlayPath + " with args: " + launchArgs);
+                    #endif
+                    
+                    return;
+                } else {
+                    #if USING_LOGGING_DIRECTIVE
+                    if (!disableLogging)
+                        logMessage("Usage: open <overlay_path> [launch_arguments...]");
+                    #endif
+                    setCommandFailed();
+                    return;
+                }
+            }
+            break;
+            
+        case 'p':
+            if (commandName == "path_exists") {
+                if (cmdSize >= 2) {
+                    std::string sourcePath = cmd[1];
+                    preprocessPath(sourcePath, packagePath);
+                    setCommandResult(ult::isFileOrDirectory(sourcePath));
+                }
+            }
+            if (commandName == "pchtxt2ips") {
+                if (cmdSize >= 3) {
+                    std::string sourcePath = cmd[1];
+                    preprocessPath(sourcePath, packagePath);
+                    std::string destinationPath = cmd[2];
+                    preprocessPath(destinationPath, packagePath);
+                    commandSuccess.store(
+                        pchtxt2ips(sourcePath, destinationPath) && commandSuccess.load(std::memory_order_acquire),
+                        std::memory_order_release
+                    );
+                }
+                return;
+            }
+            if (commandName == "pchtxt2cheat") {
+                if (cmdSize >= 2) {
+                    std::string sourcePath = cmd[1];
+                    preprocessPath(sourcePath, packagePath);
+                    if (cmdSize >= 3) {
+                        const std::string cheatName = cmd[2];
+                        commandSuccess.store(
+                            pchtxt2cheat(sourcePath, cheatName) && commandSuccess.load(std::memory_order_acquire),
+                            std::memory_order_release
+                        );
+                    } else {
+                        commandSuccess.store(
+                            pchtxt2cheat(sourcePath) && commandSuccess.load(std::memory_order_acquire),
+                            std::memory_order_release
+                        );
+                    }
+                }
+                return;
+            }
+            break;
+            
+        case 'r':
+            if (commandName == "rename") {
+                handleMoveCommand(cmd, packagePath);
+                return;
+            }
+            if (commandName == "rename-ini-section" || commandName == "remove-ini-section" || 
+                commandName == "remove-ini-key" || commandName == "remove-ini-key-matching-key") {
+                handleIniCommands(cmd, packagePath);
+                return;
+            }
+            if (commandName == "refresh") {
+                if (cmdSize == 1) {
+                    refreshPage.store(true, std::memory_order_release);
+                } else {
+                    const std::string refreshPattern = getUnquoted(cmd, 1);
+                    if (refreshPattern == "theme")
+                        tsl::initializeThemeVars();
+                    else if (refreshPattern == "package")
+                        refreshPackage.store(true, std::memory_order_release);
+                    else if (refreshPattern == "wallpaper")
+                        refreshWallpaperNow.store(true, std::memory_order_release);
+                    else if (refreshPattern == "combos")
+                        ult::refreshCombos.store(true, std::memory_order_release);
+                }
+                return;
+            }
+            if (commandName == "refresh-return") {
+                refreshReturnAfter.store(true, std::memory_order_release);
+                return;
+            }
+            if (cmdSize > 1 && commandName == "refresh-to") {
+                const std::string refreshPattern = getUnquoted(cmd, 1);
+                std::string refreshPattern2 = "";
+                std::string refreshPattern3 = "";
+                
+                if (cmdSize > 2)
+                    refreshPattern2 = getUnquoted(cmd, 2);
+                
+                if (cmdSize > 3)
+                    refreshPattern3 = getUnquoted(cmd, 3);
+                
+                jumpItemName = refreshPattern;
+                jumpItemValue = refreshPattern2;
+                jumpItemExactMatch = !(refreshPattern3 == FALSE_STR);
+                skipJumpReset.store(true, std::memory_order_release);
+                refreshPage.store(true, std::memory_order_release);
+                return;
+            }
+            if (commandName == "reboot") {
+                if (cmdSize == 2) {
+                    const std::string rebootPattern = getUnquoted(cmd, 1);
+                    if (rebootPattern == "ovlloader") {
+                        if (requestOverlayReload()) {
+                            exitingUltrahand.store(true, std::memory_order_release);
+                            ult::launchingOverlay.store(true, std::memory_order_release);
+                            tsl::setNextOverlay(OVERLAY_PATH+"ovlmenu.ovl");
+                            tsl::Overlay::get()->close(true);
+                        }
+                        return;
+                    }
+                }
+
+                bool launchUpdaterPayload = false;
+                for (const std::string& file : PROTECTED_FILES) {
+                    if (isFile(file + ".ultra")) {
+                        launchUpdaterPayload = true;
+                        break;
+                    }
+                }
+                
+                if (launchUpdaterPayload) {
+                    const std::string rebootOption = PAYLOADS_PATH + "ultrahand_updater.bin";
+                    if (!isFile(rebootOption)) {
+                        downloadFile(UPDATER_PAYLOAD_URL, PAYLOADS_PATH, false, true);
+                        downloadPercentage.store(-1, std::memory_order_release);
+                    }
+                    if (isFile(rebootOption)) {
+                        const std::string fileName = getNameFromPath(rebootOption);
+                        
+                        if (util::IsErista()) {
+                            Payload::PayloadConfig reboot_payload = { fileName, rebootOption };
+                            Payload::RebootToPayload(reboot_payload);
+                        } else {
+                            std::string strippedRebootOption = rebootOption;
+                            if (strippedRebootOption.compare(0, ROOT_PATH.length(), ROOT_PATH) == 0) {
+                                strippedRebootOption.erase(0, ROOT_PATH.length());
+                            }
+                            
+                            const std::string iniPath = "/bootloader/ini/" + fileName + ".ini";
+                            deleteFileOrDirectory(iniPath);
+                            setIniFileValue(iniPath, fileName, "payload", strippedRebootOption);
+                            setIniFileValue(iniPath, fileName, "bootwait", "0");
+                            Payload::HekateConfigList iniConfigList = Payload::LoadIniConfigList();
+                            rebootToHekateConfig(iniConfigList, fileName, true);
+                        }
+                    } else {
+                        launchUpdaterPayload = false;
+                    }
+                }
+                if (!launchUpdaterPayload && (util::IsErista() || util::SupportsMarikoRebootToConfig())) {
+                    std::string rebootOption;
+                    if (cmdSize >= 2) {
+                        rebootOption = getUnquoted(cmd, 1);
+                        if (cmdSize >= 3) {
+                            const std::string option = getUnquoted(cmd, 2);
+                            if (rebootOption == "boot") {
+                                Payload::HekateConfigList bootConfigList = Payload::LoadHekateConfigList();
+                                rebootToHekateConfig(bootConfigList, option, false);
+                            } else if (rebootOption == "ini") {
+                                Payload::HekateConfigList iniConfigList = Payload::LoadIniConfigList();
+                                rebootToHekateConfig(iniConfigList, option, true);
+                            }
+                        }
+                        if (rebootOption == "UMS") {
+                            Payload::RebootToHekateUMS(Payload::UmsTarget_Sd);
+                        } else if (rebootOption == "HEKATE" || rebootOption == "hekate") {
+                            Payload::RebootToHekateMenu();
+                        } else if (isFile(rebootOption)) {
+                            const std::string fileName = getNameFromPath(rebootOption);
+                            if (util::IsErista()) {
+                                Payload::PayloadConfig reboot_payload = {fileName, rebootOption};
+                                Payload::RebootToPayload(reboot_payload);
+                            } else {
+                                std::string strippedRebootOption = rebootOption;
+                                if (strippedRebootOption.compare(0, ROOT_PATH.length(), ROOT_PATH) == 0) {
+                                    strippedRebootOption.erase(0, ROOT_PATH.length());
+                                }
+                                
+                                const std::string iniPath = "/bootloader/ini/" + fileName + ".ini";
+                                setIniFileValue(iniPath, fileName, "payload", strippedRebootOption);
+                                setIniFileValue(iniPath, fileName, "bootwait", "0");
+                                Payload::HekateConfigList iniConfigList = Payload::LoadIniConfigList();
+                                rebootToHekateConfig(iniConfigList, fileName, true);
+                            }
+                        }
+                    }
+                    if (rebootOption.empty())
+                        Payload::RebootToHekate();
+                }
+                
+                i2cExit();
+                splExit();
+                fsdevUnmountAll();
+                Payload::StageUsbPdTeardown();
+                spsmShutdown(SpsmShutdownMode_Reboot);
+                spsmExit();
+                return;
+            }
+
+            break;
+            
+        case 's':
+            if (commandName == "set-ini-val" || commandName == "set-ini-value" || 
+                commandName == "set-ini-key" || commandName == "set-ini-val-matching-key") {
+                handleIniCommands(cmd, packagePath);
+                return;
+            }
+            if (commandName == "set-json-val" || commandName == "set-json-value" || 
+                commandName == "set-json-key") {
+                handleJsonCommands(cmd, packagePath);
+                return;
+            }
+            if (cmdSize >= 2 && commandName == "set-footer") {
+                const std::string desiredValue = getUnquoted(cmd, 1);
+                if (desiredValue.find(NULL_STR) != std::string::npos)
+                    setCommandFailed();
+                else
+                    setIniFileValue((packagePath + CONFIG_FILENAME), selectedCommand, FOOTER_STR, desiredValue);
+                return;
+            }
+            if (cmdSize > 1 && commandName == "set-region") {
+                const std::string regionStr = stringToUppercase(getUnquoted(cmd, 1));
+                
+                SetRegion region;
+                bool validRegion = true;
+                
+                if (regionStr == "JPN") {
+                    region = SetRegion_JPN;
+                } else if (regionStr == "USA") {
+                    region = SetRegion_USA;
+                } else if (regionStr == "EUR") {
+                    region = SetRegion_EUR;
+                } else if (regionStr == "AUS") {
+                    region = SetRegion_AUS;
+                } else if (regionStr == "HTK") {
+                    region = SetRegion_HTK;
+                } else if (regionStr == "CHN") {
+                    region = SetRegion_CHN;
+                } else {
+                    validRegion = false;
+                }
+                
+                if (validRegion) {
+                    if (R_FAILED(setsysSetRegionCode(region)))
+                        setCommandFailed();
+                } else {
+                    setCommandFailed();
+                }
+                return;
+            }
+            if (commandName == "shutdown") {
+                if (cmdSize >= 2) {
+                    const std::string selection = getUnquoted(cmd, 1);
+                    if (selection == "controllers") {
+                        powerOffAllControllers();
+                    }
+                } else {
+                    fsdevUnmountAll();
+                    Payload::StageUsbPdTeardown();
+                    (void)spsmShutdown(SpsmShutdownMode_Normal);
+                }
+                return;
+            }
+            break;
+            
+        case 't':
+            if (commandName == "touch") {
+                if (cmdSize >= 2) {
+                    std::string filePath = cmd[1];
+                    preprocessPath(filePath, packagePath);
+                    const std::string parentDir = filePath.substr(0, filePath.rfind('/'));
+                    if (!parentDir.empty())
+                        createDirectory(parentDir);
+                    FILE* f = fopen(filePath.c_str(), "a");
+                    if (f) fclose(f);
+                }
+                return;
+            }
+            break;
+
+        case 'u':
+            if (cmdSize >= 3 && commandName == "unzip") {
+                std::string sourcePath = cmd[1];
+                preprocessPath(sourcePath, packagePath);
+                std::string destinationPath = cmd[2];
+                preprocessPath(destinationPath, packagePath);
+                commandSuccess.store(
+                    unzipFile(sourcePath, destinationPath) && commandSuccess.load(std::memory_order_acquire),
+                    std::memory_order_release
+                );
+                return;
+            }
+            break;
+            
+        case 'v':
+            if (commandName == "volume") {
+                if (cmdSize >= 2) {
+                    const std::string volumeInput = getUnquoted(cmd, 1);
+                    
+                    if (isValidNumber(volumeInput)) {
+                        const float volumePercentage = ult::stof(volumeInput);
+                        
+                        if (volumePercentage < 0.0f || volumePercentage > 150.0f) {
+                            return;
+                        }
+                        
+                        const float masterVolume = volumePercentage / 100.0f;
+                        
+                        audctlInitialize();
+                        audctlSetSystemOutputMasterVolume(masterVolume);
+                        audctlExit();
+                    }
+                } else {
+                    #if USING_LOGGING_DIRECTIVE
+                    if (!disableLogging)
+                        logMessage("Volume command missing required argument.");
+                    #endif
+                }
+                return;
+            }
+            break;
+
+        case '!':
+            if (commandName == "!ipc_exists") {
+                // !ipc_exists <SERVICE_NAME> — success when NOT registered.
+                if (cmdSize >= 2) {
+                    Handle handle = INVALID_HANDLE;
+                    const bool registered = R_SUCCEEDED(
+                        smGetServiceOriginal(&handle, smEncodeName(cmd[1].c_str())));
+                    if (registered) svcCloseHandle(handle);
+                    setCommandResult(!registered);
+                }
+                return;
+            }
+            if (commandName == "!matching_txt_line") {
+                // !matching_txt_line <path> <line...>
+                if (cmdSize >= 3) {
+                    std::string path = cmd[1];
+                    preprocessPath(path, packagePath);
+                    std::string line = getUnquoted(cmd, 2);
+                    for (size_t i = 3; i < cmdSize; ++i) { line += ' '; line += getUnquoted(cmd, i); }
+                    setCommandResult(!txtLineExists(path, line));
+                } else { setCommandFailed(); }
+                return;
+            }
+            if (commandName == "!matching_hex_val") {
+                // !matching_hex_val <path> <offset> <hex>
+                if (cmdSize >= 4) {
+                    std::string path = cmd[1];
+                    preprocessPath(path, packagePath);
+                    const uint32_t offset = static_cast<uint32_t>(
+                        isValidNumber(cmd[2]) ? std::strtoul(cmd[2].c_str(), nullptr, 0) : 0u);
+                    setCommandResult(!hexValMatches(path, offset, getUnquoted(cmd, 3)));
+                } else { setCommandFailed(); }
+                return;
+            }
+            if (commandName == "!matching_ini_val") {
+                // !matching_ini_val <path> <section> <key> <value...>
+                if (cmdSize >= 5) {
+                    std::string path = cmd[1];
+                    preprocessPath(path, packagePath);
+                    std::string expected = getUnquoted(cmd, 4);
+                    for (size_t i = 5; i < cmdSize; ++i) { expected += ' '; expected += getUnquoted(cmd, i); }
+                    std::string actual = parseValueFromIniSection(path, getUnquoted(cmd, 2), getUnquoted(cmd, 3));
+                    removeQuotes(actual);
+                    setCommandResult(actual != expected);
+                } else { setCommandFailed(); }
+                return;
+            }
+            if (commandName == "!module_exists") {
+                setCommandResult(cmdSize >= 2 && !moduleExists(parseTid(cmd[1])));
+                return;
+            }
+            if (commandName == "!module_is_active") {
+                setCommandResult(cmdSize >= 2 && !moduleIsActive(parseTid(cmd[1])));
+                return;
+            }
+            if (commandName == "!path_exists") {
+                if (cmdSize >= 2) {
+                    std::string sourcePath = cmd[1];
+                    preprocessPath(sourcePath, packagePath);
+                    setCommandResult(!ult::isFileOrDirectory(sourcePath));
+                }
+                return;
+            }
+    }
+}
+
+
+
+// ---------------------------------------------------------------------------
+// Menu condition helpers
+//
+// Backing checks and the evaluator for the ;visibility_condition= and
+// ;toggle_state_condition= option directives. A condition is a single string
+// of the form "<mode> <args...>" with these modes:
+//
+//   path_exists       <path>
+//   ipc_exists        <service_name>
+//   module_exists     <TID>
+//   module_is_active  <TID>
+//   matching_txt_line <path> <line>
+//   matching_hex_val  <path> <offset> <hex>
+//   matching_ini_val  <path> <section> <key> <value>
+//
+// Prefix any mode with ! to negate: !path_exists, !module_exists, etc.
+//
+// The final free-text field (line / value) keeps any embedded spaces.
+// ---------------------------------------------------------------------------
+
+// Returns true when an exact line (trailing CR/LF stripped) exists in a file.
+// Full-line comparison: a target that is only a substring of a longer line does
+// not match. Lines longer than the read buffer are skipped, not partially
+// compared.
+inline bool txtLineExists(const std::string& filePath, const std::string& line) {
+    if (!isFile(filePath)) return false;
+    FILE* file = fopen(filePath.c_str(), "r");
+    if (!file) return false;
+
+    char buffer[1024];
+    bool found = false;
+    bool skipUntilNewline = false;
+    while (fgets(buffer, sizeof(buffer), file)) {
+        size_t len = std::strlen(buffer);
+        const bool hasNewline = (len > 0 && buffer[len - 1] == '\n');
+
+        if (skipUntilNewline) {
+            // Previous chunk was a partial read of an over-long line; skip the rest.
+            skipUntilNewline = !hasNewline;
+            continue;
+        }
+        if (!hasNewline && !feof(file)) {
+            // Line is longer than the buffer; skip the remainder and do not compare.
+            skipUntilNewline = true;
+            continue;
+        }
+
+        // Strip trailing CR/LF.
+        while (len > 0 && (buffer[len - 1] == '\n' || buffer[len - 1] == '\r')) {
+            buffer[--len] = '\0';
+        }
+
+        if (line.size() == len && std::memcmp(buffer, line.c_str(), len) == 0) {
+            found = true;
+            break;
+        }
+    }
+    fclose(file);
+    return found;
+}
+
+// Returns true when the bytes at offset match expectedHex. The hex string is
+// validated (even length, hex digits only, spaces ignored) before the file is
+// opened, so malformed input simply returns false.
+inline bool hexValMatches(const std::string& filePath, uint32_t offset, std::string expectedHex) {
+    if (!isFile(filePath)) return false;
+
+    // Strip spaces in-place, then validate length and characters.
+    size_t w = 0;
+    for (size_t r = 0; r < expectedHex.size(); ++r) {
+        if (expectedHex[r] != ' ') expectedHex[w++] = expectedHex[r];
+    }
+    expectedHex.resize(w);
+    if (expectedHex.empty() || (expectedHex.size() % 2) != 0) return false;
+    for (size_t i = 0; i < expectedHex.size(); ++i) {
+        if (!std::isxdigit(static_cast<unsigned char>(expectedHex[i]))) return false;
+    }
+
+    FILE* file = fopen(filePath.c_str(), "rb");
+    if (!file) return false;
+
+    if (fseek(file, static_cast<long>(offset), SEEK_SET) != 0) {
+        fclose(file);
+        return false;
+    }
+
+    const size_t len = expectedHex.size() / 2;
+    std::vector<unsigned char> buffer(len);
+    const size_t readLen = fread(buffer.data(), 1, len, file);
+    fclose(file);
+
+    if (readLen < len) return false;
+
+    for (size_t i = 0; i < len; ++i) {
+        unsigned int byte = 0;
+        if (std::sscanf(expectedHex.c_str() + i * 2, "%2x", &byte) != 1) return false;
+        if (buffer[i] != static_cast<unsigned char>(byte)) return false;
+    }
+    return true;
+}
+
+// Evaluates a "<mode> <args...>" condition string. Returns true when satisfied.
+// Used by both ;visibility_condition= (true -> shown) and
+// ;toggle_state_condition= (true -> ON). An empty condition returns true; an
+// unknown mode or missing argument returns false.
+inline bool evaluateMenuCondition(std::string condition, const std::string& packagePath) {
+    removeQuotes(condition);
+    replacePlaceholdersInArg(condition, generalPlaceholders);
+
+    size_t pos = 0;
+    const size_t end = condition.size();
+
+    // Pull the next space-delimited token starting at pos.
+    auto nextToken = [&]() -> std::string {
+        while (pos < end && condition[pos] == ' ') ++pos;
+        const size_t start = pos;
+        while (pos < end && condition[pos] != ' ') ++pos;
+        return condition.substr(start, pos - start);
+    };
+    // The remaining text after pos, leading spaces trimmed (free-text field).
+    auto remainder = [&]() -> std::string {
+        while (pos < end && condition[pos] == ' ') ++pos;
+        std::string rest = condition.substr(pos);
+        removeQuotes(rest);
+        return rest;
+    };
+
+    std::string mode = nextToken();
+    if (mode.empty()) return true;
+
+    const bool negate = !mode.empty() && mode[0] == '!';
+    if (negate) mode.erase(0, 1);
+    if (mode.empty()) return true;
+
+    if (mode == "path_exists") {
+        std::string path = nextToken();
+        if (path.empty()) return false;
+        preprocessPath(path, packagePath);
+        return negate ^ isFileOrDirectory(path);
+    }
+    if (mode == "ipc_exists") {
+        const std::string service = nextToken();
+        if (service.empty()) return false;
+        Handle handle = INVALID_HANDLE;
+        const bool registered = R_SUCCEEDED(
+            smGetServiceOriginal(&handle, smEncodeName(service.c_str())));
+        if (registered) svcCloseHandle(handle);
+        return negate ^ registered;
+    }
+    if (mode == "module_exists") {
+        const std::string tid = nextToken();
+        if (tid.empty()) return false;
+        return negate ^ moduleExists(parseTid(tid));
+    }
+    if (mode == "module_is_active") {
+        const std::string tid = nextToken();
+        if (tid.empty()) return false;
+        return negate ^ moduleIsActive(parseTid(tid));
+    }
+    if (mode == "matching_txt_line") {
+        std::string path = nextToken();
+        const std::string line = remainder();
+        if (path.empty() || line.empty()) return false;
+        preprocessPath(path, packagePath);
+        return negate ^ txtLineExists(path, line);
+    }
+    if (mode == "matching_hex_val") {
+        std::string path = nextToken();
+        const std::string offsetStr = nextToken();
+        const std::string hex = remainder();
+        if (path.empty() || offsetStr.empty() || hex.empty()) return false;
+        preprocessPath(path, packagePath);
+        uint32_t offset = 0;
+        if (isValidNumber(offsetStr))
+            offset = static_cast<uint32_t>(std::strtoul(offsetStr.c_str(), nullptr, 0));
+        return negate ^ hexValMatches(path, offset, hex);
+    }
+    if (mode == "matching_ini_val") {
+        std::string path = nextToken();
+        const std::string section = nextToken();
+        const std::string key = nextToken();
+        const std::string expected = remainder();
+        if (path.empty() || section.empty() || key.empty()) return false;
+        preprocessPath(path, packagePath);
+        std::string currentVal = parseValueFromIniSection(path, section, key);
+        removeQuotes(currentVal);
+        return negate ^ (currentVal == expected);
+    }
+    return negate ^ false;
 }
 
 
 // Thread information structure
 Thread interpreterThread;
-std::queue<std::tuple<std::vector<std::vector<std::string>>, std::string, std::string>> interpreterQueue;
-std::mutex queueMutex;
-std::condition_variable queueCondition;
 std::atomic<bool> interpreterThreadExit{false};
 
+// Cache for stack size to avoid repeated INI parsing
+static int cachedStackSize = 0;
+
+// Work data structure to pass to thread
+struct InterpreterWorkData {
+    std::vector<std::vector<std::string>> commands;
+    std::string packagePath;
+    std::string selectedCommand;
+    
+    InterpreterWorkData(std::vector<std::vector<std::string>>&& cmds, 
+                       const std::string& path, 
+                       const std::string& selected)
+        : commands(std::move(cmds)), packagePath(path), selectedCommand(selected) {}
+};
 
 inline void clearInterpreterFlags(bool state = false) {
-    abortDownload.store(state, std::memory_order_release);
-    abortUnzip.store(state, std::memory_order_release);
-    abortFileOp.store(state, std::memory_order_release);
-    abortCommand.store(state, std::memory_order_release);
+    // Use relaxed ordering for simple flag clearing - these are just state flags
+    // and don't need acquire-release synchronization
+    abortDownload.store(state, std::memory_order_relaxed);
+    abortUnzip.store(state, std::memory_order_relaxed);
+    abortFileOp.store(state, std::memory_order_relaxed);
+    abortCommand.store(state, std::memory_order_relaxed);
 }
 
-
-
-void backgroundInterpreter(void*) {
-    std::tuple<std::vector<std::vector<std::string>>, std::string, std::string> args;
-    while (!interpreterThreadExit.load(std::memory_order_acquire)) {
-        
-        {
-            std::unique_lock<std::mutex> lock(queueMutex);
-            queueCondition.wait(lock, [] { return !interpreterQueue.empty() || interpreterThreadExit.load(std::memory_order_acquire); });
-            if (interpreterThreadExit.load(std::memory_order_acquire)) {
-                //logMessage("Exiting Thread...");
-                break;
-            }
-            if (!interpreterQueue.empty()) {
-                args = std::move(interpreterQueue.front());
-                interpreterQueue.pop();
-            }
-            //svcSleepThread(10'000'000);
-        } // Release the lock before processing the command
-
-        if (!std::get<0>(args).empty()) {
-            //logMessage("Start of interpreter");
-            // Clear flags and perform any cleanup if necessary
-            clearInterpreterFlags();
-            resetPercentages();
-            threadFailure.store(false, std::memory_order_release);
-            
-            runningInterpreter.store(true, std::memory_order_release);
-            interpretAndExecuteCommands(std::move(std::get<0>(args)), std::move(std::get<1>(args)), std::move(std::get<2>(args)));
-
-            // Clear flags and perform any cleanup if necessary
-            clearInterpreterFlags();
-            resetPercentages();
-
-            runningInterpreter.store(false, std::memory_order_release);
-            interpreterThreadExit.store(true, std::memory_order_release);
-            //logMessage("End of interpreter");
-            //break;
-        }
-        //logMessage("looping...");
+void backgroundInterpreter(void* workPtr) {
+    // Get work data directly - no queue needed
+    auto workData = static_cast<InterpreterWorkData*>(workPtr);
+    
+    // Check for exit signal before starting work
+    if (interpreterThreadExit.load(std::memory_order_acquire)) {
+        delete workData;
+        return;
     }
+    
+
+    // Process the work if we have commands
+    if (!workData->commands.empty()) {
+        // Clear flags and setup for execution
+        clearInterpreterFlags();
+        resetPercentages();
+        threadFailure.store(false, std::memory_order_release);
+        
+        runningInterpreter.store(true, std::memory_order_release);
+        
+        // Execute the commands
+        interpretAndExecuteCommands(std::move(workData->commands), 
+                                   std::move(workData->packagePath), 
+                                   std::move(workData->selectedCommand));
+
+        // Brief sleep before cleanup
+        svcSleepThread(200'000'000);
+
+        // Cleanup
+        runningInterpreter.store(false, std::memory_order_release);
+        clearInterpreterFlags();
+        resetPercentages();
+    }
+    
+    // Clean up work data
+    delete workData;
+    
+    if (ult::isHidden.load(std::memory_order_acquire)) {
+        if (tsl::notification && ult::useNotifications) {
+            if (commandSuccess.load(std::memory_order_acquire))
+                tsl::notification->showNow(NOTIFY_HEADER + TASK_IS_COMPLETE);
+            else
+                tsl::notification->showNow(NOTIFY_HEADER + TASK_HAS_FAILED);
+        }
+    }
+
+    // Thread naturally exits here
 }
 
 void closeInterpreterThread() {
-   {
-       std::lock_guard<std::mutex> lock(queueMutex);
-       interpreterThreadExit.store(true, std::memory_order_release);
-       queueCondition.notify_one();
-   }
-   threadWaitForExit(&interpreterThread);
-   threadClose(&interpreterThread);
-   // Reset flags
-   clearInterpreterFlags();
+    // Signal any running thread to exit
+    interpreterThreadExit.store(true, std::memory_order_release);
+    
+    // Wait for thread to finish and clean up
+    threadWaitForExit(&interpreterThread);
+    threadClose(&interpreterThread);
+    
+    // Reset state
+    clearInterpreterFlags();
+    interpreterThreadExit.store(false, std::memory_order_release);
 }
 
-
-
-void startInterpreterThread(const std::string& packagePath = "") {
-    int stackSize = 0x8000;
-
+int getInterpreterStackSize(const std::string& packagePath = "") {
     #if USING_LOGGING_DIRECTIVE
     if (!packagePath.empty()) {
         disableLogging = !(parseValueFromIniSection(PACKAGES_INI_FILEPATH, getNameFromPath(packagePath), USE_LOGGING_STR) == TRUE_STR);
         logFilePath = packagePath + "log.txt";
     }
     #endif
+    // Cache stack size parsing to avoid repeated INI file access
+    if (cachedStackSize == 0) {
+        std::string interpreterHeap = parseValueFromIniSection(ULTRAHAND_CONFIG_INI_PATH, MEMORY_STR, "interpreter_heap");
 
-    std::string interpreterHeap = parseValueFromIniSection(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "interpreter_heap");
-    if (!interpreterHeap.empty())
-        stackSize = ult::stoi(interpreterHeap, nullptr, 16);  // Convert from base 16
+        if (!interpreterHeap.empty()) {
+            // Strip optional "0x" or "0X" prefix
+            if (interpreterHeap.size() > 2 && interpreterHeap[0] == '0' &&
+                (interpreterHeap[1] == 'x' || interpreterHeap[1] == 'X')) {
+                interpreterHeap = interpreterHeap.substr(2);
+            }
 
+            // Validate remaining string is hex
+            bool validHex = !interpreterHeap.empty();
+            for (char c : interpreterHeap) {
+                if (!std::isxdigit(static_cast<unsigned char>(c))) {
+                    validHex = false;
+                    break;
+                }
+            }
+
+            if (validHex) {
+                cachedStackSize = ult::stoi(interpreterHeap, nullptr, 16);  // Convert from base 16
+            } else {
+                cachedStackSize = 0x8000;  // Default if invalid
+            }
+        } else {
+            cachedStackSize = 0x8000;  // Default if empty
+        }
+    }
+
+    return cachedStackSize;
+}
+
+
+
+// Combined function - creates thread with work data directly
+void executeInterpreterCommands(std::vector<std::vector<std::string>>&& commands, 
+                               const std::string& packagePath = "", 
+                               const std::string& selectedCommand = "") {
+    
+    // Wait for the existing thread to finish
+    threadWaitForExit(&interpreterThread);
+    threadClose(&interpreterThread);
+
+    // Early exit if no commands
+    if (commands.empty()) {
+        return;
+    }
+
+    if (ult::useSoundEffects) {
+        if (triggerEnterSound.exchange(false)) {
+            ult::Audio::playEnterSound();
+        } else if (triggerOnSound.exchange(false)) {
+            ult::Audio::playOnSound();
+        } else if (triggerOffSound.exchange(false)) {
+            ult::Audio::playOffSound();
+        }
+
+        ult::Audio::unloadAllSounds({ult::Audio::SoundType::Wall, ult::Audio::SoundType::Notification});
+    }
+    
+    // Get stack size and setup logging
+    const int stackSize = getInterpreterStackSize(packagePath);
+    
+    // Ensure exit flag is clear before starting
     interpreterThreadExit.store(false, std::memory_order_release);
-
-    int result = threadCreate(&interpreterThread, backgroundInterpreter, nullptr, nullptr, stackSize, 0x2B, -2);
+    
+    // Create work data (will be cleaned up by the thread)
+    auto workData = new InterpreterWorkData(std::move(commands), packagePath, selectedCommand);
+    
+    // Create and start thread directly with work data
+    const int result = threadCreate(&interpreterThread, backgroundInterpreter, workData, nullptr, stackSize, 0x2B, -2);
     if (result != 0) {
-        commandSuccess = false;
+        // Handle thread creation failure
+        setCommandFailed();
         clearInterpreterFlags();
         runningInterpreter.store(false, std::memory_order_release);
-        interpreterThreadExit.store(true, std::memory_order_release);
+        
+        // Clean up work data since thread won't
+        delete workData;
+        
         #if USING_LOGGING_DIRECTIVE
-        logMessage("Failed to create interpreter thread.");
+        if (!disableLogging)
+            logMessage("Failed to create interpreter thread.");
         logFilePath = defaultLogFilePath;
         disableLogging = true;
         #endif
         return;
     }
     threadStart(&interpreterThread);
-}
-
-
-
-
-void enqueueInterpreterCommands(std::vector<std::vector<std::string>>&& commands, const std::string& packagePath, const std::string& selectedCommand) {
-    {
-        std::lock_guard<std::mutex> lock(queueMutex);
-        interpreterQueue.emplace(std::move(commands), packagePath, selectedCommand);
-    }
-    queueCondition.notify_one();
 }

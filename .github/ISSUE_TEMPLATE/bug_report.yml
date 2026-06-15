@@ -1,0 +1,183 @@
+name: "🐛 Bug Report"
+description: "Report a crash, compatibility issue, or malfunction in Ultrahand Overlay"
+title: "[Bug]: "
+labels: ["bug", "needs-triage"]
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ## 🧩 Bug Report Form
+        Please fill out **all required fields** so we can investigate efficiently.  
+        Reports missing key details may be closed without action.
+
+  - type: dropdown
+    id: nature
+    attributes:
+      label: Nature of Issue
+      description: What type of issue are you experiencing?
+      options:
+        - Crash / Fatal Error
+        - Visual or UI Bug
+        - Performance Problem
+        - Compatibility Issue
+        - Unexpected Behavior
+        - Other
+    validations:
+      required: true
+
+  - type: markdown
+    attributes:
+      value: |
+        ---
+        ### 🖥️ System Information
+
+  - type: dropdown
+    id: hardware_rev
+    attributes:
+      label: Hardware Revision
+      description: Are you using an Erista (v1) or a Mariko (v2/OLED)?
+      options:
+        - Erista
+        - Mariko
+    validations:
+      required: true
+
+  - type: input
+    id: hos_firmware
+    attributes:
+      label: HOS Firmware Version
+      placeholder: "e.g., 20.5.0"
+    validations:
+      required: true
+
+  - type: input
+    id: custom_firmware
+    attributes:
+      label: Custom Firmware Version
+      placeholder: "e.g., AMS 1.9.5"
+    validations:
+      required: true
+
+  - type: input
+    id: modules
+    attributes:
+      label: Active System Modules
+      description: List all sys-modules currently in use.
+      placeholder: "e.g., sys-clk, sys-ftpd, ..."
+    validations:
+      required: true
+
+  - type: markdown
+    attributes:
+      value: |
+        ---
+        ### 🧠 Software Versions
+
+  - type: input
+    id: ultrahand
+    attributes:
+      label: Ultrahand Version
+      placeholder: "e.g., 2.2.4"
+    validations:
+      required: true
+
+  - type: input
+    id: ovlloader_ver
+    attributes:
+      label: nx-ovlloader Version
+      placeholder: "e.g., 2.0.0"
+    validations:
+      required: true
+
+  - type: markdown
+    attributes:
+      value: |
+        ---
+        ### 🧱 Build Information
+
+  - type: dropdown
+    id: build_type
+    attributes:
+      label: Build Type
+      description: Did you compile this yourself or use an official release?
+      options:
+        - Official Release (from this GitHub or HB App Store)
+        - Unofficial Release (from 3rd-party)
+        - Self-Compiled Build
+    validations:
+      required: true
+
+  - type: input
+    id: build_commit
+    attributes:
+      label: Commit / Source Details
+      description: If self-compiled or provided by a 3rd-party, specify the commit hash or describe your build source.
+      placeholder: "e.g., commit 3a60dc0 (custom modifications)"
+    validations:
+      required: false
+
+  - type: markdown
+    attributes:
+      value: |
+        ---
+        ### 🛠️ Ultrahand Settings
+
+  - type: dropdown
+    id: language
+    attributes:
+      label: System Language
+      description: Select the language set on your system.
+      options:
+        - English (en)
+        - German (de)
+        - Spanish (es)
+        - French (fr)
+        - Italian (it)
+        - Japanese (ja)
+        - Korean (ko)
+        - Dutch (nl)
+        - Polish (pl)
+        - Portuguese (pt)
+        - Russian (ru)
+        - Ukrainian (uk)
+        - Chinese (Simplified, zh-cn)
+        - Chinese (Traditional, zh-tw)
+    validations:
+      required: true
+  
+  - type: dropdown
+    id: custom_wallpaper
+    attributes:
+      label: Wallpaper
+      description: Select "Yes" if you are using a wallpaper, otherwise select "No". (nx-ovlloader+ only)
+      options:
+        - "No"
+        - "Yes"
+    validations:
+      required: true
+
+  - type: markdown
+    attributes:
+      value: |
+        ---
+        ### 🧾 Reproduction Details
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to Reproduce
+      description: Step-by-step instructions to trigger the issue.
+      placeholder: |
+        1. Launch the game
+        2. Open the Ultrahand
+        3. ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: notes
+    attributes:
+      label: Additional Notes or Logs
+      description: Add any crash logs, screenshots, or observations here.
+      placeholder: "Attach logs or add any relevant details..."

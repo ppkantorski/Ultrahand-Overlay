@@ -86,6 +86,7 @@ namespace Payload {
     using HekateConfigList = std::list<HekateConfig>;
     using PayloadConfigList = std::list<PayloadConfig>;
 
+    void StageUsbPdTeardown(); // Signal dock USB-PD teardown before any spsmShutdown call
     HekateConfigList LoadHekateConfigList();
     HekateConfigList LoadIniConfigList();
     PayloadConfigList LoadPayloadList();

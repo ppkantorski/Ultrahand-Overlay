@@ -1,0 +1,47 @@
+name: Update HB App Store downloads
+
+on:
+  schedule:
+    - cron: "0 */6 * * *"  # every 6 hours
+  workflow_dispatch:
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Fetch and format download count
+        run: |
+          set -e
+          JSON_URL="https://switch.cdn.fortheusers.org/repo.json"
+
+          # Fetch download count
+          count=$(curl -s "$JSON_URL" \
+            | jq '.packages | map(select(.name == "UltrahandOverlay"))[0].app_dls // 0')
+
+          # Format as compact number (k for thousands)
+          if [ "$count" -ge 1000 ]; then
+            display=$(printf "%.0fk" $(echo "$count/1000" | bc -l))
+          else
+            display=$count
+          fi
+
+          # Write JSON to file
+          mkdir -p .github
+          echo "{\"schemaVersion\":1,\"label\":\"hb app store\",\"message\":\"$display\"}" > .github/hbappstore.json
+
+      - name: Commit and push
+        run: |
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+          git add .github/hbappstore.json
+          git diff-index --quiet HEAD || git commit -m "Update download count"
+          
+          # Fetch latest remote changes and rebase to avoid push rejection
+          git fetch origin main
+          git rebase origin/main || echo "Rebase completed or nothing to rebase"
+          
+          # Push changes
+          git push origin main

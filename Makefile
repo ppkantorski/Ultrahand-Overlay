@@ -11,7 +11,7 @@
 #   GitHub Repository: https://github.com/ppkantorski/Ultrahand-Overlay
 #
 # Licensed under GPLv2
-# Copyright (c) 2024 ppkantorski
+# Copyright (c) 2023-2026 ppkantorski
 ##################################################################################
 
 #---------------------------------------------------------------------------------
@@ -25,6 +25,7 @@ endif
 
 TOPDIR ?= $(CURDIR)
 include $(DEVKITPRO)/libnx/switch_rules
+
 
 #---------------------------------------------------------------------------------
 # TARGET is the name of the output
@@ -56,52 +57,100 @@ include $(DEVKITPRO)/libnx/switch_rules
 #---------------------------------------------------------------------------------
 APP_TITLE	:= Ultrahand
 APP_AUTHOR	:= ppkantorski
-APP_VERSION	:= 1.8.4
+APP_VERSION	:= 2.4.5
 TARGET		:= ovlmenu
 BUILD		:= build
-SOURCES		:= source common lib/libultrahand/libultra/source
-INCLUDES	:= source common include lib/libultrahand/libultra/include lib/libultrahand/libtesla/include
+SOURCES		:= source common
+INCLUDES	:= source common include
 NO_ICON		:= 1
+
+# This location should reflect where you place the libultrahand directory (lib can vary between projects).
+include ${TOPDIR}/lib/libultrahand/ultrahand.mk
+
 
 #---------------------------------------------------------------------------------
 # options for code generation
 #---------------------------------------------------------------------------------
 ARCH := -march=armv8-a+simd+crc+crypto -mtune=cortex-a57 -mtp=soft -fPIE
 
-CFLAGS := -g -Wall -Os -ffunction-sections -fdata-sections -flto -fomit-frame-pointer -finline-small-functions \
-			$(ARCH) $(DEFINES)
+CFLAGS := -g -Wall -Os -ffunction-sections -fdata-sections -flto \
+          -fuse-linker-plugin -fomit-frame-pointer -finline-small-functions \
+          -fno-strict-aliasing -frename-registers -falign-functions=16 \
+          $(ARCH) $(DEFINES)
 
 CFLAGS += $(INCLUDE) -D__SWITCH__ -DAPP_VERSION="\"$(APP_VERSION)\"" -D_FORTIFY_SOURCE=2
 
+
+#---------------------------------------------------------------------------------
+# options for libultrahand
+#---------------------------------------------------------------------------------
 # For compiling Ultrahand Overlay only
-IS_LAUNCHER_DIRECTIVE := 1
-CFLAGS += -DIS_LAUNCHER_DIRECTIVE=$(IS_LAUNCHER_DIRECTIVE)
+CFLAGS += -DIS_LAUNCHER_DIRECTIVE=1
 
 # Enable Widget
-USING_WIDGET_DIRECTIVE := 1  # or true
-CFLAGS += -DUSING_WIDGET_DIRECTIVE=$(USING_WIDGET_DIRECTIVE)
+CFLAGS += -DUSING_WIDGET_DIRECTIVE=1
 
 # Enable Logging
-USING_LOGGING_DIRECTIVE := 1  # or true
-CFLAGS += -DUSING_LOGGING_DIRECTIVE=$(USING_LOGGING_DIRECTIVE)
+CFLAGS += -DUSING_LOGGING_DIRECTIVE=1
 
-# Disable fstream
-#NO_FSTREAM_DIRECTIVE := 1
-#CFLAGS += -DNO_FSTREAM_DIRECTIVE=$(NO_FSTREAM_DIRECTIVE)
+# FPS Indicator (for debugging)
+#CFLAGS += -DUSING_FPS_INDICATOR_DIRECTIVE=1
 
-CXXFLAGS := $(CFLAGS) -std=c++20 -Wno-dangling-else -ffast-math -fno-unwind-tables -fno-asynchronous-unwind-tables
+# Targeted speed optimizations
+#CFLAGS += -DTESLA_TARGETED_SPEED
+
+# Exception wrap utilization (for smaller compilation size)
+CFLAGS += -DUSE_EXCEPTION_WRAP=1
+
+# Requires USE_EXCEPTION_WRAP and inclusion of exception_wrap.hpp in main
+LDFLAGS += -Wl,-wrap,__cxa_throw \
+           -Wl,-wrap,_Unwind_Resume \
+           -Wl,-wrap,__gxx_personality_v0
+
+
+#---------------------------------------------------------------------------------
+
+
+CXXFLAGS := $(CFLAGS) -std=c++26 -Wno-dangling-else -ffast-math -fno-unwind-tables -fno-asynchronous-unwind-tables 
 
 ASFLAGS := $(ARCH)
 LDFLAGS += -specs=$(DEVKITPRO)/libnx/switch.specs $(ARCH) -Wl,-Map,$(notdir $*.map)
 
-LIBS := -lcurl -lz -lzzip -lmbedtls -lmbedx509 -lmbedcrypto -ljansson -lnx
+# Essential libraries for Ultrahand Overlay
+LIBS := -lcurl -lz -lminizip -lmbedtls -lmbedx509 -lmbedcrypto -lnx
 
 CXXFLAGS += -fno-exceptions -ffunction-sections -fdata-sections -fno-rtti
-LDFLAGS += -Wl,--as-needed
+LDFLAGS += -Wl,--as-needed -Wl,--gc-sections
 
-# For Ensuring Parallel LTRANS Jobs w/ GCC, make -j6
-CXXFLAGS += -flto -fuse-linker-plugin -flto=6
-LDFLAGS += -flto=6
+
+
+# For Ensuring Parallel LTRANS Jobs w/ GCC, make -j N (for convenience)
+# ------------------------------------------------------------
+# Detect how many logical CPUs are available, cross-platform
+# ------------------------------------------------------------
+NPROC := $(shell \
+	getconf _NPROCESSORS_ONLN 2>/dev/null || \
+	nproc 2>/dev/null || \
+	sysctl -n hw.ncpu 2>/dev/null || \
+	echo 1)
+
+# Fallback if detection somehow failed
+ifeq ($(strip $(NPROC)),)
+	NPROC := 1
+endif
+
+# ------------------------------------------------------------
+# Set parallelism flags only if user didn't pass -j manually
+# ------------------------------------------------------------
+ifeq (,$(filter -j -j%,$(MAKEFLAGS)))
+	MAKEFLAGS += -j$(NPROC)
+endif
+
+# ------------------------------------------------------------
+# Enable link-time optimization with parallel jobs
+# ------------------------------------------------------------
+CXXFLAGS += -flto=$(NPROC)
+LDFLAGS  += -flto=$(NPROC)
 
 
 # Add -z notext to LDFLAGS to allow dynamic relocations in read-only segments
@@ -213,7 +262,7 @@ all: $(BUILD)
 
 $(BUILD):
 	@[ -d $@ ] || mkdir -p $@
-	@$(MAKE) --no-print-directory -C $(BUILD) -f $(CURDIR)/Makefile
+	@$(MAKE) --no-print-directory -C $(BUILD) -f $(CURDIR)/Makefile MAKEFLAGS="$(filter-out -j% -j,$(MAKEFLAGS)) -j"
 
 	@rm -rf out/
 	@mkdir -p out/switch/.overlays/
@@ -246,7 +295,8 @@ all : $(OUTPUT).ovl
 $(OUTPUT).ovl: $(OUTPUT).elf $(OUTPUT).nacp 
 	@elf2nro $< $@ $(NROFLAGS)
 	@echo "built ... $(notdir $(OUTPUT).ovl)"
-
+	@printf 'ULTR' >> $@
+	@printf "Ultrahand signature has been added.\n"
 
 
 $(OUTPUT).elf: $(OFILES)

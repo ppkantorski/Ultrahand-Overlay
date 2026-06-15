@@ -19,12 +19,11 @@
 #include "rtc_r2p.hpp"
 #include "reboot_to_payload.h"
 #include "ams_bpc.h"
-#include "ini.h"
+#include "ini_funcs.hpp"  // Changed from "ini.h"
 
 #include <unistd.h>
 #include <cstring>
 #include <dirent.h>
-#include <algorithm>
 #include <span>
 
 namespace Payload {
@@ -37,6 +36,7 @@ namespace Payload {
             if (R_SUCCEEDED(rc)) {
                 rc = amsBpcSetRebootPayload(g_reboot_payload, IRAM_PAYLOAD_MAX_SIZE);
                 if (R_SUCCEEDED(rc)) {
+                    Payload::StageUsbPdTeardown();
                     spsmShutdown(true);
                 }
                 amsBpcExit();
@@ -47,29 +47,36 @@ namespace Payload {
                 smc_reboot_to_payload();
         }
 
-        int HekateConfigHandler(void *user, char const *section, char const *name, char const *value) {
-            auto const list = reinterpret_cast<HekateConfigList *>(user);
-
-            /* Ignore pre-config and global config entries. */
-            if (section[0] == '\0' || std::strcmp(section, "config") == 0) {
-                return 1;
+        // Refactored to use ini_funcs.cpp methods instead of callback
+        HekateConfigList ParseHekateIni(const std::string& iniPath, HekateConfigList& existingConfigs) {
+            HekateConfigList newConfigs;
+            
+            // Use parseSectionsFromIni to get sections in order
+            auto sections = ult::parseSectionsFromIni(iniPath);
+            
+            for (const auto& sectionName : sections) {
+                // Ignore pre-config and global config entries (matching original logic)
+                if (sectionName.empty() || sectionName == "config") {
+                    continue;
+                }
+                
+                // Check if this section already exists in the combined list
+                bool found = false;
+                for (auto &cfg : existingConfigs) {
+                    if (cfg.name == sectionName) {
+                        found = true;
+                        break;
+                    }
+                }
+                
+                // Only add if not already in the list
+                if (!found) {
+                    // Index is based on the combined list size + 1 (matching original behavior)
+                    newConfigs.emplace_back(sectionName, existingConfigs.size() + newConfigs.size() + 1);
+                }
             }
-
-            /* Find existing entry. */
-            auto it = std::find_if(list->begin(), list->end(), [section](HekateConfig &cfg) {
-                return cfg.name == section;
-            });
-
-            /* Create config entry if not existant. */
-            HekateConfig &config = (it != list->end()) ? *it : list->emplace_back(section, list->size() + 1);
-
-            /* TODO: parse more information and display that. */
-            (void)config;
-
-            (void)name;
-            (void)value;
-
-            return 1;
+            
+            return newConfigs;
         }
 
         constexpr char const *const HekatePaths[] = {
@@ -85,9 +92,24 @@ namespace Payload {
             "sdmc:/payloads/",
         };
 
+        // Fast insertion sort - much faster than bubble sort for small arrays
+        void SortEntries(char entries[][0x100], u32 count) {
+            for (u32 i = 1; i < count; i++) {
+                char key[0x100];
+                __builtin_strcpy(key, entries[i]);
+                
+                int j = i - 1;
+                while (j >= 0 && std::strcmp(entries[j], key) > 0) {
+                    __builtin_strcpy(entries[j + 1], entries[j]);
+                    j--;
+                }
+                __builtin_strcpy(entries[j + 1], key);
+            }
+        }
+
         bool LoadPayload(const char* path, bool hekate) {
             /* Clear payload buffer. */
-            std::memset(g_reboot_payload, 0xFF, sizeof(g_reboot_payload));
+            __builtin_memset(g_reboot_payload, 0xFF, sizeof(g_reboot_payload));
 
             /* Open payload. */
             auto const file = fopen(path, "r");
@@ -124,9 +146,19 @@ namespace Payload {
 
     }
 
+    void StageUsbPdTeardown() {
+        // Force console to handheld mode policy, which triggers USB-PD CC pin teardown.
+        // This signals the dock to cut its 5V rail before spsmShutdown fires the PMIC.
+        if (R_SUCCEEDED(ommInitialize())) {
+            (void)ommSetOperationModePolicy(OmmOperationModePolicy_Handheld);
+            ommExit();
+        }
+    }
+
     HekateConfigList LoadHekateConfigList() {
         HekateConfigList configs;
-        ini_parse("sdmc:/bootloader/hekate_ipl.ini", HekateConfigHandler, &configs);
+        auto newConfigs = ParseHekateIni("sdmc:/bootloader/hekate_ipl.ini", configs);
+        configs.splice(configs.end(), newConfigs);
         return configs;
     }
 
@@ -141,7 +173,7 @@ namespace Payload {
         if (dirp == nullptr)
             return configs;
 
-        u32 count=0;
+        u32 count = 0;
         char dir_entries[8][0x100];
 
         /* Get entries */
@@ -149,29 +181,22 @@ namespace Payload {
             if (dent->d_type != DT_REG)
                 continue;
 
-            std::strcpy(dir_entries[count++], dent->d_name);
+            __builtin_strcpy(dir_entries[count++], dent->d_name);
 
             if (count == std::size(dir_entries))
                 break;
         }
 
+        /* Sort entries if we have more than one */
         if (count > 1) {
-            /* Reorder ini files by ASCII ordering. */
-            char temp[0x100];
-            for (size_t i = 0; i < count - 1 ; i++) {
-                for (size_t j = i + 1; j < count; j++) {
-                    if (std::strcmp(dir_entries[i], dir_entries[j]) > 0) {
-                        std::strcpy(temp, dir_entries[i]);
-                        std::strcpy(dir_entries[i], dir_entries[j]);
-                        std::strcpy(dir_entries[j], temp);
-                    }
-                }
-            }
+            SortEntries(dir_entries, count);
         }
 
-        /* parse config */
-        for (auto const &entry : std::span(dir_entries, count))
-            ini_parse(entry, HekateConfigHandler, &configs);
+        /* parse config - accumulating into the same list */
+        for (auto const &entry : std::span(dir_entries, count)) {
+            auto newConfigs = ParseHekateIni(entry, configs);
+            configs.splice(configs.end(), newConfigs);
+        }
 
         closedir(dirp);
 
@@ -201,7 +226,7 @@ namespace Payload {
 
                 /* Get payloads */
                 std::string const name(dent->d_name);
-                if (name.substr(name.size() - 4) == ".bin")
+                if (name.size() >= 4 && name.substr(name.size() - 4) == ".bin")
                     res.emplace_back(name.substr(0, name.size() - 4), (path + name));
             }
 
@@ -223,7 +248,7 @@ namespace Payload {
         auto const storage = reinterpret_cast<BootStorage *>(g_reboot_payload + BootStorageOffset);
 
         /* Clear boot storage. */
-        std::memset(storage, 0, sizeof(BootStorage));
+        __builtin_memset(storage, 0, sizeof(BootStorage));
 
         /* Configure boot storage */
         func(storage);
