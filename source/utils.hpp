@@ -2099,9 +2099,34 @@ void applyReplaceIniPlaceholder(std::string& arg, const std::string& commandName
     
     // Process all occurrences of the placeholder
     while ((startPos = arg.find(searchString, lastPos)) != std::string::npos) {
-        endPos = arg.find(")}", startPos);
+        // Depth-aware scan for the matching ")}" so that nested {ini_file(...)}
+        // placeholders inside the argument list do not fool us into stopping early.
+        // e.g. {ini_file({ini_file(0)},{ini_file(软件版本,{ini_file(0)})})}
+        //                                                             ^
+        //       naive find(")}", startPos) would stop here (depth 2), not at the
+        //       real closing ")}" of the outermost placeholder.
+        {
+            int depth = 1;
+            size_t scan = startPos + searchStringLen;
+            endPos = std::string::npos;
+            while (scan + 1 < arg.size()) {
+                if (arg.compare(scan, searchStringLen, searchString) == 0) {
+                    // Nested opener of the same type — go deeper
+                    ++depth;
+                    scan += searchStringLen;
+                } else if (arg[scan] == ')' && arg[scan + 1] == '}') {
+                    if (--depth == 0) {
+                        endPos = scan;
+                        break;
+                    }
+                    scan += 2;
+                } else {
+                    ++scan;
+                }
+            }
+        }
         if (endPos == std::string::npos || endPos <= startPos) {
-            // Invalid placeholder, append text up to this point and continue searching
+            // Invalid/unmatched placeholder — skip past the opener and continue
             result.append(arg, lastPos, startPos + searchStringLen - lastPos);
             lastPos = startPos + searchStringLen;
             continue;
@@ -2113,8 +2138,35 @@ void applyReplaceIniPlaceholder(std::string& arg, const std::string& commandName
         placeholderContent = arg.substr(startPos + searchStringLen, 
                                        endPos - startPos - searchStringLen);
         trim(placeholderContent);
-        
-        commaPos = placeholderContent.find(',');
+
+        // If placeholderContent still contains unresolved inner placeholders, skip
+        // the entire outer placeholder and leave it intact for a later resolution pass.
+        // Without this guard, the comma-split and integer-check below would operate on
+        // literal placeholder text (e.g. "{ini_file(0)}") instead of resolved values,
+        // producing null instead of deferring correctly.
+        if (placeholderContent.find('{') != std::string::npos) {
+            result.append(searchString);  // re-emit the opener
+            result.append(placeholderContent);
+            result.append(")}");          // re-emit the closer
+            lastPos = endPos + 2;
+            continue;
+        }
+
+        // Find the top-level comma (depth-aware: skip commas inside nested placeholders).
+        // A plain find(',') would mis-split on e.g. "sec,{ini_file(a,b)}" — finding the
+        // comma inside the inner placeholder first and producing a broken iniSection.
+        // The unresolved-inner guard above now prevents us from ever reaching here with
+        // '{' still present, but the depth-aware scan is kept as a correct-by-construction
+        // safeguard for any future call paths that may bypass the guard.
+        commaPos = std::string::npos;
+        {
+            int d = 0;
+            for (size_t i = 0; i < placeholderContent.size(); ++i) {
+                if (placeholderContent[i] == '{') { ++d; continue; }
+                if (placeholderContent[i] == '}') { --d; continue; }
+                if (d == 0 && placeholderContent[i] == ',') { commaPos = i; break; }
+            }
+        }
         
         if (commaPos != std::string::npos) {
             // Handle section,key format
@@ -2128,7 +2180,7 @@ void applyReplaceIniPlaceholder(std::string& arg, const std::string& commandName
             
             replacement = returnOrNull(parseValueFromIniSection(iniPath, iniSection, iniKey));
         } else {
-            // Check if the content is an integer
+            // Check if the content is an integer (section index lookup)
             if (std::all_of(placeholderContent.begin(), placeholderContent.end(), ::isdigit)) {
                 if (!isValidNumber(placeholderContent)) {
                     replacement = NULL_STR;
@@ -2148,7 +2200,14 @@ void applyReplaceIniPlaceholder(std::string& arg, const std::string& commandName
                     }
                 }
             } else {
-                replacement = NULL_STR;
+                // Content is non-numeric and has no comma — not a valid ini_file argument.
+                // Leave the whole placeholder intact rather than collapsing it to null,
+                // so a later resolution pass can still act on it if the content resolves.
+                result.append(searchString);
+                result.append(placeholderContent);
+                result.append(")}");
+                lastPos = endPos + 2;
+                continue;
             }
         }
         
