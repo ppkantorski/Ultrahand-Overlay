@@ -1506,7 +1506,7 @@ void drawTable(
 
             // Minimal branching, maximum cache efficiency
             if (useHeaderIndent) {
-                renderer->drawRect(x-2, y, 4, 22, renderer->aWithOpacity(tsl::headerSeparatorColor));
+                renderer->drawRect(x-2 +5, y, 4, 22, renderer->aWithOpacity(tsl::headerSeparatorColor));
             }
 
             // Convert to renderer colors once per frame
@@ -1515,7 +1515,7 @@ void drawTable(
             const auto dividerColor = (tsl::textSeparatorColor);
             
             const size_t count = cacheExpSec.size();
-            const s32 baseX = x + 12;
+            const s32 baseX = (useHeaderIndent) ? x+12+5: x + 12;
 
             // ── Viewport culling ──────────────────────────────────────────────
             // TableDrawer::draw calls enableScissoring(0, 88, w, FramebufferHeight-163)
@@ -1559,7 +1559,13 @@ void drawTable(
                     const s32 yPos = y + cacheYOff[i];
                     if (yPos >= kClipBottom) break;
                     renderer->drawStringWithColoredSections(cacheExpSec[i], false, tsl::s_dividerSpecialChars, baseX, yPos, 16, secColor, dividerColor);
-                    renderer->drawStringWithColoredSections(cacheExpInfo[i], false, tsl::s_dividerSpecialChars, x + cacheXOff[i], yPos, 16, infoColor, dividerColor);
+                    // When useHeaderIndent, right-align the info value to the same
+                    // anchor as CategoryHeader::draw (getX()+2+getWidth()-valueWidth-5).
+                    // Lambda x=getX()+4, w=getWidth()+4, so that anchor is x+w-valueWidth-11.
+                    const s32 infoX = useHeaderIndent
+                        ? (x + w - renderer->getTextDimensions(cacheExpInfo[i], false, 16).first - 11)
+                        : (x + cacheXOff[i]);
+                    renderer->drawStringWithColoredSections(cacheExpInfo[i], false, tsl::s_dividerSpecialChars, infoX, yPos, 16, infoColor, dividerColor);
                 }
             } else {
                 // Different colors path
@@ -1569,8 +1575,14 @@ void drawTable(
                     const s32 yPos = y + cacheYOff[i];
                     if (yPos >= kClipBottom) break;
                     renderer->drawStringWithColoredSections(cacheExpSec[i], false, tsl::s_dividerSpecialChars, baseX, yPos, 16, secColor, dividerColor);
+                    // When useHeaderIndent, right-align the info value to the same
+                    // anchor as CategoryHeader::draw (getX()+2+getWidth()-valueWidth-5).
+                    // Lambda x=getX()+4, w=getWidth()+4, so that anchor is x+w-valueWidth-11.
+                    const s32 infoX = useHeaderIndent
+                        ? (x + w - renderer->getTextDimensions(cacheExpInfo[i], false, 16).first - 11)
+                        : (x + cacheXOff[i]);
                     renderer->drawStringWithHighlight(
-                        cacheExpInfo[i], false, x + cacheXOff[i], yPos, 16,
+                        cacheExpInfo[i], false, infoX, yPos, 16,
                         infoColor, hiliteColor
                     );
                 }
