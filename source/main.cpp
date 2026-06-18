@@ -2873,7 +2873,7 @@ public:
             // Use default parameters for the table view
             constexpr size_t tableColumnOffset = 163;
             constexpr size_t tableStartGap = 20;
-            constexpr size_t tableEndGap = 9;
+            constexpr size_t tableEndGap = 9+2;
             constexpr size_t tableSpacing = 4;
             const std::string& tableSectionTextColor = DEFAULT_STR;
             const std::string& tableInfoTextColor = DEFAULT_STR;
@@ -4472,7 +4472,7 @@ bool drawCommandsMenu(
         hideTableBackground = false;
         useHeaderIndent = false;
         tableStartGap = 20;
-        tableEndGap = 9;
+        tableEndGap = 9+2;
         tableColumnOffset = 164;
         tableSpacing = 0;
         tableSectionTextColor = DEFAULT_STR;

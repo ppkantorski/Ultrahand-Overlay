@@ -1437,7 +1437,7 @@ void drawTable(
     std::vector<std::string>&             infoLines,
     size_t columnOffset             = 164,
     size_t startGap                 = 20,
-    size_t endGap                   = 9,
+    size_t endGap                   = 9+2,
     size_t newlineGap               = 4,
     const std::string& tableSectionTextColor       = DEFAULT_STR,
     const std::string& tableInfoTextColor          = DEFAULT_STR,
@@ -1603,7 +1603,7 @@ void addTable(
     const std::string&                     packagePath,
     const size_t&                          columnOffset                = 164,
     const size_t&                          tableStartGap               = 20,
-    const size_t&                          tableEndGap                 = 9,
+    const size_t&                          tableEndGap                 = 9+2,
     const size_t&                          tableSpacing                = 0,
     const std::string&                     tableSectionTextColor       = DEFAULT_STR,
     const std::string&                     tableInfoTextColor          = DEFAULT_STR,
@@ -1653,7 +1653,7 @@ void addHelpInfo(tsl::elm::List* list) {
     std::vector<std::vector<std::string>> dummyTableData;
     drawTable(list, dummyTableData, sectionLines, infoLines,
         static_cast<size_t>(tsl::cfg::FramebufferWidth) - 90 - maxInfoWidth,
-        20, 9, 4);
+        20, 9+2, 4);
 }
 
 
@@ -1715,7 +1715,7 @@ void addPackageInfo(tsl::elm::List* list, auto& packageHeader, std::string type 
     addField(_ABOUT,        getTranslated(packageHeader.about),   defaultLang == "en" ? WORD_STR : CHAR_STR);
     addField(_CREDITS,      getTranslated(packageHeader.credits), WORD_STR);
     std::vector<std::vector<std::string>> dummyTableData;
-    drawTable(list, dummyTableData, sectionLines, infoLines, xOffset, 20, 9, 3, DEFAULT_STR, DEFAULT_STR, DEFAULT_STR, LEFT_STR, false, false, true);
+    drawTable(list, dummyTableData, sectionLines, infoLines, xOffset, 20, 9+2, 3, DEFAULT_STR, DEFAULT_STR, DEFAULT_STR, LEFT_STR, false, false, true);
 }
 
 // Load once at startup, store globally
