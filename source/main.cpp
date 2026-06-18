@@ -1854,6 +1854,8 @@ public:
             createToggleListItem(list, SWITCH_2_STYLE, useSwitch2Style, "switch_2_style");
             useDynamicLogo = getBoolValue("dynamic_logo", true); // TRUE_STR default
             createToggleListItem(list, DYNAMIC_LOGO, useDynamicLogo, "dynamic_logo");
+            useDynamicTableColors = getBoolValue("dynamic_tables", true); // TRUE_STR default
+            createToggleListItem(list, DYNAMIC_TABLES, useDynamicTableColors, "dynamic_tables");
             useSelectionBG = getBoolValue("selection_bg", true); // TRUE_STR default
             createToggleListItem(list, SELECTION_BACKGROUND, useSelectionBG, "selection_bg", false, true);
             useSelectionText = getBoolValue("selection_text", false); // TRUE_STR default
@@ -7451,6 +7453,7 @@ void initializeSettingsAndDirectories() {
     // Shared keys (variables set by parseOverlaySettings — INI write-back only)
     ensureDefault("dynamic_logo",             TRUE_STR);
     ensureDefault("switch_2_style",            TRUE_STR);
+    ensureDefault("dynamic_tables",            TRUE_STR);
     ensureDefault("selection_bg",             TRUE_STR);
     ensureDefault("selection_text",           FALSE_STR);
     ensureDefault("selection_value",          FALSE_STR);
