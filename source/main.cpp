@@ -1850,8 +1850,8 @@ public:
 
 
             addHeader(list, THEME_SETTINGS);
-            useSwitch2Style = getBoolValue("switch2_style", false); // FALSE_STR default
-            createToggleListItem(list, SWITCH2_STYLE, useSwitch2Style, "switch2_style");
+            useSwitch2Style = getBoolValue("switch_2_style", true); // TRUE_STR default
+            createToggleListItem(list, SWITCH_2_STYLE, useSwitch2Style, "switch_2_style");
             useDynamicLogo = getBoolValue("dynamic_logo", true); // TRUE_STR default
             createToggleListItem(list, DYNAMIC_LOGO, useDynamicLogo, "dynamic_logo");
             useSelectionBG = getBoolValue("selection_bg", true); // TRUE_STR default
@@ -7450,7 +7450,7 @@ void initializeSettingsAndDirectories() {
 
     // Shared keys (variables set by parseOverlaySettings — INI write-back only)
     ensureDefault("dynamic_logo",             TRUE_STR);
-    ensureDefault("switch2_style",            FALSE_STR);
+    ensureDefault("switch_2_style",            TRUE_STR);
     ensureDefault("selection_bg",             TRUE_STR);
     ensureDefault("selection_text",           FALSE_STR);
     ensureDefault("selection_value",          FALSE_STR);
