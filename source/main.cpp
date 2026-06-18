@@ -732,6 +732,7 @@ private:
                 convertComboToUnicode(mappedItem);
     
             tsl::elm::ListItem* listItem = new tsl::elm::ListItem(mappedItem);
+            listItem->setRadioSelector();
             if (item == defaultItem) {
                 listItem->setValue(CHECKMARK_SYMBOL);
                 lastSelectedListItem = listItem;
@@ -1074,6 +1075,7 @@ public:
                 if (defaultLangMode != "en" && !isFile(langFile))  {index++; continue;}
 
                 tsl::elm::ListItem* listItem = new tsl::elm::ListItem(*defaultLanguagesRepresentation[index]);
+                listItem->setRadioLabelSelector();
 
                 listItem->setValue(defaultLangMode);
                 if (defaultLangMode == defaulLang) {
@@ -1428,6 +1430,7 @@ public:
             std::string currentTheme = parseValueFromIniSection(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "current_theme");
             currentTheme = currentTheme.empty() ? DEFAULT_STR : currentTheme;
             auto* listItem = new tsl::elm::ListItem(DEFAULT);
+            listItem->setRadioSelector();
             if (currentTheme == DEFAULT_STR) {
                 listItem->setValue(CHECKMARK_SYMBOL);
                 lastSelectedListItem = listItem;
@@ -1471,6 +1474,7 @@ public:
                 if (themeName == DEFAULT_STR) continue;
 
                 listItem = new tsl::elm::ListItem(themeName);
+                listItem->setRadioSelector();
                 if (themeName == currentTheme) {
                     listItem->setValue(CHECKMARK_SYMBOL);
                     lastSelectedListItem = listItem;
@@ -1513,6 +1517,7 @@ public:
                     currentSounds = OPTION_SYMBOL;
             }
             auto* listItem = new tsl::elm::SilentListItem(OPTION_SYMBOL);
+            listItem->setRadioSelector();
             if (currentSounds == OPTION_SYMBOL) {
                 listItem->setValue(CHECKMARK_SYMBOL);
                 lastSelectedListItem = listItem;
@@ -1551,6 +1556,7 @@ public:
                 dropExtension(soundsName);
         
                 tsl::elm::ListItem* listItem = new tsl::elm::SilentListItem(soundsName);
+                listItem->setRadioSelector();
                 if (soundsName == currentSounds) {
                     listItem->setValue(CHECKMARK_SYMBOL);
                     lastSelectedListItem = listItem;
@@ -1593,6 +1599,7 @@ public:
             currentWallpaper = currentWallpaper.empty() ? OPTION_SYMBOL : currentWallpaper;
 
             auto* listItem = new tsl::elm::ListItem(OPTION_SYMBOL);
+            listItem->setRadioSelector();
             if (currentWallpaper == OPTION_SYMBOL) {
                 listItem->setValue(CHECKMARK_SYMBOL);
                 lastSelectedListItem = listItem;
@@ -1630,6 +1637,7 @@ public:
                 if (wallpaperName == DEFAULT_STR) continue;
 
                 listItem = new tsl::elm::ListItem(wallpaperName);
+                listItem->setRadioSelector();
                 if (wallpaperName == currentWallpaper) {
                     listItem->setValue(CHECKMARK_SYMBOL);
                     lastSelectedListItem = listItem;
@@ -2108,6 +2116,7 @@ public:
         bool isMini = false
     ) {
         auto* listItem = new tsl::elm::ListItem(iStr, "", isMini);
+        listItem->setRadioSelector();
 
         if (iStr == priorityValue) {
             listItem->setValue(CHECKMARK_SYMBOL);
@@ -2202,7 +2211,7 @@ public:
                     //tsl::shiftItemFocus(item);
                     tsl::changeTo<SettingsMenu>(name, mode, overlayName, overlayVersion, selection);
                     selectedListItem = item;
-                    if (lastSelectedListItem) lastSelectedListItem->triggerClickAnimation();
+                    //if (lastSelectedListItem) lastSelectedListItem->triggerClickAnimation();
                     return true;
                 }
                 return false;
@@ -2294,7 +2303,7 @@ public:
                             //tsl::shiftItemFocus(item);
                             tsl::changeTo<SettingsMenu>(entryName, OVERLAY_STR, mode, "", "mode_combo_" + std::to_string(i));
                             selectedListItem = item;
-                            if (lastSelectedListItem) lastSelectedListItem->triggerClickAnimation();
+                            //if (lastSelectedListItem) lastSelectedListItem->triggerClickAnimation();
                             return true;
                         }
                         return false;
@@ -2331,6 +2340,7 @@ public:
             // No combo option
             auto* _item = new tsl::elm::ListItem(OPTION_SYMBOL);
             {
+                _item->setRadioSelector();
                 if (currentCombo.empty()) {
                     _item->setValue(CHECKMARK_SYMBOL);
                     lastSelectedListItem = _item;
@@ -2363,6 +2373,7 @@ public:
                 convertComboToUnicode(mapped);
                 
                 auto* item = new tsl::elm::ListItem(mapped);
+                item->setRadioSelector();
                 if (combo == currentCombo) {
                     item->setValue(CHECKMARK_SYMBOL);
                     lastSelectedListItem = item;
@@ -2414,6 +2425,7 @@ public:
             // No combo option
             auto* _item = new tsl::elm::ListItem(OPTION_SYMBOL);
             {
+                _item->setRadioSelector();
                 if (currentCombo.empty()) {
                     _item->setValue(CHECKMARK_SYMBOL);
                     lastSelectedListItem = _item;
@@ -2450,6 +2462,7 @@ public:
                 convertComboToUnicode(mapped);
                 
                 auto* item = new tsl::elm::ListItem(mapped);
+                item->setRadioSelector();
                 if (combo == currentCombo) {
                     item->setValue(CHECKMARK_SYMBOL);
                     lastSelectedListItem = item;
@@ -3715,6 +3728,7 @@ public:
                 convertComboToUnicode(selectedFooterDict[specifiedFooterKey]);
                 
                 if (commandMode == OPTION_STR) {
+                    listItem->setRadioLabelSelector(footer);
                     if (selectedFooterDict[specifiedFooterKey] == itemName) {
                         lastSelectedListItem = listItem;
                         lastSelectedListItemFooter2 = footer;
