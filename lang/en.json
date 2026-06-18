@@ -143,6 +143,7 @@
     "REBOOT": "Reboot",
     "SHUTDOWN": "Shutdown",
     "BOOT_ENTRY": "Boot Entry",
+    "INI_ENTRY": "INI Entry",
     "GAP_1": "     ",
     "GAP_2": "  ",
     "SETTINGS_MENU": "Settings Menu",
