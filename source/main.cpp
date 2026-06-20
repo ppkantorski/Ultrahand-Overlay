@@ -1248,7 +1248,7 @@ public:
             // CPU, GPU, and SOC info
             tableData.clear();
             tableData = {{"", "CPU      GPU      SOC"}};
-            addTable(list, tableData, "", 163-1, 9, 3, 0, DEFAULT_STR, "section", "section", RIGHT_STR, true);
+            addTable(list, tableData, "", 163, 9, 3, 0, DEFAULT_STR, "section", "section", RIGHT_STR, true);
             
             tableData.clear();
             
