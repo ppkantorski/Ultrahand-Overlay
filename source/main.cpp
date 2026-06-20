@@ -1677,7 +1677,8 @@ public:
             createToggleListItem(list, BORDER, hideWidgetBorder, "hide_widget_border", true);
 
             addHeader(list, WIDGET_SETTINGS);
-            createToggleListItem(list, DYNAMIC_COLORS, dynamicWidgetColors, "dynamic_widget_colors");
+            createToggleListItem(list, DYNAMIC_BORDER, dynamicWidgetBorder, "dynamic_widget_border");
+            createToggleListItem(list, DYNAMIC_TEMPS, dynamicWidgetColors, "dynamic_widget_colors");
             createToggleListItem(list, CENTER_ALIGNMENT, centerWidgetAlignment, "center_widget_alignment");
             createToggleListItem(list, EXTENDED_BACKDROP, extendedWidgetBackdrop, "extended_widget_backdrop", true);
 
@@ -7473,6 +7474,7 @@ void initializeSettingsAndDirectories() {
     ensureDefault("hide_battery",             TRUE_STR);
     ensureDefault("hide_pcb_temp",            TRUE_STR);
     ensureDefault("hide_soc_temp",            TRUE_STR);
+    ensureDefault("dynamic_widget_border",    TRUE_STR);
     ensureDefault("dynamic_widget_colors",    TRUE_STR);
     ensureDefault("hide_widget_backdrop",     FALSE_STR);
     ensureDefault("center_widget_alignment",  TRUE_STR);

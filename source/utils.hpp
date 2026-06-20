@@ -1203,7 +1203,7 @@ static bool buildTableDrawerLines(
 ) {
     static constexpr size_t lineHeight = 16;
     static constexpr size_t fontSize = 16;
-    const size_t xMax = tsl::cfg::FramebufferWidth - 95;
+    const size_t xMax = tsl::cfg::FramebufferWidth - 95 -1;
     const std::string indent = "└ ";
     const float indentWidth = tsl::gfx::calculateStringWidth(indent, fontSize, false);
 
@@ -1516,7 +1516,7 @@ void drawTable(
             const auto dividerColor = (tsl::textSeparatorColor);
             
             const size_t count = cacheExpSec.size();
-            const s32 baseX = (useHeaderIndent) ? x+12+5: x + 12;
+            const s32 baseX = (useHeaderIndent) ? x+12+5: x + 12 +1;
 
             // ── Viewport culling ──────────────────────────────────────────────
             // TableDrawer::draw calls enableScissoring(0, 88, w, FramebufferHeight-163)
