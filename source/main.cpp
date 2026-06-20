@@ -732,6 +732,7 @@ private:
                 convertComboToUnicode(mappedItem);
     
             tsl::elm::ListItem* listItem = new tsl::elm::ListItem(mappedItem);
+            listItem->setRadioSelector();
             if (item == defaultItem) {
                 listItem->setValue(CHECKMARK_SYMBOL);
                 lastSelectedListItem = listItem;
@@ -1074,6 +1075,7 @@ public:
                 if (defaultLangMode != "en" && !isFile(langFile))  {index++; continue;}
 
                 tsl::elm::ListItem* listItem = new tsl::elm::ListItem(*defaultLanguagesRepresentation[index]);
+                listItem->setRadioLabelSelector();
 
                 listItem->setValue(defaultLangMode);
                 if (defaultLangMode == defaulLang) {
@@ -1428,6 +1430,7 @@ public:
             std::string currentTheme = parseValueFromIniSection(ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, "current_theme");
             currentTheme = currentTheme.empty() ? DEFAULT_STR : currentTheme;
             auto* listItem = new tsl::elm::ListItem(DEFAULT);
+            listItem->setRadioSelector();
             if (currentTheme == DEFAULT_STR) {
                 listItem->setValue(CHECKMARK_SYMBOL);
                 lastSelectedListItem = listItem;
@@ -1471,6 +1474,7 @@ public:
                 if (themeName == DEFAULT_STR) continue;
 
                 listItem = new tsl::elm::ListItem(themeName);
+                listItem->setRadioSelector();
                 if (themeName == currentTheme) {
                     listItem->setValue(CHECKMARK_SYMBOL);
                     lastSelectedListItem = listItem;
@@ -1513,6 +1517,7 @@ public:
                     currentSounds = OPTION_SYMBOL;
             }
             auto* listItem = new tsl::elm::SilentListItem(OPTION_SYMBOL);
+            listItem->setRadioSelector();
             if (currentSounds == OPTION_SYMBOL) {
                 listItem->setValue(CHECKMARK_SYMBOL);
                 lastSelectedListItem = listItem;
@@ -1551,6 +1556,7 @@ public:
                 dropExtension(soundsName);
         
                 tsl::elm::ListItem* listItem = new tsl::elm::SilentListItem(soundsName);
+                listItem->setRadioSelector();
                 if (soundsName == currentSounds) {
                     listItem->setValue(CHECKMARK_SYMBOL);
                     lastSelectedListItem = listItem;
@@ -1593,6 +1599,7 @@ public:
             currentWallpaper = currentWallpaper.empty() ? OPTION_SYMBOL : currentWallpaper;
 
             auto* listItem = new tsl::elm::ListItem(OPTION_SYMBOL);
+            listItem->setRadioSelector();
             if (currentWallpaper == OPTION_SYMBOL) {
                 listItem->setValue(CHECKMARK_SYMBOL);
                 lastSelectedListItem = listItem;
@@ -1630,6 +1637,7 @@ public:
                 if (wallpaperName == DEFAULT_STR) continue;
 
                 listItem = new tsl::elm::ListItem(wallpaperName);
+                listItem->setRadioSelector();
                 if (wallpaperName == currentWallpaper) {
                     listItem->setValue(CHECKMARK_SYMBOL);
                     lastSelectedListItem = listItem;
@@ -1669,7 +1677,8 @@ public:
             createToggleListItem(list, BORDER, hideWidgetBorder, "hide_widget_border", true);
 
             addHeader(list, WIDGET_SETTINGS);
-            createToggleListItem(list, DYNAMIC_COLORS, dynamicWidgetColors, "dynamic_widget_colors");
+            createToggleListItem(list, DYNAMIC_BORDER, dynamicWidgetBorder, "dynamic_widget_border");
+            createToggleListItem(list, DYNAMIC_TEMPS, dynamicWidgetColors, "dynamic_widget_colors");
             createToggleListItem(list, CENTER_ALIGNMENT, centerWidgetAlignment, "center_widget_alignment");
             createToggleListItem(list, EXTENDED_BACKDROP, extendedWidgetBackdrop, "extended_widget_backdrop", true);
 
@@ -1707,7 +1716,7 @@ public:
                     "",
                     notifLabels,
                     nullptr, nullptr, {}, "",
-                    false,
+                    true,
                     false
                 );
 
@@ -1781,7 +1790,7 @@ public:
                 "",
                 holdLabels,
                 nullptr, nullptr, {}, "",
-                false,
+                true,
                 false
             );
             holdDurationTrackbar->setSimpleCallback([this](s16 /*value*/, s16 index) {
@@ -1842,8 +1851,12 @@ public:
 
 
             addHeader(list, THEME_SETTINGS);
+            useSwitch2Style = getBoolValue("switch_2_style", true); // TRUE_STR default
+            createToggleListItem(list, SWITCH_2_STYLE, useSwitch2Style, "switch_2_style");
             useDynamicLogo = getBoolValue("dynamic_logo", true); // TRUE_STR default
             createToggleListItem(list, DYNAMIC_LOGO, useDynamicLogo, "dynamic_logo");
+            useDynamicTableColors = getBoolValue("dynamic_tables", true); // TRUE_STR default
+            createToggleListItem(list, DYNAMIC_TABLES, useDynamicTableColors, "dynamic_tables");
             useSelectionBG = getBoolValue("selection_bg", true); // TRUE_STR default
             createToggleListItem(list, SELECTION_BACKGROUND, useSelectionBG, "selection_bg", false, true);
             useSelectionText = getBoolValue("selection_text", false); // TRUE_STR default
@@ -1940,7 +1953,17 @@ public:
         }
         
         if (handleGoBackAfter()) return true;
-        
+
+        // Recovery guard: if both navigation flags went false while this GUI is on top
+        // (can happen after a hide/show cycle that interrupted a transition, or after a
+        // rapid back-press chain left stale global state), re-derive them from this
+        // instance's own identity.  This is a no-op on every normal path where createUI
+        // correctly initialised the flags.
+        if (!inSettingsMenu && !inSubSettingsMenu && !returningToSettings) {
+            inSettingsMenu    = dropdownSelection.empty();
+            inSubSettingsMenu = !dropdownSelection.empty();
+        }
+
         if (inSettingsMenu && !inSubSettingsMenu) {
             if (!returningToSettings) {
                 resetSimulatedInputs();
@@ -2106,6 +2129,7 @@ public:
         bool isMini = false
     ) {
         auto* listItem = new tsl::elm::ListItem(iStr, "", isMini);
+        listItem->setRadioSelector();
 
         if (iStr == priorityValue) {
             listItem->setValue(CHECKMARK_SYMBOL);
@@ -2200,7 +2224,7 @@ public:
                     //tsl::shiftItemFocus(item);
                     tsl::changeTo<SettingsMenu>(name, mode, overlayName, overlayVersion, selection);
                     selectedListItem = item;
-                    if (lastSelectedListItem) lastSelectedListItem->triggerClickAnimation();
+                    //if (lastSelectedListItem) lastSelectedListItem->triggerClickAnimation();
                     return true;
                 }
                 return false;
@@ -2292,7 +2316,7 @@ public:
                             //tsl::shiftItemFocus(item);
                             tsl::changeTo<SettingsMenu>(entryName, OVERLAY_STR, mode, "", "mode_combo_" + std::to_string(i));
                             selectedListItem = item;
-                            if (lastSelectedListItem) lastSelectedListItem->triggerClickAnimation();
+                            //if (lastSelectedListItem) lastSelectedListItem->triggerClickAnimation();
                             return true;
                         }
                         return false;
@@ -2329,6 +2353,7 @@ public:
             // No combo option
             auto* _item = new tsl::elm::ListItem(OPTION_SYMBOL);
             {
+                _item->setRadioSelector();
                 if (currentCombo.empty()) {
                     _item->setValue(CHECKMARK_SYMBOL);
                     lastSelectedListItem = _item;
@@ -2361,6 +2386,7 @@ public:
                 convertComboToUnicode(mapped);
                 
                 auto* item = new tsl::elm::ListItem(mapped);
+                item->setRadioSelector();
                 if (combo == currentCombo) {
                     item->setValue(CHECKMARK_SYMBOL);
                     lastSelectedListItem = item;
@@ -2412,6 +2438,7 @@ public:
             // No combo option
             auto* _item = new tsl::elm::ListItem(OPTION_SYMBOL);
             {
+                _item->setRadioSelector();
                 if (currentCombo.empty()) {
                     _item->setValue(CHECKMARK_SYMBOL);
                     lastSelectedListItem = _item;
@@ -2448,6 +2475,7 @@ public:
                 convertComboToUnicode(mapped);
                 
                 auto* item = new tsl::elm::ListItem(mapped);
+                item->setRadioSelector();
                 if (combo == currentCombo) {
                     item->setValue(CHECKMARK_SYMBOL);
                     lastSelectedListItem = item;
@@ -2582,6 +2610,15 @@ public:
             }, nullptr, true); // false = do NOT reset storedCommands
         }
 
+        // Recovery guard: if both navigation flags went false while this GUI is on top
+        // (can happen after a hide/show cycle that interrupted a transition, or after a
+        // rapid back-press chain left stale global state), re-derive them from this
+        // instance's own identity.  This is a no-op on every normal path where createUI
+        // correctly initialised the flags.
+        if (!inSettingsMenu && !inSubSettingsMenu && !returningToSettings) {
+            inSettingsMenu    = dropdownSelection.empty();
+            inSubSettingsMenu = !dropdownSelection.empty();
+        }
 
         if (inSettingsMenu && !inSubSettingsMenu) {
             if (!returningToSettings) {
@@ -2655,11 +2692,16 @@ public:
                     modeTitle = LAUNCH_MODES;
                     reloadMenu2 = true;
                 }
-
-
                 else if (dropdownSelection.rfind("mode_combo_", 0) != 0) {
                     inSubSettingsMenu = false;
                     returningToSettings = true;
+                } else {
+                    // mode_combo_ case: clear the sub-menu flag even though we are not
+                    // setting returningToSettings. The swapTo/goBack block below handles
+                    // routing; without this, inSubSettingsMenu stays true on the parent
+                    // SettingsMenu when plain goBack() is used, causing a stale-flag
+                    // double-pop on the next B press and a potential stuck state.
+                    inSubSettingsMenu = false;
                 }
     
                 // Step 1: Go back one menu level
@@ -2858,7 +2900,7 @@ public:
             // Use default parameters for the table view
             constexpr size_t tableColumnOffset = 163;
             constexpr size_t tableStartGap = 20;
-            constexpr size_t tableEndGap = 9;
+            constexpr size_t tableEndGap = 9+2;
             constexpr size_t tableSpacing = 4;
             const std::string& tableSectionTextColor = DEFAULT_STR;
             const std::string& tableInfoTextColor = DEFAULT_STR;
@@ -3713,6 +3755,7 @@ public:
                 convertComboToUnicode(selectedFooterDict[specifiedFooterKey]);
                 
                 if (commandMode == OPTION_STR) {
+                    listItem->setRadioLabelSelector(footer);
                     if (selectedFooterDict[specifiedFooterKey] == itemName) {
                         lastSelectedListItem = listItem;
                         lastSelectedListItemFooter2 = footer;
@@ -4456,7 +4499,7 @@ bool drawCommandsMenu(
         hideTableBackground = false;
         useHeaderIndent = false;
         tableStartGap = 20;
-        tableEndGap = 9;
+        tableEndGap = 9+2;
         tableColumnOffset = 164;
         tableSpacing = 0;
         tableSectionTextColor = DEFAULT_STR;
@@ -7434,6 +7477,8 @@ void initializeSettingsAndDirectories() {
 
     // Shared keys (variables set by parseOverlaySettings — INI write-back only)
     ensureDefault("dynamic_logo",             TRUE_STR);
+    ensureDefault("switch_2_style",            TRUE_STR);
+    ensureDefault("dynamic_tables",            TRUE_STR);
     ensureDefault("selection_bg",             TRUE_STR);
     ensureDefault("selection_text",           FALSE_STR);
     ensureDefault("selection_value",          FALSE_STR);
@@ -7453,6 +7498,7 @@ void initializeSettingsAndDirectories() {
     ensureDefault("hide_battery",             TRUE_STR);
     ensureDefault("hide_pcb_temp",            TRUE_STR);
     ensureDefault("hide_soc_temp",            TRUE_STR);
+    ensureDefault("dynamic_widget_border",    TRUE_STR);
     ensureDefault("dynamic_widget_colors",    TRUE_STR);
     ensureDefault("hide_widget_backdrop",     FALSE_STR);
     ensureDefault("center_widget_alignment",  TRUE_STR);

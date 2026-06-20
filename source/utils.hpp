@@ -1203,7 +1203,7 @@ static bool buildTableDrawerLines(
 ) {
     static constexpr size_t lineHeight = 16;
     static constexpr size_t fontSize = 16;
-    const size_t xMax = tsl::cfg::FramebufferWidth - 95;
+    const size_t xMax = tsl::cfg::FramebufferWidth - 95 -1;
     const std::string indent = "└ ";
     const float indentWidth = tsl::gfx::calculateStringWidth(indent, fontSize, false);
 
@@ -1437,7 +1437,7 @@ void drawTable(
     std::vector<std::string>&             infoLines,
     size_t columnOffset             = 164,
     size_t startGap                 = 20,
-    size_t endGap                   = 9,
+    size_t endGap                   = 9+2,
     size_t newlineGap               = 4,
     const std::string& tableSectionTextColor       = DEFAULT_STR,
     const std::string& tableInfoTextColor          = DEFAULT_STR,
@@ -1506,7 +1506,8 @@ void drawTable(
 
             // Minimal branching, maximum cache efficiency
             if (useHeaderIndent) {
-                renderer->drawRect(x-2, y, 4, 22, renderer->aWithOpacity(tsl::headerSeparatorColor));
+                if (!ult::useSwitch2Style) renderer->drawRect(x-2 +5, y, 4, 22, renderer->aWithOpacity(tsl::headerSeparatorColor));
+                else renderer->drawRoundedRectSingleThreaded(x-2 +5, y, 4, 22, 2, renderer->aWithOpacity(tsl::headerSeparatorColor));
             }
 
             // Convert to renderer colors once per frame
@@ -1515,7 +1516,7 @@ void drawTable(
             const auto dividerColor = (tsl::textSeparatorColor);
             
             const size_t count = cacheExpSec.size();
-            const s32 baseX = x + 12;
+            const s32 baseX = (useHeaderIndent) ? x+12+5: x + 12 +1;
 
             // ── Viewport culling ──────────────────────────────────────────────
             // TableDrawer::draw calls enableScissoring(0, 88, w, FramebufferHeight-163)
@@ -1559,7 +1560,13 @@ void drawTable(
                     const s32 yPos = y + cacheYOff[i];
                     if (yPos >= kClipBottom) break;
                     renderer->drawStringWithColoredSections(cacheExpSec[i], false, tsl::s_dividerSpecialChars, baseX, yPos, 16, secColor, dividerColor);
-                    renderer->drawStringWithColoredSections(cacheExpInfo[i], false, tsl::s_dividerSpecialChars, x + cacheXOff[i], yPos, 16, infoColor, dividerColor);
+                    // When useHeaderIndent, right-align the info value to the same
+                    // anchor as CategoryHeader::draw (getX()+2+getWidth()-valueWidth-5).
+                    // Lambda x=getX()+4, w=getWidth()+4, so that anchor is x+w-valueWidth-11.
+                    const s32 infoX = useHeaderIndent
+                        ? (x + w - renderer->getTextDimensions(cacheExpInfo[i], false, 16).first - 11)
+                        : (x + cacheXOff[i]);
+                    renderer->drawStringWithColoredSections(cacheExpInfo[i], false, tsl::s_dividerSpecialChars, infoX, yPos, 16, infoColor, dividerColor);
                 }
             } else {
                 // Different colors path
@@ -1569,8 +1576,14 @@ void drawTable(
                     const s32 yPos = y + cacheYOff[i];
                     if (yPos >= kClipBottom) break;
                     renderer->drawStringWithColoredSections(cacheExpSec[i], false, tsl::s_dividerSpecialChars, baseX, yPos, 16, secColor, dividerColor);
+                    // When useHeaderIndent, right-align the info value to the same
+                    // anchor as CategoryHeader::draw (getX()+2+getWidth()-valueWidth-5).
+                    // Lambda x=getX()+4, w=getWidth()+4, so that anchor is x+w-valueWidth-11.
+                    const s32 infoX = useHeaderIndent
+                        ? (x + w - renderer->getTextDimensions(cacheExpInfo[i], false, 16).first - 11)
+                        : (x + cacheXOff[i]);
                     renderer->drawStringWithHighlight(
-                        cacheExpInfo[i], false, x + cacheXOff[i], yPos, 16,
+                        cacheExpInfo[i], false, infoX, yPos, 16,
                         infoColor, hiliteColor
                     );
                 }
@@ -1590,7 +1603,7 @@ void addTable(
     const std::string&                     packagePath,
     const size_t&                          columnOffset                = 164,
     const size_t&                          tableStartGap               = 20,
-    const size_t&                          tableEndGap                 = 9,
+    const size_t&                          tableEndGap                 = 9+2,
     const size_t&                          tableSpacing                = 0,
     const std::string&                     tableSectionTextColor       = DEFAULT_STR,
     const std::string&                     tableInfoTextColor          = DEFAULT_STR,
@@ -1640,7 +1653,7 @@ void addHelpInfo(tsl::elm::List* list) {
     std::vector<std::vector<std::string>> dummyTableData;
     drawTable(list, dummyTableData, sectionLines, infoLines,
         static_cast<size_t>(tsl::cfg::FramebufferWidth) - 90 - maxInfoWidth,
-        20, 9, 4);
+        20, 9+2, 4);
 }
 
 
@@ -1702,7 +1715,7 @@ void addPackageInfo(tsl::elm::List* list, auto& packageHeader, std::string type 
     addField(_ABOUT,        getTranslated(packageHeader.about),   defaultLang == "en" ? WORD_STR : CHAR_STR);
     addField(_CREDITS,      getTranslated(packageHeader.credits), WORD_STR);
     std::vector<std::vector<std::string>> dummyTableData;
-    drawTable(list, dummyTableData, sectionLines, infoLines, xOffset, 20, 9, 3, DEFAULT_STR, DEFAULT_STR, DEFAULT_STR, LEFT_STR, false, false, true);
+    drawTable(list, dummyTableData, sectionLines, infoLines, xOffset, 20, 9+2, 3, DEFAULT_STR, DEFAULT_STR, DEFAULT_STR, LEFT_STR, false, false, true);
 }
 
 // Load once at startup, store globally
@@ -2087,9 +2100,34 @@ void applyReplaceIniPlaceholder(std::string& arg, const std::string& commandName
     
     // Process all occurrences of the placeholder
     while ((startPos = arg.find(searchString, lastPos)) != std::string::npos) {
-        endPos = arg.find(")}", startPos);
+        // Depth-aware scan for the matching ")}" so that nested {ini_file(...)}
+        // placeholders inside the argument list do not fool us into stopping early.
+        // e.g. {ini_file({ini_file(0)},{ini_file(软件版本,{ini_file(0)})})}
+        //                                                             ^
+        //       naive find(")}", startPos) would stop here (depth 2), not at the
+        //       real closing ")}" of the outermost placeholder.
+        {
+            int depth = 1;
+            size_t scan = startPos + searchStringLen;
+            endPos = std::string::npos;
+            while (scan + 1 < arg.size()) {
+                if (arg.compare(scan, searchStringLen, searchString) == 0) {
+                    // Nested opener of the same type — go deeper
+                    ++depth;
+                    scan += searchStringLen;
+                } else if (arg[scan] == ')' && arg[scan + 1] == '}') {
+                    if (--depth == 0) {
+                        endPos = scan;
+                        break;
+                    }
+                    scan += 2;
+                } else {
+                    ++scan;
+                }
+            }
+        }
         if (endPos == std::string::npos || endPos <= startPos) {
-            // Invalid placeholder, append text up to this point and continue searching
+            // Invalid/unmatched placeholder — skip past the opener and continue
             result.append(arg, lastPos, startPos + searchStringLen - lastPos);
             lastPos = startPos + searchStringLen;
             continue;
@@ -2101,8 +2139,35 @@ void applyReplaceIniPlaceholder(std::string& arg, const std::string& commandName
         placeholderContent = arg.substr(startPos + searchStringLen, 
                                        endPos - startPos - searchStringLen);
         trim(placeholderContent);
-        
-        commaPos = placeholderContent.find(',');
+
+        // If placeholderContent still contains unresolved inner placeholders, skip
+        // the entire outer placeholder and leave it intact for a later resolution pass.
+        // Without this guard, the comma-split and integer-check below would operate on
+        // literal placeholder text (e.g. "{ini_file(0)}") instead of resolved values,
+        // producing null instead of deferring correctly.
+        if (placeholderContent.find('{') != std::string::npos) {
+            result.append(searchString);  // re-emit the opener
+            result.append(placeholderContent);
+            result.append(")}");          // re-emit the closer
+            lastPos = endPos + 2;
+            continue;
+        }
+
+        // Find the top-level comma (depth-aware: skip commas inside nested placeholders).
+        // A plain find(',') would mis-split on e.g. "sec,{ini_file(a,b)}" — finding the
+        // comma inside the inner placeholder first and producing a broken iniSection.
+        // The unresolved-inner guard above now prevents us from ever reaching here with
+        // '{' still present, but the depth-aware scan is kept as a correct-by-construction
+        // safeguard for any future call paths that may bypass the guard.
+        commaPos = std::string::npos;
+        {
+            int d = 0;
+            for (size_t i = 0; i < placeholderContent.size(); ++i) {
+                if (placeholderContent[i] == '{') { ++d; continue; }
+                if (placeholderContent[i] == '}') { --d; continue; }
+                if (d == 0 && placeholderContent[i] == ',') { commaPos = i; break; }
+            }
+        }
         
         if (commaPos != std::string::npos) {
             // Handle section,key format
@@ -2116,7 +2181,7 @@ void applyReplaceIniPlaceholder(std::string& arg, const std::string& commandName
             
             replacement = returnOrNull(parseValueFromIniSection(iniPath, iniSection, iniKey));
         } else {
-            // Check if the content is an integer
+            // Check if the content is an integer (section index lookup)
             if (std::all_of(placeholderContent.begin(), placeholderContent.end(), ::isdigit)) {
                 if (!isValidNumber(placeholderContent)) {
                     replacement = NULL_STR;
@@ -2136,7 +2201,14 @@ void applyReplaceIniPlaceholder(std::string& arg, const std::string& commandName
                     }
                 }
             } else {
-                replacement = NULL_STR;
+                // Content is non-numeric and has no comma — not a valid ini_file argument.
+                // Leave the whole placeholder intact rather than collapsing it to null,
+                // so a later resolution pass can still act on it if the content resolves.
+                result.append(searchString);
+                result.append(placeholderContent);
+                result.append(")}");
+                lastPos = endPos + 2;
+                continue;
             }
         }
         
