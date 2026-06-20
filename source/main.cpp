@@ -1953,7 +1953,17 @@ public:
         }
         
         if (handleGoBackAfter()) return true;
-        
+
+        // Recovery guard: if both navigation flags went false while this GUI is on top
+        // (can happen after a hide/show cycle that interrupted a transition, or after a
+        // rapid back-press chain left stale global state), re-derive them from this
+        // instance's own identity.  This is a no-op on every normal path where createUI
+        // correctly initialised the flags.
+        if (!inSettingsMenu && !inSubSettingsMenu && !returningToSettings) {
+            inSettingsMenu    = dropdownSelection.empty();
+            inSubSettingsMenu = !dropdownSelection.empty();
+        }
+
         if (inSettingsMenu && !inSubSettingsMenu) {
             if (!returningToSettings) {
                 resetSimulatedInputs();
@@ -2600,6 +2610,15 @@ public:
             }, nullptr, true); // false = do NOT reset storedCommands
         }
 
+        // Recovery guard: if both navigation flags went false while this GUI is on top
+        // (can happen after a hide/show cycle that interrupted a transition, or after a
+        // rapid back-press chain left stale global state), re-derive them from this
+        // instance's own identity.  This is a no-op on every normal path where createUI
+        // correctly initialised the flags.
+        if (!inSettingsMenu && !inSubSettingsMenu && !returningToSettings) {
+            inSettingsMenu    = dropdownSelection.empty();
+            inSubSettingsMenu = !dropdownSelection.empty();
+        }
 
         if (inSettingsMenu && !inSubSettingsMenu) {
             if (!returningToSettings) {
@@ -2673,11 +2692,16 @@ public:
                     modeTitle = LAUNCH_MODES;
                     reloadMenu2 = true;
                 }
-
-
                 else if (dropdownSelection.rfind("mode_combo_", 0) != 0) {
                     inSubSettingsMenu = false;
                     returningToSettings = true;
+                } else {
+                    // mode_combo_ case: clear the sub-menu flag even though we are not
+                    // setting returningToSettings. The swapTo/goBack block below handles
+                    // routing; without this, inSubSettingsMenu stays true on the parent
+                    // SettingsMenu when plain goBack() is used, causing a stale-flag
+                    // double-pop on the next B press and a potential stuck state.
+                    inSubSettingsMenu = false;
                 }
     
                 // Step 1: Go back one menu level
