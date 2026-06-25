@@ -2020,7 +2020,7 @@ public:
                 returningToSettings = true;
                 
                 if (reloadMenu2) {
-                    tsl::swapTo<UltrahandSettingsMenu>(SwapDepth(3));
+                    tsl::swapTo<UltrahandSettingsMenu>(SwapDepth(1));
                     reloadMenu2 = false;
                 } else {
                     tsl::goBack();
@@ -7438,6 +7438,8 @@ public:
                 inMainMenu.store(false, std::memory_order_release);
                 skipJumpReset.store(false, std::memory_order_release);
                 lastMenu = "hiddenMenuMode";
+                reloadMenu = false;
+                reloadMenu2 = false;
                 tsl::changeTo<UltrahandSettingsMenu>();
                 triggerSettingsFeedback();
                 return true;
@@ -7447,13 +7449,19 @@ public:
         if (freshSpawn && !(keysDown & KEY_B))
             freshSpawn = false;
         
-        if (returningToMain && !(keysDown & KEY_B)) {
-            returningToMain = false;
-            inMainMenu.store(true, std::memory_order_release);
+        if (returningToMain) {
+            if (!(keysDown & KEY_B)) {
+                returningToMain = false;
+                inMainMenu.store(true, std::memory_order_release);
+            }
+            return true; // consume all input (including B) while transition is pending
         }
-        if (returningToHiddenMain && !(keysDown & KEY_B)) {
-            returningToHiddenMain = false;
-            inHiddenMode.store(true, std::memory_order_release);
+        if (returningToHiddenMain) {
+            if (!(keysDown & KEY_B)) {
+                returningToHiddenMain = false;
+                inHiddenMode.store(true, std::memory_order_release);
+            }
+            return true; // consume all input (including B) while transition is pending
         }
     
         handleTriggerExit();
