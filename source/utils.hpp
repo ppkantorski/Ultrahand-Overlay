@@ -3569,6 +3569,7 @@ bool applyPlaceholderReplacements(std::vector<std::string>& cmd, const std::stri
 void processCommand(const std::vector<std::string>& cmd, const std::string& packagePath, const std::string& selectedCommand);
 inline bool txtLineExists(const std::string& filePath, const std::string& line);
 inline bool hexValMatches(const std::string& filePath, uint32_t offset, std::string expectedHex);
+inline bool hexValMatchesCustom(const std::string& filePath, const std::string& customAsciiPattern, const std::string& offsetStr, std::string expectedHex);
 inline bool moduleExists(u64 programId);
 inline bool moduleIsActive(u64 programId);
 
@@ -4966,6 +4967,16 @@ void processCommand(const std::vector<std::string>& cmd, const std::string& pack
                 } else { setCommandFailed(); }
                 return;
             }
+            if (commandName == "matching_hex_val_custom") {
+                // [!]matching_hex_val_custom <path> <ascii_pattern> <offset> <hex>
+                if (cmdSize >= 5) {
+                    std::string path = cmd[1];
+                    preprocessPath(path, packagePath);
+                    const bool match = hexValMatchesCustom(path, getUnquoted(cmd, 2), getUnquoted(cmd, 3), getUnquoted(cmd, 4));
+                    setCommandResult(match);
+                } else { setCommandFailed(); }
+                return;
+            }
             if (commandName == "matching_ini_val") {
                 // [!]matching_ini_val <path> <section> <key> <value...>
                 if (cmdSize >= 5) {
@@ -5541,6 +5552,15 @@ void processCommand(const std::vector<std::string>& cmd, const std::string& pack
                 } else { setCommandFailed(); }
                 return;
             }
+            if (commandName == "!matching_hex_val_custom") {
+                // !matching_hex_val_custom <path> <ascii_pattern> <offset> <hex>
+                if (cmdSize >= 5) {
+                    std::string path = cmd[1];
+                    preprocessPath(path, packagePath);
+                    setCommandResult(!hexValMatchesCustom(path, getUnquoted(cmd, 2), getUnquoted(cmd, 3), getUnquoted(cmd, 4)));
+                } else { setCommandFailed(); }
+                return;
+            }
             if (commandName == "!matching_ini_val") {
                 // !matching_ini_val <path> <section> <key> <value...>
                 if (cmdSize >= 5) {
@@ -5586,13 +5606,18 @@ void processCommand(const std::vector<std::string>& cmd, const std::string& pack
 //   ipc_exists        <service_name>
 //   module_exists     <TID>
 //   module_is_active  <TID>
-//   matching_txt_line <path> <line>
-//   matching_hex_val  <path> <offset> <hex>
-//   matching_ini_val  <path> <section> <key> <value>
+//   matching_txt_line     <path> <line>
+//   matching_hex_val      <path> <offset> <hex>
+//   matching_hex_val_custom <path> <ascii_pattern> <offset> <hex>
+//   matching_ini_val      <path> <section> <key> <value>
+//
+// matching_hex_val_custom resolves <offset> relative to the file offset of
+// <ascii_pattern> (e.g. "CUST"), via the same magic-scan + hexSumCache that
+// hex-by-custom-offset uses for writes -- see hexValMatchesCustom() below.
 //
 // Prefix any mode with ! to negate: !path_exists, !module_exists, etc.
 //
-// The final free-text field (line / value) keeps any embedded spaces.
+// The final free-text field (line / value / hex) keeps any embedded spaces.
 // ---------------------------------------------------------------------------
 
 // Returns true when an exact line (trailing CR/LF stripped) exists in a file.
@@ -5676,6 +5701,40 @@ inline bool hexValMatches(const std::string& filePath, uint32_t offset, std::str
     return true;
 }
 
+// Returns true when the bytes at (patternOffset + offset) match expectedHex, where
+// patternOffset is the file offset of customAsciiPattern (e.g. "CUST"), resolved via
+// the same findHexDataOffsets() magic-scan and hexSumCache that hex-by-custom-offset
+// uses for writes -- so this read-side check can never drift out of sync with where
+// hex-by-custom-offset actually patches. The hex string is validated (even length,
+// hex digits only, spaces ignored) before any file I/O, exactly like hexValMatches().
+inline bool hexValMatchesCustom(const std::string& filePath, const std::string& customAsciiPattern,
+                                 const std::string& offsetStr, std::string expectedHex) {
+    if (!isFile(filePath)) return false;
+
+    // Strip spaces in-place, then validate length and characters.
+    size_t w = 0;
+    for (size_t r = 0; r < expectedHex.size(); ++r) {
+        if (expectedHex[r] != ' ') expectedHex[w++] = expectedHex[r];
+    }
+    expectedHex.resize(w);
+    if (expectedHex.empty() || (expectedHex.size() % 2) != 0) return false;
+    for (size_t i = 0; i < expectedHex.size(); ++i) {
+        if (!std::isxdigit(static_cast<unsigned char>(expectedHex[i]))) return false;
+    }
+
+    const size_t len = expectedHex.size() / 2;
+    const std::string actual = parseHexDataAtCustomOffset(filePath, customAsciiPattern, offsetStr, len);
+    if (actual.size() != expectedHex.size()) return false;
+
+    for (size_t i = 0; i < len; ++i) {
+        unsigned int a = 0, b = 0;
+        if (std::sscanf(actual.c_str() + i * 2, "%2x", &a) != 1) return false;
+        if (std::sscanf(expectedHex.c_str() + i * 2, "%2x", &b) != 1) return false;
+        if (a != b) return false;
+    }
+    return true;
+}
+
 // Evaluates a "<mode> <args...>" condition string. Returns true when satisfied.
 // Used by both ;visibility_condition= (true -> shown) and
 // ;toggle_state_condition= (true -> ON). An empty condition returns true; an
@@ -5751,6 +5810,15 @@ inline bool evaluateMenuCondition(std::string condition, const std::string& pack
         if (isValidNumber(offsetStr))
             offset = static_cast<uint32_t>(std::strtoul(offsetStr.c_str(), nullptr, 0));
         return negate ^ hexValMatches(path, offset, hex);
+    }
+    if (mode == "matching_hex_val_custom") {
+        std::string path = nextToken();
+        std::string pattern = nextToken();
+        std::string offsetStr = nextToken();
+        const std::string hex = remainder();
+        if (path.empty() || pattern.empty() || offsetStr.empty() || hex.empty()) return false;
+        preprocessPath(path, packagePath);
+        return negate ^ hexValMatchesCustom(path, pattern, offsetStr, hex);
     }
     if (mode == "matching_ini_val") {
         std::string path = nextToken();
