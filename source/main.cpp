@@ -289,8 +289,15 @@ bool handleRunningInterpreter(uint64_t& keysDown, uint64_t& keysHeld) {
     }
     
     // Other input handling
-    if ((keysDown & KEY_B) && !(keysHeld & ~KEY_B & ALL_KEYS_MASK) && !stillTouching.load(acquire)) {
+    // X hides the overlay while a command is running (moved off B to prevent
+    // accidental hides when the user reflexively presses B to "go back").
+    if ((keysDown & KEY_X) && !(keysHeld & ~KEY_X & ALL_KEYS_MASK) && !stillTouching.load(acquire)) {
         tsl::Overlay::get()->hide();
+        return true;
+    }
+    // Swallow B during a running command: consume it so it neither hides nor pops the GUI.
+    if ((keysDown & KEY_B) && !(keysHeld & ~KEY_B & ALL_KEYS_MASK)) {
+        return true;
     }
     
     if (threadFailure.exchange(false, std::memory_order_acq_rel)) {
