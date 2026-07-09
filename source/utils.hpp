@@ -210,7 +210,7 @@ void removeKeyComboFromOthers(const std::string& keyCombo, const std::string& cu
 }
 
 // Define default key combos (same as UltrahandSettingsMenu)
-static const std::array<std::string, 29> defaultCombos = {
+static const std::array<std::string, 28> defaultCombos = {
     // Primary (Default) Combos – top priority, always first
     "ZL+ZR+DDOWN",
     "ZL+ZR+DRIGHT",
