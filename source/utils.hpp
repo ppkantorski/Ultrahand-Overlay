@@ -1449,7 +1449,9 @@ void drawTable(
     bool isScrollable               = true,
     const std::string& wrappingMode               = "none",
     bool useWrappedTextIndent        = false,
-    const std::string& packagePath          = ""
+    const std::string& packagePath          = "",
+    const std::string& bgColor              = DEFAULT_STR,
+    bool drawBorder                  = true
 ) {
     // Prebuild initial buffers
     std::vector<std::string> cacheExpSec, cacheExpInfo;
@@ -1467,6 +1469,13 @@ void drawTable(
     const auto secRaw = getRawColor(tableSectionTextColor, tsl::sectionTextColor);
     const auto infoRaw = getRawColor(tableInfoTextColor, tsl::infoTextColor);
     const auto hiliteRaw = getRawColor(tableInfoTextHighlightColor, tsl::infoTextColor);
+
+    // Custom background color (;bg_color=): only the RGB channels are resolved
+    // here -- the alpha channel is taken live from the theme's table background
+    // color at draw time (in TableDrawer::draw), so opacity/fade settings and
+    // theme changes still apply normally.
+    const bool hasCustomBgColor = (bgColor != DEFAULT_STR);
+    const auto customBgRaw = hasCustomBgColor ? getRawColor(bgColor, tsl::Color(0,0,0,0)) : tsl::Color(0,0,0,0);
     
     // Pre-calculate color comparison
     const bool sameCol = (tableInfoTextColor == tableInfoTextHighlightColor);
@@ -1591,7 +1600,10 @@ void drawTable(
         },
         hideTableBackground,
         endGap,
-        isScrollable
+        isScrollable,
+        drawBorder,
+        hasCustomBgColor,
+        customBgRaw
     ), itemHeight);
 }
 
@@ -1614,7 +1626,9 @@ void addTable(
     const bool&                            isPolling                   = false,
     const bool&                            isScrollable                = true,
     const std::string&                     wrappingMode                = "none",
-    const bool&                            useWrappedTextIndent        = false
+    const bool&                            useWrappedTextIndent        = false,
+    const std::string&                     tableBgColor                = DEFAULT_STR,
+    const bool&                            tableDrawBorder             = true
 ) {
     std::vector<std::string> sectionLines, infoLines;
     drawTable(
@@ -1624,7 +1638,7 @@ void addTable(
         tableSectionTextColor, tableInfoTextColor, tableInfoTextHighlightColor,
         tableAlignment, hideTableBackground, useHeaderIndent,
         isPolling, isScrollable, wrappingMode, useWrappedTextIndent,
-        packagePath
+        packagePath, tableBgColor, tableDrawBorder
     );
 }
 
