@@ -177,7 +177,7 @@ def main():
         print("Copying theme files...")
         theme_source = ultrahand_root / "themes"
         theme_dest = sdout_dir / "config/ultrahand/themes"
-        theme_files = ["ultra.ini", "ultra-blue.ini"]
+        theme_files = ["classic.ini", "ultra.ini", "ultra-blue.ini"]
         
         if theme_source.exists():
             for theme_file in theme_files:
