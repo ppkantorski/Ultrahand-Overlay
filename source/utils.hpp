@@ -3051,7 +3051,16 @@ bool replacePlaceholdersRecursively(
 
 std::unordered_map<std::string, std::string> generalPlaceholders;
 void updateGeneralPlaceholders() {
+    // {ovl_language}: the currently selected overlay language code
+    // ("en", "es", "ja", "zh-cn", ...).  Read fresh from config.ini on every
+    // update so a language change is reflected the next time placeholders are
+    // resolved (this function runs before each placeholder pass).
+    std::string ovlLanguage = parseValueFromIniSection(
+        ULTRAHAND_CONFIG_INI_PATH, ULTRAHAND_PROJECT_NAME, DEFAULT_LANG_STR);
+    if (ovlLanguage.empty()) ovlLanguage = "en";
+
     generalPlaceholders = {
+        {"{ovl_language}", ovlLanguage},
         {"{ram_vendor}", memoryVendor},
         {"{ram_model}", memoryModel},
         {"{ram_size_gb}", is8GBEnabled ? "8" : "4"},
