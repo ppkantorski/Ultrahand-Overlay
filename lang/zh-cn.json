@@ -79,6 +79,7 @@
     "LIBULTRAHAND_TITLES": "libultrahand 标题",
     "LIBULTRAHAND_VERSIONS": "libultrahand 版本",
     "PACKAGE_TITLES": "插件包标题",
+    "IN_PACKAGE_TITLES": "插件包内标题",
     "KEY_COMBO": "按键组合",
     "MODE": "模式",
     "LAUNCH_MODES": "启动模式",
