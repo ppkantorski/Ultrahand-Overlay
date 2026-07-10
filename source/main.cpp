@@ -719,6 +719,9 @@ private:
                     deleteFileOrDirectory(SETTINGS_PATH+"RELEASE.ini");
                     downloadFile(LATEST_RELEASE_INFO_URL, SETTINGS_PATH, false, true);
                 } else if (targetMenu == "themeMenu") {
+                    if (!isFile(THEMES_PATH+"classic.ini")) {
+                        downloadFile(INCLUDED_THEME_FOLDER_URL+"classic.ini", THEMES_PATH, false, true);
+                    }
                     if (!isFile(THEMES_PATH+"ultra.ini")) {
                         downloadFile(INCLUDED_THEME_FOLDER_URL+"ultra.ini", THEMES_PATH, false, true);
                     }
