@@ -122,7 +122,7 @@ constexpr std::string_view BG_COLOR_PATTERN = ";bg_color="; // rgb888 hex, e.g. 
 constexpr std::string_view BORDER_PATTERN = ";border="; // true or false
 constexpr std::string_view HEADER_INDENT_PATTERN = ";header_indent="; // true or false
 constexpr std::string_view ALIGNMENT_PATTERN = ";alignment=";
-constexpr std::string_view WRAPPING_MODE_PATTERN = ";wrapping_mode="; // "none", "char", "word"
+constexpr std::string_view WRAPPING_MODE_PATTERN = ";wrapping_mode="; // "none", "char", "word", "auto" (auto = char for CJK text, word otherwise)
 constexpr std::string_view WRAPPING_INDENT_PATTERN = ";wrapping_indent="; // true or false
 constexpr std::string_view START_GAP_PATTERN =";start_gap=";
 constexpr std::string_view END_GAP_PATTERN =";end_gap=";
