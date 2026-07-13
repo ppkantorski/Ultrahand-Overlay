@@ -205,7 +205,7 @@ sdmc:/
 │   │   └── 420000000007E51B/           ← nx-ovlreloader sysmodule (for on-demand reloads)
 │   │       └── exefs.nsp
 │   └── exefs_patches/
-│       └── audio_mastervolume/         ← system audio master volume patches
+│       └── audio_mastervolume/         ← system audio master volume patches (optional)
 ├── switch/
 │   ├── .overlays/
 │   │   └── ovlmenu.ovl                 ← Ultrahand Overlay binary
