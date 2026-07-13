@@ -1034,15 +1034,15 @@ std::tuple<Result, std::string, std::string, bool, bool> getOverlayInfo(const st
     fclose(file);
 
     // --- Extract strings ---
-    const char* nameEnd = static_cast<const char*>(std::memchr(nacp.lang[0].name, '\0', sizeof(nacp.lang[0].name)));
-    const size_t nameLen = nameEnd ? (nameEnd - nacp.lang[0].name) : sizeof(nacp.lang[0].name);
+    const char* nameEnd = static_cast<const char*>(std::memchr(nacp.lang_data.lang[0].name, '\0', sizeof(nacp.lang_data.lang[0].name)));
+    const size_t nameLen = nameEnd ? (nameEnd - nacp.lang_data.lang[0].name) : sizeof(nacp.lang_data.lang[0].name);
     
     const char* versionEnd = static_cast<const char*>(std::memchr(nacp.display_version, '\0', sizeof(nacp.display_version)));
     const size_t versionLen = versionEnd ? (versionEnd - nacp.display_version) : sizeof(nacp.display_version);
 
     return {
         ResultSuccess,
-        std::string(nacp.lang[0].name, nameLen),
+        std::string(nacp.lang_data.lang[0].name, nameLen),
         std::string(nacp.display_version, versionLen),
         usingLibUltrahand,
         usesNewLibNX
