@@ -38,6 +38,12 @@ static std::atomic<bool> triggerExit(false);
 
 std::atomic<bool> exitingUltrahand{false};
 std::atomic<bool> isDownloadCommand{false};
+// Set (once, right where "open" actually queues its launch — never on a failed/no-op
+// "open") by the "open" command handler below. Consumed and reset in main.cpp's
+// handleInterpreterCompletion() to show LAUNCH_SYMBOL instead of CHECKMARK_SYMBOL on the
+// list item, since the usual "this finished, here's your checkmark" feedback is misleading
+// for a command that's actually about to hand off to another overlay.
+std::atomic<bool> lastCommandLaunchesOverlay{false};
 std::atomic<bool> commandSuccess{false};
 inline void setCommandFailed();
 inline void setCommandResult(bool result);
@@ -5203,6 +5209,16 @@ void processCommand(const std::vector<std::string>& cmd, const std::string& pack
                         }
                     }
                     
+                    // Snapshot the current package-menu position (if any) so returning from
+                    // this overlay with a plain back-out can restore it exactly. No-op if we
+                    // aren't inside an interactive package menu (e.g. boot_package/exit_package).
+                    if (ult::openCommandInvokedCallback)
+                        ult::openCommandInvokedCallback();
+
+                    // Past the isFile() failure return above, so this only ever fires for an
+                    // "open" that's actually about to launch something.
+                    lastCommandLaunchesOverlay.store(true, std::memory_order_release);
+
                     {
                         std::lock_guard<std::mutex> lock(ult::overlayLaunchMutex);
                         ult::requestedOverlayPath = overlayPath;

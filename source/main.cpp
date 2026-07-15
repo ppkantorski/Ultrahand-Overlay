@@ -59,6 +59,15 @@ static std::string mainMenuRightItem; // cursor for the right tab
 // Per-nesting-level page cursors for PackageMenu: .first = left page, .second = right page
 static std::vector<std::pair<std::string,std::string>> pkgPageCursors;
 
+// Mirrors of the currently-active PackageMenu's navigation context, refreshed every time
+// PackageMenu::createUI() runs (see below). Read by captureOpenReturnContext() to snapshot
+// exactly where we are when the "open" package command launches an external overlay.
+static std::string lastOpenDropdownSection;
+static std::string lastOpenCurrentPage;
+static std::string lastOpenPackageName;
+static std::string lastOpenPageHeader;
+static size_t lastOpenNestedLayer = 0;
+
 // Overlay booleans
 static bool returningToMain = false;
 static bool returningToHiddenMain = false;
@@ -529,6 +538,10 @@ static bool handleGoBackAfter() {
 [[gnu::noinline]]
 static void handleInterpreterCompletion(const std::string& packageConfigIniPath) {
     isDownloadCommand.store(false, std::memory_order_release);
+    // Single-use: whether the command batch that just finished included an "open" that
+    // actually fired (as opposed to failing its own file-exists check). Consumed here
+    // unconditionally so it can never leak into a later, unrelated command's completion.
+    const bool launchesOverlay = lastCommandLaunchesOverlay.exchange(false, std::memory_order_acq_rel);
 
     if (lastSelectedListItem) {
         const bool success = commandSuccess.load(std::memory_order_acquire);
@@ -557,14 +570,14 @@ static void handleInterpreterCompletion(const std::string& packageConfigIniPath)
 
                     lastCommandMode.clear();
                 } else {
-                    lastSelectedListItem->setValue(CHECKMARK_SYMBOL);
+                    lastSelectedListItem->setValue(launchesOverlay ? LAUNCH_SYMBOL : CHECKMARK_SYMBOL);
                 }
             } else {
                 lastSelectedListItem->setValue(CROSSMARK_SYMBOL);
             }
         } else {
             if (nextToggleState.empty()) {
-                lastSelectedListItem->setValue(success ? CHECKMARK_SYMBOL : CROSSMARK_SYMBOL);
+                lastSelectedListItem->setValue(success ? (launchesOverlay ? LAUNCH_SYMBOL : CHECKMARK_SYMBOL) : CROSSMARK_SYMBOL);
             } else {
                 const std::string finalState = success
                     ? nextToggleState
@@ -3122,6 +3135,218 @@ struct ReturnContext {
 };
 
 static std::stack<ReturnContext> returnContextStack;
+
+// ----------------------------------------------------------------------------------------
+// "open" command return-context persistence
+//
+// The "open" package command launches an external overlay by exiting this process (see
+// utils.hpp's "open" branch + tesla.hpp's overlayLaunchRequested consumer), so anything we
+// want to survive until that overlay closes and ovlmenu.ovl relaunches has to go to disk.
+//
+// captureOpenReturnContext() is invoked synchronously, on the interpreter thread, from
+// utils.hpp right as "open" fires. It runs while PackageMenu's own handleInput() is gated
+// off by runningInterpreter, so touching returnContextStack / navigation globals here is
+// safe under the same implicit convention the rest of the navigation code already relies on.
+//
+// loadOpenReturnContext() is consumed once, in Overlay::loadInitialGui(), on the next boot.
+// It is single-use: the file is deleted as soon as it's read, regardless of outcome, so a
+// malformed or stale file can never cause more than one incorrect restore attempt.
+//
+// Any launch-combo-driven overlay switch (handled generically in tesla.hpp, applies to any
+// overlay, not just this one) deletes the file outright — a combo always abandons the
+// return context, only a plain back-out restores it.
+// ----------------------------------------------------------------------------------------
+
+static void captureOpenReturnContext() {
+    if (!inPackageMenu && !inSubPackageMenu) {
+        // "open" fired outside an interactive package menu (e.g. from boot_package.ini or
+        // exit_package.ini) — there's nothing meaningful to return to. Make sure no stale
+        // file from an earlier session can be picked up later.
+        if (isFile(OPEN_RETURN_CONTEXT_FILEPATH))
+            deleteFileOrDirectory(OPEN_RETURN_CONTEXT_FILEPATH);
+        return;
+    }
+
+    // Drain the existing ancestor stack (oldest-first once reversed). Safe to destroy it —
+    // this process is about to exit once the overlay launch fires.
+    std::vector<ReturnContext> frames;
+    frames.reserve(returnContextStack.size() + 1);
+    while (!returnContextStack.empty()) {
+        frames.push_back(returnContextStack.top());
+        returnContextStack.pop();
+    }
+    for (size_t i = 0, j = frames.size(); i < j / 2; ++i)
+        std::swap(frames[i], frames[j - 1 - i]);
+
+    // Append the leaf: exactly where we are right now.
+    ReturnContext leaf;
+    leaf.packagePath = lastOpenPackagePath;
+    leaf.sectionName = lastOpenDropdownSection;
+    leaf.currentPage = lastOpenCurrentPage;
+    leaf.packageName = lastOpenPackageName;
+    leaf.pageHeader  = lastOpenPageHeader;
+    leaf.option      = s_lastFocusedItemText;
+    leaf.nestedLayer = lastOpenNestedLayer;
+    frames.push_back(std::move(leaf));
+
+    FILE* file = fopen(OPEN_RETURN_CONTEXT_FILEPATH.c_str(), "w");
+    if (!file)
+        return;
+    fprintf(file, "%zu\n", frames.size());
+    for (const auto& f : frames) {
+        fprintf(file, "%s\n%s\n%s\n%s\n%s\n%s\n%zu\n",
+                f.packagePath.c_str(), f.sectionName.c_str(), f.currentPage.c_str(),
+                f.packageName.c_str(), f.pageHeader.c_str(),  f.option.c_str(),
+                f.nestedLayer);
+    }
+    // Left/right page cursor memory (pkgPageCursors), indexed by nesting level exactly as it
+    // is at runtime. Without this, restoring the leaf via initially<PackageMenu>() lands on
+    // the correct page and item, but swiping to the *other* page afterward would show a blank
+    // cursor instead of wherever the user actually left it — this block is what carries that
+    // memory across the "open" round-trip the same way returnContextStack already does for
+    // the package/section/item position itself.
+    fprintf(file, "%zu\n", pkgPageCursors.size());
+    for (const auto& cursor : pkgPageCursors) {
+        fprintf(file, "%s\n%s\n", cursor.first.c_str(), cursor.second.c_str());
+    }
+    // MainMenu's own left/right tab cursor memory (mainMenuLeftItem/mainMenuRightItem).
+    // "open" causes a genuine process exit — these are plain process-lifetime globals, so
+    // without carrying them across the round-trip the same way pkgPageCursors is just above,
+    // they'd silently reset to "" the moment the new process boots. That's invisible until
+    // the user backs all the way out to MainMenu and swipes to the *other* tab from the one
+    // this restore lands on: instead of recalling wherever they actually left that tab (e.g.
+    // "Tetris" on Overlays), it would land on the first item, indistinguishable from the tab
+    // never having been visited at all.
+    fprintf(file, "%s\n%s\n", mainMenuLeftItem.c_str(), mainMenuRightItem.c_str());
+    fclose(file);
+}
+
+struct OpenReturnContextData {
+    std::vector<ReturnContext> ancestors; // push onto returnContextStack, oldest-first
+    ReturnContext leaf;                   // where to land
+    std::vector<std::pair<std::string,std::string>> pageCursors; // restore into pkgPageCursors, indexed by nesting level
+    std::string mainMenuLeftItem;  // restore into the global of the same name (MainMenu tab memory)
+    std::string mainMenuRightItem; // restore into the global of the same name (MainMenu tab memory)
+};
+
+// Reads and deletes OPEN_RETURN_CONTEXT_FILEPATH (single-use, regardless of outcome).
+// Returns false if there's nothing to restore or the file is malformed/stale.
+static bool loadOpenReturnContext(OpenReturnContextData& out) {
+    if (!isFile(OPEN_RETURN_CONTEXT_FILEPATH))
+        return false;
+
+    FILE* file = fopen(OPEN_RETURN_CONTEXT_FILEPATH.c_str(), "r");
+    if (!file) {
+        // Couldn't open it (permissions, race, whatever) — still try to remove it so a
+        // persistently-unreadable file can't wedge every future boot into this same dead end.
+        deleteFileOrDirectory(OPEN_RETURN_CONTEXT_FILEPATH);
+        return false;
+    }
+
+    static constexpr size_t BUFFER_SIZE = 1024;
+    char buffer[BUFFER_SIZE];
+
+    // Reads one line into 'dest', stripping a trailing \n and \r\n. Returns false at EOF/error.
+    auto readLine = [&](std::string& dest) -> bool {
+        if (!fgets(buffer, BUFFER_SIZE, file))
+            return false;
+        size_t len = strlen(buffer);
+        if (len > 0 && buffer[len - 1] == '\n') {
+            buffer[--len] = '\0';
+            if (len > 0 && buffer[len - 1] == '\r')
+                buffer[len - 1] = '\0';
+        }
+        dest.assign(buffer);
+        return true;
+    };
+
+    bool ok = true;
+    std::vector<ReturnContext> frames;
+
+    std::string countLine;
+    if (!readLine(countLine)) {
+        ok = false;
+    }
+
+    size_t count = 0;
+    if (ok) {
+        count = static_cast<size_t>(std::strtoul(countLine.c_str(), nullptr, 10));
+        if (count == 0 || count > 64) // sanity guard against a corrupt file
+            ok = false;
+    }
+
+    if (ok) {
+        frames.reserve(count);
+        for (size_t i = 0; i < count; ++i) {
+            ReturnContext f;
+            std::string nestedLayerStr;
+            if (!readLine(f.packagePath) || !readLine(f.sectionName) ||
+                !readLine(f.currentPage)  || !readLine(f.packageName) ||
+                !readLine(f.pageHeader)   || !readLine(f.option) ||
+                !readLine(nestedLayerStr)) {
+                ok = false;
+                break;
+            }
+            f.nestedLayer = static_cast<size_t>(std::strtoul(nestedLayerStr.c_str(), nullptr, 10));
+            frames.push_back(std::move(f));
+        }
+    }
+
+    // Left/right page cursor memory (pkgPageCursors block). Optional in the sense that a
+    // parse failure here only loses page-cursor memory, not the leaf/ancestor restore itself —
+    // 'ok' from the frames parse above is what still gates the overall restore.
+    std::vector<std::pair<std::string,std::string>> pageCursors;
+    if (ok) {
+        std::string cursorCountLine;
+        if (readLine(cursorCountLine)) {
+            const size_t cursorCount = static_cast<size_t>(std::strtoul(cursorCountLine.c_str(), nullptr, 10));
+            if (cursorCount <= 64) { // sanity guard, same ceiling as the frame count above
+                pageCursors.reserve(cursorCount);
+                bool cursorsOk = true;
+                for (size_t i = 0; i < cursorCount; ++i) {
+                    std::string left, right;
+                    if (!readLine(left) || !readLine(right)) {
+                        cursorsOk = false;
+                        break;
+                    }
+                    pageCursors.emplace_back(std::move(left), std::move(right));
+                }
+                if (!cursorsOk)
+                    pageCursors.clear();
+            }
+        }
+    }
+
+    // MainMenu's own left/right tab cursor memory. Same optional-tail treatment as the page
+    // cursors above: a parse failure here only loses tab-memory restoration, never the
+    // leaf/ancestor restore itself.
+    std::string mainMenuLeftItemRead, mainMenuRightItemRead;
+    if (ok) {
+        if (!readLine(mainMenuLeftItemRead) || !readLine(mainMenuRightItemRead)) {
+            mainMenuLeftItemRead.clear();
+            mainMenuRightItemRead.clear();
+        }
+    }
+
+    // Fully done with the handle before touching the directory entry — deleting a file out
+    // from under a still-open FILE* silently fails on the SD card filesystem, which is exactly
+    // what let this file survive indefinitely and re-trigger the restore on every subsequent
+    // boot (the infinite-reopen bug). Single-use applies no matter what we read: close first,
+    // then delete, regardless of whether parsing succeeded.
+    fclose(file);
+    deleteFileOrDirectory(OPEN_RETURN_CONTEXT_FILEPATH);
+
+    if (!ok || frames.empty())
+        return false;
+
+    out.leaf = frames.back();
+    frames.pop_back();
+    out.ancestors = std::move(frames);
+    out.pageCursors = std::move(pageCursors);
+    out.mainMenuLeftItem  = std::move(mainMenuLeftItemRead);
+    out.mainMenuRightItem = std::move(mainMenuRightItemRead);
+    return !out.leaf.packagePath.empty() && isDirectory(out.leaf.packagePath);
+}
 
 class PackageMenu; // forward declaration
 
@@ -6001,7 +6226,16 @@ public:
             inSubPackageMenu = true;
             lastMenu = "subPackageMenu";
         }
-        
+
+        // Mirror this instance's full navigation context into globals, unconditionally (root
+        // or dropdown/sub-menu alike). Read by captureOpenReturnContext() when the "open"
+        // package command fires, so it can snapshot exactly where we are right now.
+        lastOpenDropdownSection = dropdownSection;
+        lastOpenCurrentPage     = currentPage;
+        lastOpenPackageName     = packageName;
+        lastOpenPageHeader      = pageHeader;
+        lastOpenNestedLayer     = nestedLayer;
+
         auto* list = new tsl::elm::List();
 
         packageIniPath = packagePath + packageName;
@@ -7739,6 +7973,119 @@ public:
             }
         }
 
+        // Defensive: a confirmed combo-driven relaunch always wins over an "open" restore.
+        // --comboReturnFrom / --comboReturnPackage are only ever attached by tesla.hpp's own
+        // Case 1 / Case 2 / self-return combo paths, so their presence here is a certain sign
+        // this boot is a genuine combo return, not a plain back-out from an "open"-launched
+        // overlay. The combo choke point in tesla.hpp already deletes the return-context file
+        // the instant a combo fires, but that choke point only exists in overlays built against
+        // this updated libultrahand -- an older or third-party overlay opened via "open" won't
+        // have it, so a combo fired from inside one of those can leave the file stale. Clearing
+        // it here too means a genuine combo return can never be shadowed by a leftover restore,
+        // no matter what the opened overlay's own binary does or doesn't clean up.
+        if (isComboReturnFrom || isComboReturnPackage) {
+            if (isFile(OPEN_RETURN_CONTEXT_FILEPATH))
+                deleteFileOrDirectory(OPEN_RETURN_CONTEXT_FILEPATH);
+        }
+
+        // "open" return-context restore: if this relaunch is a plain back-out from an overlay
+        // launched via the "open" package command (as opposed to a launch-combo switch, which
+        // deletes this file outright), restore the exact package/section/page/item the user
+        // was on before "open" fired. Single-use: loadOpenReturnContext() already deleted the
+        // file by the time it returns, so any later boot is unaffected either way.
+        {
+            OpenReturnContextData restoreData;
+            if (loadOpenReturnContext(restoreData)) {
+                for (const auto& ancestor : restoreData.ancestors)
+                    returnContextStack.push(ancestor);
+
+                // Restore left/right page cursor memory for every level touched by this
+                // return context (the leaf's own level plus every ancestor's), so swiping
+                // to the other page after landing — now or after backing out further —
+                // recalls the same item it would have had this process never exited.
+                pkgPageCursors = std::move(restoreData.pageCursors);
+
+                const ReturnContext& leaf = restoreData.leaf;
+
+                // Prime the header title/version/color cache exactly as MainMenu's package-list
+                // click handler does (packages.ini custom_name, falling back to the package's
+                // own ini header, falling back to the folder name) before landing on the leaf.
+                // This restore can drop directly onto a nested dropdown/sub-menu level, which —
+                // unlike normal navigation from MainMenu — never runs the code that would
+                // otherwise prime this cache, leaving the header stale/wrong (falling through to
+                // a blank or bare-folder-name title) until the user backs all the way out to
+                // MainMenu and back in again.
+                //
+                // This must be primed from the ROOT-level (nestedLayer 0) context, never from
+                // the leaf itself when the leaf is a dropdown/forwarder several hops deep. A
+                // forwarder (";mode=forwarder") can point nestedLayer >= 1 at a completely
+                // different packagePath/packageName — a sub-ini with no title/version/color of
+                // its own — that normally just inherits whatever packageRootLayerTitle the true
+                // root already primed (see the `nestedLayer == 0` gate in createUI()). Priming
+                // from the leaf in that case would overwrite the real package title with
+                // whatever that sub-ini's folder/filename happens to be, even though its
+                // pageHeader (the breadcrumb subtitle, e.g. "Settings") is correctly inherited
+                // and left untouched — that part was never the bug. The true root-level frame
+                // is always the oldest entry in the ancestor chain when ancestors exist, since
+                // nesting depth only ever increases while navigating deeper (nestedLayer 0 is
+                // always pushed before nestedLayer 1, which is always pushed before nestedLayer
+                // 2, etc.), so it's always the first element once captureOpenReturnContext() has
+                // reversed the stack to oldest-first. Only when there are no ancestors at all is
+                // the leaf itself the root (i.e. "open" was invoked directly from the top-level
+                // package view, not from inside any dropdown/forwarder).
+                {
+                    const ReturnContext& rootFrame = restoreData.ancestors.empty() ? leaf : restoreData.ancestors.front();
+
+                    const std::string folderName = getNameFromPath(rootFrame.packagePath);
+                    const auto packagesIniData = getParsedDataFromIniFile(PACKAGES_INI_FILEPATH);
+                    std::string customName, customVersion;
+                    auto packageIt = packagesIniData.find(folderName);
+                    if (packageIt != packagesIniData.end()) {
+                        customName    = getValueOrDefault(packageIt->second, "custom_name", "");
+                        customVersion = getValueOrDefault(packageIt->second, "custom_version", "");
+                    }
+
+                    const std::string iniFileName = rootFrame.packageName.empty() ? PACKAGE_FILENAME : rootFrame.packageName;
+                    const PackageHeader packageHeader = getPackageHeaderFromIni(rootFrame.packagePath + iniFileName);
+
+                    packageRootLayerTitle = !customName.empty() ? customName :
+                                             (packageHeader.title.empty() ? folderName : packageHeader.title);
+                    if (!packageHeader.display_title.empty())
+                        packageRootLayerTitle = packageHeader.display_title;
+                    packageRootLayerVersion = !customVersion.empty() ? customVersion : packageHeader.version;
+                    packageRootLayerColor   = packageHeader.color;
+                    packageRootLayerName    = folderName;
+                }
+
+                jumpItemName = leaf.option;
+                jumpItemValue = "";
+                jumpItemExactMatch = false;
+                skipJumpReset.store(true, std::memory_order_release);
+
+                nestedMenuCount = leaf.nestedLayer;
+                inMainMenu.store(false, std::memory_order_release);
+
+                // See detailed rationale above the edit that introduced this: clears the
+                // "jump straight to the overlay 'open' launched" bookkeeping so a later page
+                // swap to the Overlays tab respects normal mainMenuLeftItem/mainMenuRightItem
+                // page memory instead of hijacking the cursor onto Sysmodules.
+                lastOverlayFilename.clear();
+                lastOverlayMode.clear();
+
+                // Restore MainMenu's own left/right tab cursor memory (see the capture-side
+                // comment in captureOpenReturnContext() for why this is necessary at all: this
+                // is a fresh process, so without this these two would otherwise still be at
+                // their default-constructed "" from process start, and the *other* tab from
+                // whichever one this restore lands the user on would appear never-visited the
+                // next time they swipe to it).
+                mainMenuLeftItem  = restoreData.mainMenuLeftItem;
+                mainMenuRightItem = restoreData.mainMenuRightItem;
+
+                return initially<PackageMenu>(leaf.packagePath, leaf.sectionName, leaf.currentPage,
+                                               leaf.packageName, leaf.nestedLayer, leaf.pageHeader);
+            }
+        }
+
         // Check if a package was specified via command line
         if (!selectedPackage.empty()) {
             
@@ -7915,6 +8262,8 @@ public:
  * @return The application's exit code.
  */
 int main(int argc, char* argv[]) {
+    ult::openCommandInvokedCallback = captureOpenReturnContext;
+
     for (u8 arg = 0; arg < argc; arg++) {
         if (argv[arg][0] != '-') continue;
         
