@@ -407,10 +407,26 @@ bool processHold(uint64_t keysDown, uint64_t keysHeld, u64& holdStartTick, bool&
     // Check if user is touch holding or button holding
     const bool isTouchHolding = lastSelectedListItem->isTouchHolding();
     const bool isButtonHolding = (keysHeld & KEY_A);
-    
-    if (!isTouchHolding && !isButtonHolding) {
-        // Key/touch released — reset everything
-        triggerExitFeedback();
+
+    // If a touch-initiated hold has turned into a scroll gesture — i.e. the finger
+    // slid far enough that the overlay flipped into TouchScroll input mode — treat
+    // it exactly as if the finger had lifted and disengage the hold. This is what
+    // makes hold-to-execute rows behave like ordinary list items: the moment you
+    // move up/down/left/right the touch is handed off to list scrolling instead of
+    // the row staying locked in place and charging the progress bar to completion.
+    // Note we cannot rely on ListItem::onTouch to notice this, because while a hold
+    // is charging runningInterpreter is true, which gates off onTouch dispatch in
+    // the overlay's touch loop — so the item never receives the Scroll event. The
+    // input-mode check here is the only signal that survives that gate. Button
+    // holds (KEY_A) are unaffected since controller input never enters TouchScroll.
+    const bool touchScrolledAway = isTouchHolding &&
+        tsl::elm::Element::getInputMode() == tsl::InputMode::TouchScroll;
+
+    if ((!isTouchHolding && !isButtonHolding) || touchScrolledAway) {
+        // Key/touch released (or the touch became a scroll) — reset everything.
+        // Skip the exit rumble/sound when we're just handing off to scrolling so
+        // it feels like a plain list scroll rather than a cancelled action.
+        if (!touchScrolledAway) triggerExitFeedback();
         isHolding = false;
         displayPercentage.store(0, std::memory_order_release);
         runningInterpreter.store(false, std::memory_order_release);
