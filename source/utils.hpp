@@ -2252,6 +2252,8 @@ void applyReplaceIniPlaceholder(std::string& arg, const std::string& commandName
  *
  * Optimized version with variables moved to usage scope to avoid repeated allocations.
  * Supports "null" key as a fallback default for failed lookups.
+ * Array path segments accept numeric indices or field=value matches (case-sensitive;
+ * first match wins), e.g. {json_file(0,assets,name=Switchfin.nro,browser_download_url)}.
  *
  * @param arg The input string containing the placeholder.
  * @param commandName The name of the JSON command (e.g., "json", "json_file").
@@ -2318,8 +2320,30 @@ std::string replaceJsonPlaceholder(const std::string& arg, const std::string& co
             if (cJSON_IsObject(value)) {
                 value = cJSON_GetObjectItemCaseSensitive(value, key.c_str()); // Navigate through object
             } else if (cJSON_IsArray(value)) {
-                index = std::stoul(key); // Convert key to index for arrays
-                value = cJSON_GetArrayItem(value, index);
+                // Array path: numeric index (e.g. 12) or field=value match (e.g. name=Switchfin.nro).
+                // Dots in match values are literal (not nested keys). First case-sensitive match wins.
+                const size_t eqPos = key.find('=');
+                if (eqPos != std::string::npos && eqPos > 0) {
+                    const std::string field(key, 0, eqPos);
+                    cJSON* found = nullptr;
+                    const int arraySize = cJSON_GetArraySize(value);
+                    for (int i = 0; i < arraySize; ++i) {
+                        cJSON* item = cJSON_GetArrayItem(value, i);
+                        if (!cJSON_IsObject(item)) {
+                            continue;
+                        }
+                        cJSON* fieldItem = cJSON_GetObjectItemCaseSensitive(item, field.c_str());
+                        if (cJSON_IsString(fieldItem) && fieldItem->valuestring &&
+                            key.compare(eqPos + 1, std::string::npos, fieldItem->valuestring) == 0) {
+                            found = item;
+                            break;
+                        }
+                    }
+                    value = found; // nullptr on no match → same fallback as a bad index
+                } else {
+                    index = std::stoul(key); // Convert key to index for arrays
+                    value = cJSON_GetArrayItem(value, index);
+                }
             } else {
                 validValue = false; // Set validValue to false if value is neither object nor array
             }
