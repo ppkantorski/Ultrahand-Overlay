@@ -2253,7 +2253,7 @@ void applyReplaceIniPlaceholder(std::string& arg, const std::string& commandName
  * Optimized version with variables moved to usage scope to avoid repeated allocations.
  * Supports "null" key as a fallback default for failed lookups.
  * Array path segments accept numeric indices or field=value matches (case-sensitive;
- * first match wins), e.g. {json_file(0,assets,name=Switchfin.nro,browser_download_url)}.
+ * first match wins), e.g. {json_file(0,assets,name=Test.nro,browser_download_url)}.
  *
  * @param arg The input string containing the placeholder.
  * @param commandName The name of the JSON command (e.g., "json", "json_file").
@@ -2320,7 +2320,7 @@ std::string replaceJsonPlaceholder(const std::string& arg, const std::string& co
             if (cJSON_IsObject(value)) {
                 value = cJSON_GetObjectItemCaseSensitive(value, key.c_str()); // Navigate through object
             } else if (cJSON_IsArray(value)) {
-                // Array path: numeric index (e.g. 12) or field=value match (e.g. name=Switchfin.nro).
+                // Array path: numeric index (e.g. 12) or field=value match (e.g. name=Test.nro).
                 // Dots in match values are literal (not nested keys). First case-sensitive match wins.
                 const size_t eqPos = key.find('=');
                 if (eqPos != std::string::npos && eqPos > 0) {
