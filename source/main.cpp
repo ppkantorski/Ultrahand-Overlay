@@ -1020,12 +1020,12 @@ public:
         inSettingsMenu = dropdownSelection.empty();
         inSubSettingsMenu = !dropdownSelection.empty();
         
-        const std::array<const std::string*, 14> defaultLanguagesRepresentation = {
+        const std::array<const std::string*, 15> defaultLanguagesRepresentation = {
             &ENGLISH, &SPANISH, &FRENCH, &GERMAN, &JAPANESE, &KOREAN, &ITALIAN,
-            &DUTCH, &PORTUGUESE, &RUSSIAN, &UKRAINIAN, &POLISH, 
-            &SIMPLIFIED_CHINESE, &TRADITIONAL_CHINESE
+            &DUTCH, &PORTUGUESE, &RUSSIAN, &UKRAINIAN, &POLISH,
+            &SIMPLIFIED_CHINESE, &TRADITIONAL_CHINESE, &TURKISH
         };
-        const std::vector<std::string> defaultLanguages = {"en", "es", "fr", "de", "ja", "ko", "it", "nl", "pt", "ru", "uk", "pl", "zh-cn", "zh-tw"};
+        const std::vector<std::string> defaultLanguages = {"en", "es", "fr", "de", "ja", "ko", "it", "nl", "pt", "ru", "uk", "pl", "zh-cn", "zh-tw", "tr"};
         
         auto* list = new tsl::elm::List();
         
