@@ -3399,6 +3399,8 @@ private:
     std::vector<std::vector<std::string>> selectionCommandsOn = {};
     std::vector<std::vector<std::string>> selectionCommandsOff = {};
     std::string lastSelectedListItemFooter2 = "";
+    std::string toggleStateCondition;
+    bool hasGlobalSource = false;
     
     std::unordered_map<int, int> toggleCount;
     std::unordered_map<int, bool> currentPatternIsOriginal; 
@@ -3440,6 +3442,8 @@ public:
         else if (!ult::limitedMemory) maxItemsLimit = 400; // raise cap for 6MB heap
     
         removeEmptyCommands(selectionCommands);
+        toggleStateCondition.clear();
+        hasGlobalSource = false;
     
         bool inEristaSection = false;
         bool inMarikoSection = false;
@@ -3487,9 +3491,14 @@ public:
                 (!inEristaSection && inMarikoSection && usingMariko) || 
                 (!inEristaSection && !inMarikoSection)) {
                 
-                // Menu-item directives are resolved at render time; skip them here.
-                if (commandName.compare(0, VISIBILITY_CONDITION_PATTERN_LEN, VISIBILITY_CONDITION_PATTERN) == 0 ||
-                    commandName.compare(0, TOGGLE_STATE_CONDITION_PATTERN_LEN, TOGGLE_STATE_CONDITION_PATTERN) == 0) {
+                // visibility_condition is resolved at package-menu render time.
+                // toggle_state_condition is stored and evaluated per source row in createUI.
+                if (commandName.compare(0, VISIBILITY_CONDITION_PATTERN_LEN, VISIBILITY_CONDITION_PATTERN) == 0) {
+                    continue;
+                }
+                if (commandName.compare(0, TOGGLE_STATE_CONDITION_PATTERN_LEN, TOGGLE_STATE_CONDITION_PATTERN) == 0) {
+                    toggleStateCondition = commandName.substr(TOGGLE_STATE_CONDITION_PATTERN_LEN);
+                    appendConditionArgs(toggleStateCondition, cmd);
                     continue;
                 }
                 
@@ -3618,6 +3627,7 @@ public:
                             filesList.insert(filesList.end(), 
                                            std::make_move_iterator(tempFiles.begin()),
                                            std::make_move_iterator(tempFiles.end()));
+                            hasGlobalSource = true;
                         } else if (currentSection == ON_STR) {
                             pathPatternOn = cmd[1];
                             preprocessPath(pathPatternOn, filePath);
@@ -3645,6 +3655,7 @@ public:
                             preprocessPath(jsonPath, filePath);
                             if (cmd.size() > 2)
                                 jsonKey = cmd[2];
+                            hasGlobalSource = true;
                         } else if (currentSection == ON_STR) {
                             jsonPathOn = cmd[1];
                             preprocessPath(jsonPathOn, filePath);
@@ -3664,6 +3675,7 @@ public:
                         if (currentSection == GLOBAL_STR) {
                             listPath = cmd[1];
                             preprocessPath(listPath, filePath);
+                            hasGlobalSource = true;
                         } else if (currentSection == ON_STR) {
                             listPathOn = cmd[1];
                             preprocessPath(listPathOn, filePath);
@@ -3679,6 +3691,7 @@ public:
                         if (currentSection == GLOBAL_STR) {
                             listString = cmd[1];
                             removeQuotes(listString);
+                            hasGlobalSource = true;
                         } else if (currentSection == ON_STR) {
                             listStringOn = cmd[1];
                             removeQuotes(listStringOn);
@@ -3696,6 +3709,7 @@ public:
                             preprocessPath(iniPath, filePath);
                             parseSectionsFromIniPattern(iniPath, filesList, maxItemsLimit);
                             iniPath.clear();
+                            hasGlobalSource = true;
                         } else if (currentSection == ON_STR) {
                             sourceTypeOn = INI_FILE_STR;
                             iniPathOn = cmd[1];
@@ -3719,6 +3733,7 @@ public:
                                 jsonKey = cmd[2];
                                 removeQuotes(jsonKey);
                             }
+                            hasGlobalSource = true;
                         } else if (currentSection == ON_STR) {
                             jsonStringOn = cmd[1];
                             removeQuotes(jsonStringOn);
@@ -3769,6 +3784,16 @@ public:
         commandGrouping = commandGroupings[0];
     
         processSelectionCommands();
+
+        auto normalizeFilterList = [&](std::vector<std::string>& filters) {
+            for (auto& f : filters) {
+                if (!f.empty() && (f.front() == '/' || f.find(":/") != std::string::npos))
+                    preprocessPath(f, filePath);
+            }
+        };
+        normalizeFilterList(filterList);
+        normalizeFilterList(filterListOn);
+        normalizeFilterList(filterListOff);
     
         std::vector<std::string> selectedItemsListOn, selectedItemsListOff;
         std::string currentPackageHeader;
@@ -3792,40 +3817,42 @@ public:
             applyItemsLimit(selectedItemsList);
 
         } else if (commandMode == TOGGLE_STR) {
-            if (sourceTypeOn == FILE_STR || sourceTypeOn == INI_FILE_STR) {
-                selectedItemsListOn = std::move(filesListOn);
-                filesListOn.shrink_to_fit();
-            }
-            else if (sourceTypeOn == LIST_STR || sourceTypeOn == LIST_FILE_STR) {
-                selectedItemsListOn = (sourceTypeOn == LIST_STR) ? stringToList(listStringOn) : readListFromFile(listPathOn, maxItemsLimit);
-                listStringOn = "";
-                listPathOn = "";
-            }
-            else if (sourceTypeOn == JSON_STR || sourceTypeOn == JSON_FILE_STR) {
-                populateSelectedItemsListFromJson(sourceTypeOn, (sourceTypeOn == JSON_STR) ? jsonStringOn : jsonPathOn, jsonKeyOn, selectedItemsListOn);
-                jsonPathOff = "";
-                jsonStringOff = "";
-            }
-            applyItemsLimit(selectedItemsListOn);
+            auto populateToggleList = [&](const std::string& type,
+                                          std::vector<std::string>& files,
+                                          const std::string& lst,
+                                          const std::string& lstPath,
+                                          const std::string& jPath,
+                                          const std::string& jStr,
+                                          const std::string& jKey,
+                                          std::vector<std::string>& out) {
+                if (type == FILE_STR || type == INI_FILE_STR) {
+                    out = std::move(files);
+                    files.shrink_to_fit();
+                } else if (type == LIST_STR || type == LIST_FILE_STR) {
+                    out = (type == LIST_STR) ? stringToList(lst) : readListFromFile(lstPath, maxItemsLimit);
+                } else if (type == JSON_STR || type == JSON_FILE_STR) {
+                    populateSelectedItemsListFromJson(type, (type == JSON_STR) ? jStr : jPath, jKey, out);
+                }
+                applyItemsLimit(out);
+            };
 
-            if (sourceTypeOff == FILE_STR || sourceTypeOff == INI_FILE_STR) {
-                selectedItemsListOff = std::move(filesListOff);
-                filesListOff.shrink_to_fit();
-            }
-            else if (sourceTypeOff == LIST_STR || sourceTypeOff == LIST_FILE_STR) {
-                selectedItemsListOff = (sourceTypeOff == LIST_STR) ? stringToList(listStringOff) : readListFromFile(listPathOff, maxItemsLimit);
-                listStringOff = "";
-                listPathOff = "";
-            }
-            else if (sourceTypeOff == JSON_STR || sourceTypeOff == JSON_FILE_STR) {
-                populateSelectedItemsListFromJson(sourceTypeOff, (sourceTypeOff == JSON_STR) ? jsonStringOff : jsonPathOff, jsonKeyOff, selectedItemsListOff);
-                jsonPathOff = "";
-                jsonStringOff = "";
-            }
-            applyItemsLimit(selectedItemsListOff);
+            if (!toggleStateCondition.empty()) {
+                // Condition-backed toggles use a single item list (global source, else on:).
+                if (hasGlobalSource) {
+                    populateToggleList(sourceType, filesList, listString, listPath, jsonPath, jsonString, jsonKey, selectedItemsList);
+                } else {
+                    populateToggleList(sourceTypeOn, filesListOn, listStringOn, listPathOn, jsonPathOn, jsonStringOn, jsonKeyOn, selectedItemsList);
+                    if (sourceType.empty())
+                        sourceType = sourceTypeOn;
+                }
+            } else {
+                populateToggleList(sourceTypeOn, filesListOn, listStringOn, listPathOn, jsonPathOn, jsonStringOn, jsonKeyOn, selectedItemsListOn);
 
-            selectedItemsList.insert(selectedItemsList.end(), selectedItemsListOn.begin(), selectedItemsListOn.end());
-            selectedItemsList.insert(selectedItemsList.end(), selectedItemsListOff.begin(), selectedItemsListOff.end());
+                populateToggleList(sourceTypeOff, filesListOff, listStringOff, listPathOff, jsonPathOff, jsonStringOff, jsonKeyOff, selectedItemsListOff);
+
+                selectedItemsList.insert(selectedItemsList.end(), selectedItemsListOn.begin(), selectedItemsListOn.end());
+                selectedItemsList.insert(selectedItemsList.end(), selectedItemsListOff.begin(), selectedItemsListOff.end());
+            }
 
         }
 
@@ -3913,6 +3940,12 @@ public:
                 it = std::find(filterListOff.begin(), filterListOff.end(), selectedItem);
                 if (it != filterListOff.end()) {
                     filterListOff.erase(it);
+                    selectedItem = "";
+                    continue;
+                }
+                it = std::find(filterList.begin(), filterList.end(), selectedItem);
+                if (it != filterList.end()) {
+                    filterList.erase(it);
                     selectedItem = "";
                     continue;
                 }
@@ -4137,11 +4170,45 @@ public:
                 toggleListItem->enableShortHoldKey();
                 toggleListItem->m_shortHoldKey = SCRIPT_KEY;
     
-                // Use const iterators for better performance
-                const bool toggleStateOn = std::find(selectedItemsListOn.cbegin(), selectedItemsListOn.cend(), selectedItem) != selectedItemsListOn.cend();
+                bool toggleStateOn;
+                if (!toggleStateCondition.empty()) {
+                    std::string conditionStr = toggleStateCondition;
+                    expandSourcePlaceholders(conditionStr, selectedItem, i);
+                    toggleStateOn = evaluateMenuCondition(conditionStr, filePath);
+                } else {
+                    toggleStateOn = std::find(selectedItemsListOn.cbegin(), selectedItemsListOn.cend(), selectedItem) != selectedItemsListOn.cend();
+                }
                 toggleListItem->setState(toggleStateOn);
-    
-                toggleListItem->setStateChangedListener([this, i, toggleListItem, selectedItem, itemName](bool state) {
+
+                if (!toggleStateCondition.empty()) {
+                    // Package-level semantics: new ON runs on:, new OFF runs off:.
+                    toggleListItem->setStateChangedListener([this, i, toggleListItem, selectedItem](bool state) {
+                        if (runningInterpreter.load(std::memory_order_acquire)) {
+                            return;
+                        }
+
+                        tsl::Overlay::get()->getCurrentGui()->requestFocus(toggleListItem, tsl::FocusDirection::None);
+
+                        const auto& activeCommands = state ? selectionCommandsOn : selectionCommandsOff;
+                        auto modifiedCmds = getSourceReplacement(activeCommands, selectedItem, i, filePath);
+
+                        if (usingProgress)
+                            toggleListItem->setValue(INPROGRESS_SYMBOL);
+
+                        nextToggleState = state ? CAPITAL_ON_STR : CAPITAL_OFF_STR;
+                        runningInterpreter.store(true, release);
+                        lastRunningInterpreter.store(true, release);
+                        lastSelectedListItem = toggleListItem;
+                        executeInterpreterCommands(std::move(modifiedCmds), filePath, specificKey);
+                    });
+
+                    toggleListItem->setScriptKeyListener([this, i, currentPackageHeader, itemName, selectedItem](bool state) {
+                        auto modifiedCmds = getSourceReplacement(state ? selectionCommandsOn : selectionCommandsOff, selectedItem, i, filePath);
+                        applyPlaceholderReplacementsToCommands(modifiedCmds, filePath);
+                        tsl::changeTo<ScriptOverlay>(std::move(modifiedCmds), filePath, itemName, "selection", false, currentPackageHeader, showWidget);
+                    });
+                } else {
+                    toggleListItem->setStateChangedListener([this, i, toggleListItem, selectedItem, itemName](bool state) {
                     if (runningInterpreter.load(std::memory_order_acquire)) {
                         return;
                     }
@@ -4234,6 +4301,7 @@ public:
                     //tsl::shiftItemFocus(toggleListItem);
                     tsl::changeTo<ScriptOverlay>(std::move(modifiedCmds), filePath, itemName, "selection", false, currentPackageHeader, showWidget);
                 });
+                }
     
                 list->addItem(toggleListItem);
             }
@@ -5252,8 +5320,7 @@ bool drawCommandsMenu(
                                 if (parseBoolFlag(commandName, TOP_PIVOT_PATTERN, usingTopPivot)) continue;
                                 if (commandName.compare(0, TOGGLE_STATE_CONDITION_PATTERN_LEN, TOGGLE_STATE_CONDITION_PATTERN) == 0) {
                                     std::string conditionStr = commandName.substr(TOGGLE_STATE_CONDITION_PATTERN_LEN);
-                                    for (size_t j = 1; j < cmd.size(); ++j)
-                                        conditionStr += " " + cmd[j];
+                                    appendConditionArgs(conditionStr, cmd);
                                     toggleStateConditionResult = evaluateMenuCondition(conditionStr, packagePath);
                                     toggleStateConditionSet = true;
                                     continue;
@@ -5342,8 +5409,7 @@ bool drawCommandsMenu(
                             case 'v':
                                 if (commandName.compare(0, VISIBILITY_CONDITION_PATTERN_LEN, VISIBILITY_CONDITION_PATTERN) == 0) {
                                     std::string conditionStr = commandName.substr(VISIBILITY_CONDITION_PATTERN_LEN);
-                                    for (size_t j = 1; j < cmd.size(); ++j)
-                                        conditionStr += " " + cmd[j];
+                                    appendConditionArgs(conditionStr, cmd);
                                     if (!skipVisibility && !evaluateMenuCondition(conditionStr, packagePath))
                                         skipVisibility = true;
                                     continue;
