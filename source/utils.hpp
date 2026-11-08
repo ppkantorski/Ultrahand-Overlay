@@ -2412,6 +2412,22 @@ bool replacePlaceholdersInArg(std::string& source, const std::unordered_map<std:
     return replaced;
 }
 
+// Expand {file_source}, {file_name}, {folder_name}, {index} using the same rules as
+// getSourceReplacement: {file_name} drops the extension for files, not directories.
+inline void expandSourcePlaceholders(std::string& arg, const std::string& entry, size_t entryIndex) {
+    std::string fileName = getNameFromPath(entry);
+    if (!isDirectory(entry)) {
+        dropExtension(fileName);
+    }
+    std::string folder = getParentDirNameFromPath(entry);
+    removeQuotes(folder);
+    const std::string indexStr = ult::to_string(entryIndex);
+    replaceAllPlaceholders(arg, "{file_source}", entry);
+    replaceAllPlaceholders(arg, "{file_name}", fileName);
+    replaceAllPlaceholders(arg, "{folder_name}", folder);
+    replaceAllPlaceholders(arg, "{index}", indexStr);
+}
+
 
 // Optimized getSourceReplacement function
 std::vector<std::vector<std::string>> getSourceReplacement(const std::vector<std::vector<std::string>>& commands,
@@ -2436,7 +2452,8 @@ std::vector<std::vector<std::string>> getSourceReplacement(const std::vector<std
     size_t startPos, endPos;
     std::string replacement;
 
-    std::string path;
+    std::string path = getParentDirNameFromPath(entry);
+    removeQuotes(path);
     std::string raw;
 
     const std::string indexStr = ult::to_string(entryIndex);
@@ -2517,12 +2534,7 @@ std::vector<std::vector<std::string>> getSourceReplacement(const std::vector<std
                 modifiedArg = arg;
 
                 // Resolve local source-entry placeholders first (not in any global map).
-                replaceAllPlaceholders(modifiedArg, "{file_source}", entry);
-                replaceAllPlaceholders(modifiedArg, "{file_name}", fileName);
-                path = getParentDirNameFromPath(entry);
-                removeQuotes(path);
-                replaceAllPlaceholders(modifiedArg, "{folder_name}", path);
-                replaceAllPlaceholders(modifiedArg, "{index}", indexStr);
+                expandSourcePlaceholders(modifiedArg, entry, entryIndex);
 
 
                 // {list_source(...)} block — uses *_source path (index into current selection list)
@@ -5798,20 +5810,39 @@ inline bool hexValMatchesCustom(const std::string& filePath, const std::string& 
     return true;
 }
 
+// Join remaining command argv into a condition string. Each extra arg is single-quoted
+// so later {file_name} expansion can insert names that contain spaces (package folders)
+// without splitting matching_ini_val's <section> token.
+inline void appendConditionArgs(std::string& condition, const std::vector<std::string>& cmd) {
+    for (size_t j = 1; j < cmd.size(); ++j) {
+        condition += " '";
+        condition += cmd[j];
+        condition += "'";
+    }
+}
+
 // Evaluates a "<mode> <args...>" condition string. Returns true when satisfied.
 // Used by both ;visibility_condition= (true -> shown) and
 // ;toggle_state_condition= (true -> ON). An empty condition returns true; an
 // unknown mode or missing argument returns false.
 inline bool evaluateMenuCondition(std::string condition, const std::string& packagePath) {
-    removeQuotes(condition);
     replacePlaceholdersInArg(condition, generalPlaceholders);
 
     size_t pos = 0;
     const size_t end = condition.size();
 
-    // Pull the next space-delimited token starting at pos.
+    // Pull the next token. Single- or double-quoted spans keep embedded spaces.
     auto nextToken = [&]() -> std::string {
         while (pos < end && condition[pos] == ' ') ++pos;
+        if (pos >= end) return "";
+        if (condition[pos] == '\'' || condition[pos] == '"') {
+            const char quote = condition[pos++];
+            const size_t start = pos;
+            while (pos < end && condition[pos] != quote) ++pos;
+            std::string tok = condition.substr(start, pos - start);
+            if (pos < end) ++pos;
+            return tok;
+        }
         const size_t start = pos;
         while (pos < end && condition[pos] != ' ') ++pos;
         return condition.substr(start, pos - start);
