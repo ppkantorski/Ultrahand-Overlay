@@ -219,6 +219,68 @@ static tsl::elm::ListItem* lastSelectedListItem;
 
 static std::atomic<bool> lastRunningInterpreter{false};
 
+// ── Timed result symbol for regular items ───────────────────────────────────
+// After a regular (default-mode) item's commands finish, its result symbol
+// (CHECKMARK_SYMBOL on success, CROSSMARK_SYMBOL on failure) is shown for
+// RESULT_SYMBOL_NS and then the item's normal footer comes back -- the same
+// footer it shows when the page is re-entered. Radio-style selection items,
+// toggles and option/slot items are not affected.
+//
+// Lifetime safety: a ListItem lives exactly as long as the Gui whose list owns
+// it (nothing in Ultrahand removes list items in place), so `item` is only ever
+// dereferenced while `owner` is alive, and each owner (PackageMenu, MainMenu)
+// calls dropResultFooterRestore(this) in its destructor -- which runs before the
+// base tsl::Gui destructor frees the list and its items. A stale pointer is
+// therefore never kept, even if a new page is later allocated at the same address.
+struct ResultFooterRestore {
+    tsl::elm::ListItem* item = nullptr; // item to restore
+    const tsl::Gui* owner = nullptr;    // Gui whose list owns `item`
+    std::string footer;                 // the item's normal footer
+    std::string shownSymbol;            // symbol set on completion; restore only if still shown
+    u64 deadlineTick = 0;               // 0 = armed (commands still running), else restore time
+    bool faint = false;                 // the item's normal setValue() faint flag
+};
+static ResultFooterRestore resultFooterRestore;
+static constexpr u64 RESULT_SYMBOL_NS = 3'000'000'000ULL; // how long the result symbol stays (3 s)
+
+// Applies a scheduled restore immediately (if the item still shows the symbol we
+// set) and clears the state. Armed-but-not-scheduled state is just cleared.
+// Safe from any Gui: while state is held, its owner is alive, so its item is too.
+[[gnu::noinline]]
+static void flushResultFooterRestore() {
+    auto& r = resultFooterRestore;
+    if (r.item && r.deadlineTick && r.item->getValue() == r.shownSymbol)
+        r.item->setValue(r.footer, r.faint);
+    r = {};
+}
+
+// Regular item click: remember its normal footer before commands start. An
+// earlier item still showing its symbol gets its footer back right away.
+[[gnu::noinline]]
+static void armResultFooterRestore(tsl::elm::ListItem* item, const std::string& footer, bool faint) {
+    flushResultFooterRestore();
+    auto& r = resultFooterRestore;
+    r.item   = item;
+    r.owner  = tsl::Overlay::get()->getCurrentGui().get(); // the page the click came from
+    r.footer = footer;
+    r.faint  = faint;
+}
+
+// Called from PackageMenu / MainMenu handleInput every frame: restores the footer
+// once the symbol has been shown long enough. Only the owning page restores, so
+// if you open a sub-page within the second, it happens when you come back.
+static inline void serviceResultFooterRestore(const tsl::Gui* gui) {
+    const auto& r = resultFooterRestore;
+    if (r.deadlineTick && r.owner == gui && armGetSystemTick() >= r.deadlineTick)
+        flushResultFooterRestore();
+}
+
+// Owner destructor hook: forget the item before the page's list is freed.
+static inline void dropResultFooterRestore(const tsl::Gui* gui) {
+    if (resultFooterRestore.owner == gui)
+        resultFooterRestore = {};
+}
+
 
 
 template<typename Map, typename Func = std::function<std::string(const std::string&)>, typename... Args>
@@ -432,6 +494,9 @@ bool processHold(uint64_t keysDown, uint64_t keysHeld, u64& holdStartTick, bool&
         runningInterpreter.store(false, std::memory_order_release);
         holdRumbleFired[0] = holdRumbleFired[1] = holdRumbleFired[2] = false;
         
+        if (resultFooterRestore.item && !resultFooterRestore.deadlineTick)
+            resultFooterRestore = {}; // hold cancelled before its commands ran
+
         if (lastSelectedListItem) {
             // Reset touch hold state
             lastSelectedListItem->resetTouchHold();
@@ -552,7 +617,7 @@ static bool handleGoBackAfter() {
 // resets percentages, and triggers sound/rumble feedback.
 // packageConfigIniPath is the only value that differs between the two callers.
 [[gnu::noinline]]
-static void handleInterpreterCompletion(const std::string& packageConfigIniPath) {
+static void handleInterpreterCompletion(const std::string& packageConfigIniPath, const tsl::Gui* owner) {
     isDownloadCommand.store(false, std::memory_order_release);
     // Single-use: whether the command batch that just finished included an "open" that
     // actually fired (as opposed to failing its own file-exists check). Consumed here
@@ -593,7 +658,16 @@ static void handleInterpreterCompletion(const std::string& packageConfigIniPath)
             }
         } else {
             if (nextToggleState.empty()) {
-                lastSelectedListItem->setValue(success ? (launchesOverlay ? LAUNCH_SYMBOL : CHECKMARK_SYMBOL) : CROSSMARK_SYMBOL);
+                const std::string& resultSymbol = success ? (launchesOverlay ? LAUNCH_SYMBOL : CHECKMARK_SYMBOL) : CROSSMARK_SYMBOL;
+                lastSelectedListItem->setValue(resultSymbol);
+
+                // Regular item: show the result for RESULT_SYMBOL_NS, then its normal footer.
+                // (Not for overlay launches -- the overlay is closing anyway.)
+                auto& r = resultFooterRestore;
+                if (!launchesOverlay && r.item == lastSelectedListItem && r.owner == owner && !r.deadlineTick) {
+                    r.shownSymbol  = resultSymbol;
+                    r.deadlineTick = armGetSystemTick() + armNsToTicks(RESULT_SYMBOL_NS);
+                }
             } else {
                 const std::string finalState = success
                     ? nextToggleState
@@ -613,6 +687,10 @@ static void handleInterpreterCompletion(const std::string& packageConfigIniPath)
         lastSelectedListItem = nullptr;
         lastFooterHighlight = lastFooterHighlightDefined = false;
     }
+
+    // Anything still only armed did not get scheduled above: forget it.
+    if (resultFooterRestore.item && !resultFooterRestore.deadlineTick)
+        resultFooterRestore = {};
 
     closeInterpreterThread();
     resetPercentages();
@@ -2311,8 +2389,15 @@ public:
     
             // Mode-specific items
             if (entryMode == OVERLAY_STR) {
-                createAndAddToggleListItem(list, LAUNCH_ARGUMENTS, false, USE_LAUNCH_ARGS_STR,
-                    getValue(USE_LAUNCH_ARGS_STR), settingsIniPath, entryName);
+                // Only offer the Launch Arguments toggle when the user has actually set
+                // launch_args for this overlay. Same cleanup as at launch (quotes removed),
+                // plus whitespace, so "" / '' / blank values count as not set.
+                std::string launchArgs = getValue(LAUNCH_ARGS_STR);
+                removeQuotes(launchArgs);
+                trim(launchArgs);
+                if (!launchArgs.empty())
+                    createAndAddToggleListItem(list, LAUNCH_ARGUMENTS, false, USE_LAUNCH_ARGS_STR,
+                        getValue(USE_LAUNCH_ARGS_STR), settingsIniPath, entryName);
     
                 const std::vector<std::string> modeList = splitIniList(getValue("mode_args"));
                 if (!modeList.empty()) {
@@ -3400,7 +3485,7 @@ private:
     std::vector<std::vector<std::string>> selectionCommandsOff = {};
     std::string lastSelectedListItemFooter2 = "";
     std::string toggleStateCondition;
-    bool hasGlobalSource = false;
+    std::string globalSourceType; // source type declared in the global (non on:/off:) section, if any
     
     std::unordered_map<int, int> toggleCount;
     std::unordered_map<int, bool> currentPatternIsOriginal; 
@@ -3443,7 +3528,7 @@ public:
     
         removeEmptyCommands(selectionCommands);
         toggleStateCondition.clear();
-        hasGlobalSource = false;
+        globalSourceType.clear();
     
         bool inEristaSection = false;
         bool inMarikoSection = false;
@@ -3627,7 +3712,7 @@ public:
                             filesList.insert(filesList.end(), 
                                            std::make_move_iterator(tempFiles.begin()),
                                            std::make_move_iterator(tempFiles.end()));
-                            hasGlobalSource = true;
+                            globalSourceType = FILE_STR;
                         } else if (currentSection == ON_STR) {
                             pathPatternOn = cmd[1];
                             preprocessPath(pathPatternOn, filePath);
@@ -3655,7 +3740,7 @@ public:
                             preprocessPath(jsonPath, filePath);
                             if (cmd.size() > 2)
                                 jsonKey = cmd[2];
-                            hasGlobalSource = true;
+                            globalSourceType = JSON_FILE_STR;
                         } else if (currentSection == ON_STR) {
                             jsonPathOn = cmd[1];
                             preprocessPath(jsonPathOn, filePath);
@@ -3675,7 +3760,7 @@ public:
                         if (currentSection == GLOBAL_STR) {
                             listPath = cmd[1];
                             preprocessPath(listPath, filePath);
-                            hasGlobalSource = true;
+                            globalSourceType = LIST_FILE_STR;
                         } else if (currentSection == ON_STR) {
                             listPathOn = cmd[1];
                             preprocessPath(listPathOn, filePath);
@@ -3691,7 +3776,7 @@ public:
                         if (currentSection == GLOBAL_STR) {
                             listString = cmd[1];
                             removeQuotes(listString);
-                            hasGlobalSource = true;
+                            globalSourceType = LIST_STR;
                         } else if (currentSection == ON_STR) {
                             listStringOn = cmd[1];
                             removeQuotes(listStringOn);
@@ -3709,7 +3794,7 @@ public:
                             preprocessPath(iniPath, filePath);
                             parseSectionsFromIniPattern(iniPath, filesList, maxItemsLimit);
                             iniPath.clear();
-                            hasGlobalSource = true;
+                            globalSourceType = INI_FILE_STR;
                         } else if (currentSection == ON_STR) {
                             sourceTypeOn = INI_FILE_STR;
                             iniPathOn = cmd[1];
@@ -3733,7 +3818,7 @@ public:
                                 jsonKey = cmd[2];
                                 removeQuotes(jsonKey);
                             }
-                            hasGlobalSource = true;
+                            globalSourceType = JSON_STR;
                         } else if (currentSection == ON_STR) {
                             jsonStringOn = cmd[1];
                             removeQuotes(jsonStringOn);
@@ -3785,15 +3870,30 @@ public:
     
         processSelectionCommands();
 
-        auto normalizeFilterList = [&](std::vector<std::string>& filters) {
-            for (auto& f : filters) {
-                if (!f.empty() && (f.front() == '/' || f.find(":/") != std::string::npos))
-                    preprocessPath(f, filePath);
-            }
-        };
-        normalizeFilterList(filterList);
-        normalizeFilterList(filterListOn);
-        normalizeFilterList(filterListOff);
+        // ;toggle_state_condition= on a source toggle switches it to "condition mode":
+        // one item list (global source if declared, otherwise on:), with each row's ON/OFF
+        // state taken from the condition. Everything below that is specific to this mode is
+        // gated on this flag so toggles without a condition behave exactly as before.
+        const bool useToggleCondition = (commandMode == TOGGLE_STR && !toggleStateCondition.empty());
+        const std::string toggleConditionSourceType = useToggleCondition
+            ? (!globalSourceType.empty() ? globalSourceType : sourceTypeOn)
+            : std::string();
+
+        if (useToggleCondition && toggleConditionSourceType == FILE_STR) {
+            // Filters are compared against file paths ("sdmc:/..."). At parse time a filter is
+            // only path-normalized if a file source was already seen, so normalize here too.
+            // preprocessPath is idempotent, and this is only done for file sources so list/JSON/INI
+            // filters (plain strings, URLs, section names) are never rewritten.
+            auto normalizeFilterList = [&](std::vector<std::string>& filters) {
+                for (auto& f : filters) {
+                    if (!f.empty())
+                        preprocessPath(f, filePath);
+                }
+            };
+            normalizeFilterList(filterList);
+            normalizeFilterList(filterListOn);
+            normalizeFilterList(filterListOff);
+        }
     
         std::vector<std::string> selectedItemsListOn, selectedItemsListOff;
         std::string currentPackageHeader;
@@ -3816,43 +3916,68 @@ public:
             }
             applyItemsLimit(selectedItemsList);
 
-        } else if (commandMode == TOGGLE_STR) {
-            auto populateToggleList = [&](const std::string& type,
-                                          std::vector<std::string>& files,
-                                          const std::string& lst,
-                                          const std::string& lstPath,
-                                          const std::string& jPath,
-                                          const std::string& jStr,
-                                          const std::string& jKey,
-                                          std::vector<std::string>& out) {
-                if (type == FILE_STR || type == INI_FILE_STR) {
-                    out = std::move(files);
-                    files.shrink_to_fit();
-                } else if (type == LIST_STR || type == LIST_FILE_STR) {
-                    out = (type == LIST_STR) ? stringToList(lst) : readListFromFile(lstPath, maxItemsLimit);
-                } else if (type == JSON_STR || type == JSON_FILE_STR) {
-                    populateSelectedItemsListFromJson(type, (type == JSON_STR) ? jStr : jPath, jKey, out);
-                }
-                applyItemsLimit(out);
-            };
-
-            if (!toggleStateCondition.empty()) {
-                // Condition-backed toggles use a single item list (global source, else on:).
-                if (hasGlobalSource) {
-                    populateToggleList(sourceType, filesList, listString, listPath, jsonPath, jsonString, jsonKey, selectedItemsList);
-                } else {
-                    populateToggleList(sourceTypeOn, filesListOn, listStringOn, listPathOn, jsonPathOn, jsonStringOn, jsonKeyOn, selectedItemsList);
-                    if (sourceType.empty())
-                        sourceType = sourceTypeOn;
-                }
-            } else {
-                populateToggleList(sourceTypeOn, filesListOn, listStringOn, listPathOn, jsonPathOn, jsonStringOn, jsonKeyOn, selectedItemsListOn);
-
-                populateToggleList(sourceTypeOff, filesListOff, listStringOff, listPathOff, jsonPathOff, jsonStringOff, jsonKeyOff, selectedItemsListOff);
-
-                selectedItemsList.insert(selectedItemsList.end(), selectedItemsListOn.begin(), selectedItemsListOn.end());
-                selectedItemsList.insert(selectedItemsList.end(), selectedItemsListOff.begin(), selectedItemsListOff.end());
+        } else if (commandMode == TOGGLE_STR && useToggleCondition) {
+            // Condition-backed toggles use a single item list (global source, else on:).
+            // globalSourceType is tracked separately because sourceType is also overwritten
+            // by sources declared inside on:/off: sections.
+            const bool fromGlobal = !globalSourceType.empty();
+            const std::string& type = toggleConditionSourceType;
+            if (type == FILE_STR || type == INI_FILE_STR) {
+                selectedItemsList = std::move(fromGlobal ? filesList : filesListOn);
+                (fromGlobal ? filesList : filesListOn).shrink_to_fit();
             }
+            else if (type == LIST_STR || type == LIST_FILE_STR) {
+                if (type == LIST_STR)
+                    selectedItemsList = stringToList(fromGlobal ? listString : listStringOn);
+                else
+                    selectedItemsList = readListFromFile(fromGlobal ? listPath : listPathOn, maxItemsLimit);
+            }
+            else if (type == JSON_STR || type == JSON_FILE_STR) {
+                const std::string& jsonSrc = (type == JSON_STR) ? (fromGlobal ? jsonString : jsonStringOn)
+                                                                : (fromGlobal ? jsonPath : jsonPathOn);
+                populateSelectedItemsListFromJson(type, jsonSrc, fromGlobal ? jsonKey : jsonKeyOn, selectedItemsList);
+            }
+            applyItemsLimit(selectedItemsList);
+
+            // Row rendering (grouping, name handling) keys off sourceType.
+            sourceType = type;
+
+        } else if (commandMode == TOGGLE_STR) {
+            // Toggles without ;toggle_state_condition= -- original code, unchanged.
+            if (sourceTypeOn == FILE_STR || sourceTypeOn == INI_FILE_STR) {
+                selectedItemsListOn = std::move(filesListOn);
+                filesListOn.shrink_to_fit();
+            }
+            else if (sourceTypeOn == LIST_STR || sourceTypeOn == LIST_FILE_STR) {
+                selectedItemsListOn = (sourceTypeOn == LIST_STR) ? stringToList(listStringOn) : readListFromFile(listPathOn, maxItemsLimit);
+                listStringOn = "";
+                listPathOn = "";
+            }
+            else if (sourceTypeOn == JSON_STR || sourceTypeOn == JSON_FILE_STR) {
+                populateSelectedItemsListFromJson(sourceTypeOn, (sourceTypeOn == JSON_STR) ? jsonStringOn : jsonPathOn, jsonKeyOn, selectedItemsListOn);
+                jsonPathOff = "";
+                jsonStringOff = "";
+            }
+            applyItemsLimit(selectedItemsListOn);
+
+            if (sourceTypeOff == FILE_STR || sourceTypeOff == INI_FILE_STR) {
+                selectedItemsListOff = std::move(filesListOff);
+                filesListOff.shrink_to_fit();
+            }
+            else if (sourceTypeOff == LIST_STR || sourceTypeOff == LIST_FILE_STR) {
+                selectedItemsListOff = (sourceTypeOff == LIST_STR) ? stringToList(listStringOff) : readListFromFile(listPathOff, maxItemsLimit);
+                listStringOff = "";
+                listPathOff = "";
+            }
+            else if (sourceTypeOff == JSON_STR || sourceTypeOff == JSON_FILE_STR) {
+                populateSelectedItemsListFromJson(sourceTypeOff, (sourceTypeOff == JSON_STR) ? jsonStringOff : jsonPathOff, jsonKeyOff, selectedItemsListOff);
+                jsonPathOff = "";
+                jsonStringOff = "";
+            }
+            applyItemsLimit(selectedItemsListOff);
+
+            selectedItemsList.insert(selectedItemsList.end(), selectedItemsListOn.begin(), selectedItemsListOn.end());
+            selectedItemsList.insert(selectedItemsList.end(), selectedItemsListOff.begin(), selectedItemsListOff.end());
 
         }
 
@@ -3943,11 +4068,16 @@ public:
                     selectedItem = "";
                     continue;
                 }
-                it = std::find(filterList.begin(), filterList.end(), selectedItem);
-                if (it != filterList.end()) {
-                    filterList.erase(it);
-                    selectedItem = "";
-                    continue;
+                // Global filters only apply to condition-mode toggles, whose items can come from
+                // the global source. Toggles without a condition never used global filters, and
+                // keep ignoring them so existing packages show the same items as before.
+                if (useToggleCondition) {
+                    it = std::find(filterList.begin(), filterList.end(), selectedItem);
+                    if (it != filterList.end()) {
+                        filterList.erase(it);
+                        selectedItem = "";
+                        continue;
+                    }
                 }
             } else {
                 auto it = std::find(filterList.begin(), filterList.end(), selectedItem);
@@ -3962,6 +4092,10 @@ public:
         filterList = {};
         filterListOn = {};
         filterListOff = {};
+
+        // Lives for this menu build only: each INI referenced by the toggle condition is read
+        // once instead of once per row, and nothing can go stale (the menu is rebuilt on reload).
+        MenuConditionIniCache toggleConditionIniCache;
 
         std::string itemName;
         for (size_t i = 0; i < selectedItemsSize; ++i) {
@@ -4171,17 +4305,18 @@ public:
                 toggleListItem->m_shortHoldKey = SCRIPT_KEY;
     
                 bool toggleStateOn;
-                if (!toggleStateCondition.empty()) {
+                if (useToggleCondition) {
                     std::string conditionStr = toggleStateCondition;
                     expandSourcePlaceholders(conditionStr, selectedItem, i);
-                    toggleStateOn = evaluateMenuCondition(conditionStr, filePath);
+                    toggleStateOn = evaluateMenuCondition(conditionStr, filePath, &toggleConditionIniCache);
                 } else {
                     toggleStateOn = std::find(selectedItemsListOn.cbegin(), selectedItemsListOn.cend(), selectedItem) != selectedItemsListOn.cend();
                 }
                 toggleListItem->setState(toggleStateOn);
 
-                if (!toggleStateCondition.empty()) {
+                if (useToggleCondition) {
                     // Package-level semantics: new ON runs on:, new OFF runs off:.
+                    // (Toggles without a condition keep their original mapping below.)
                     toggleListItem->setStateChangedListener([this, i, toggleListItem, selectedItem](bool state) {
                         if (runningInterpreter.load(std::memory_order_acquire)) {
                             return;
@@ -6030,6 +6165,8 @@ bool drawCommandsMenu(
                                 runningInterpreter.store(true, release);
 
                                 auto modifiedCmds = getSourceReplacement(commands, selectedItem, i, packagePath);
+                                if (commandMode == DEFAULT_STR) // regular item: result symbol is shown briefly, then this footer
+                                    armResultFooterRestore(listItem, footer, commandFooterHighlightDefined ? !commandFooterHighlight : true);
                                 if (isHold) {
                                     lastSelectedListItemFooter = footer;
                                     lastFooterHighlight = commandFooterHighlight;  // STORE THE VALUE
@@ -6249,6 +6386,7 @@ public:
      */
     ~PackageMenu() {
         //std::lock_guard<std::mutex> lock(transitionMutex);
+        dropResultFooterRestore(this); // before the base Gui destructor frees this page's items
 
         if (returningToMain || returningToHiddenMain || pendingExitPackage.load(std::memory_order_acquire)) {
             lastOpenPackagePath.clear();  // no longer in a package
@@ -6390,6 +6528,7 @@ public:
      * @return `true` if the input was handled within the overlay, `false` otherwise.
      */
     virtual bool handleInput(uint64_t keysDown, uint64_t keysHeld, touchPosition touchInput, JoystickPosition leftJoyStick, JoystickPosition rightJoyStick) override {
+        serviceResultFooterRestore(this);
         
         if (handleCommandHold(keysDown, keysHeld, packagePath)) return true;
         
@@ -6402,7 +6541,7 @@ public:
         }
             
         if (lastRunningInterpreter.exchange(false, std::memory_order_acq_rel)) {
-            handleInterpreterCompletion(packageConfigIniPath);
+            handleInterpreterCompletion(packageConfigIniPath, this);
             return true;
         }
 
@@ -6779,6 +6918,7 @@ public:
      */
     ~MainMenu() {
         //std::lock_guard<std::mutex> lock(transitionMutex);
+        dropResultFooterRestore(this); // before the base Gui destructor frees this page's items
     }
     
     /**
@@ -7584,6 +7724,7 @@ public:
      * @return `true` if the input was handled within the overlay, `false` otherwise.
      */
     virtual bool handleInput(uint64_t keysDown, uint64_t keysHeld, touchPosition touchInput, JoystickPosition leftJoyStick, JoystickPosition rightJoyStick) override {
+        serviceResultFooterRestore(this);
         
         if (handleCommandHold(keysDown, keysHeld, packageIniPath)) return true;
 
@@ -7596,7 +7737,7 @@ public:
             return handleRunningInterpreter(keysDown, keysHeld);
     
         if (lastRunningInterpreter.exchange(false, std::memory_order_acq_rel)) {
-            handleInterpreterCompletion(packageConfigIniPath);
+            handleInterpreterCompletion(packageConfigIniPath, this);
             return true;
         }
         
@@ -7940,6 +8081,21 @@ void initializeSettingsAndDirectories() {
     ensureDefault("extended_widget_backdrop", FALSE_STR);
     ensureDefault("datetime_format",          DEFAULT_DT_FORMAT);
     ensureDefault(DEFAULT_LANG_STR,           "en");
+
+    // [memory] custom_overlay_memory_MB: the 4th "Overlay Memory" option in Settings.
+    // Provisioned only when the key is absent -- an existing value is never touched.
+    // Defaults to 10 MB, unless the overlay heap is already set above 8 MB (e.g. via
+    // another tool), in which case that size is kept so the slider still matches it.
+    // (Heap sizes are always multiples of 2 MB, so the value passes the Settings
+    // page's "> 8 and even" check.)
+    {
+        auto& memSec = iniData[MEMORY_STR];
+        if (memSec.count("custom_overlay_memory_MB") == 0) {
+            const u32 heapMB = bytesToMB(static_cast<u64>(getCurrentHeapSize()));
+            memSec["custom_overlay_memory_MB"] = ult::to_string(heapMB > 8 ? heapMB : 10);
+            needsUpdate = true;
+        }
+    }
 
     // Launcher-only keys (variables also set by parseOverlaySettings where accessible,
     // the rest are static to main.cpp so setDefaultValue is still needed here)

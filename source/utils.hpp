@@ -2412,20 +2412,36 @@ bool replacePlaceholdersInArg(std::string& source, const std::unordered_map<std:
     return replaced;
 }
 
-// Expand {file_source}, {file_name}, {folder_name}, {index} using the same rules as
-// getSourceReplacement: {file_name} drops the extension for files, not directories.
+// Expand {file_source}, {file_name}, {folder_name}, {index} in a single argument.
+// Same replacement order as the original inline code in getSourceReplacement.
+// This overload takes values the caller has already computed, so it does no
+// filesystem access and is cheap enough to call once per argument.
+inline void expandSourcePlaceholders(std::string& arg, const std::string& entry,
+                                     const std::string& fileName, const std::string& folderName,
+                                     const std::string& indexStr) {
+    if (arg.find('{') == std::string::npos) return; // fast path: nothing to expand
+    replaceAllPlaceholders(arg, "{file_source}", entry);
+    replaceAllPlaceholders(arg, "{file_name}", fileName);
+    replaceAllPlaceholders(arg, "{folder_name}", folderName);
+    replaceAllPlaceholders(arg, "{index}", indexStr);
+}
+
+// Convenience overload: derives the values from the entry using the same rules as
+// getSourceReplacement ({file_name} drops the extension for files, not directories).
+// The isDirectory() check (an SD access) only runs when {file_name} is actually used.
 inline void expandSourcePlaceholders(std::string& arg, const std::string& entry, size_t entryIndex) {
-    std::string fileName = getNameFromPath(entry);
-    if (!isDirectory(entry)) {
-        dropExtension(fileName);
+    if (arg.find('{') == std::string::npos) return;
+    std::string fileName;
+    // (entry is checked too: {file_source} is substituted first, as in the original order)
+    if (arg.find("{file_name}") != std::string::npos || entry.find("{file_name}") != std::string::npos) {
+        fileName = getNameFromPath(entry);
+        if (!isDirectory(entry)) {
+            dropExtension(fileName);
+        }
     }
     std::string folder = getParentDirNameFromPath(entry);
     removeQuotes(folder);
-    const std::string indexStr = ult::to_string(entryIndex);
-    replaceAllPlaceholders(arg, "{file_source}", entry);
-    replaceAllPlaceholders(arg, "{file_name}", fileName);
-    replaceAllPlaceholders(arg, "{folder_name}", folder);
-    replaceAllPlaceholders(arg, "{index}", indexStr);
+    expandSourcePlaceholders(arg, entry, fileName, folder, ult::to_string(entryIndex));
 }
 
 
@@ -2534,7 +2550,7 @@ std::vector<std::vector<std::string>> getSourceReplacement(const std::vector<std
                 modifiedArg = arg;
 
                 // Resolve local source-entry placeholders first (not in any global map).
-                expandSourcePlaceholders(modifiedArg, entry, entryIndex);
+                expandSourcePlaceholders(modifiedArg, entry, fileName, path, indexStr);
 
 
                 // {list_source(...)} block — uses *_source path (index into current selection list)
@@ -4699,6 +4715,71 @@ static inline bool ipcPollExit(u64 programId) {
     return false;
 }
 
+// Set by the `home` / `hold-home` commands after a successful press. The press hides the overlay on
+// purpose, so the "Task is complete!" notification that backgroundInterpreter() shows
+// for runs that finish while hidden is skipped for that run. Failures still notify.
+std::atomic<bool> suppressHiddenCompleteNotify{false};
+
+// ---------------------------------------------------------------------------
+// pressHomeButton -- simulates one press of the HOME button, held for holdNs.
+//   `home`      -> short click (opens the HOME menu)
+//   `hold-home` -> long hold   (opens the quick-settings menu: sleep / brightness / airplane mode)
+//
+// Overlays run with AppletType_None, so the applet "RequestHomeMenu" route is
+// unavailable. Instead a temporary virtual Pro Controller is attached through
+// hid:dbg (HDLS), HOME is pressed and released on it, and everything is torn
+// down again before returning, on every path, so no phantom controller is left
+// connected. Runs on the interpreter thread; total time is holdNs + ~150 ms.
+// Ultrahand closes the overlay by itself when it sees the HOME press.
+// ---------------------------------------------------------------------------
+constexpr u64 kHomeShortHold = 10'000'000ULL;   // 10 ms: a normal click
+constexpr u64 kHomeLongHold  = 510'000'000ULL;  // 510 ms: long-press hold for `hold-home`
+
+static bool pressHomeButton(const u64 holdNs = kHomeShortHold) {
+    constexpr size_t kWorkMemSize   = 0x1000;           // HDLS work buffer: 0x1000 bytes, 0x1000-aligned
+    constexpr u64    kAttachSettle  = 100'000'000ULL;   // let hid register the new device before input
+    constexpr u64    kReleaseSettle =  50'000'000ULL;   // let the release register before detaching
+
+    if (R_FAILED(hiddbgInitialize()))
+        return false;
+
+    bool pressed = false;
+    void* workMem = aligned_alloc(kWorkMemSize, kWorkMemSize);
+    if (workMem) {
+        HiddbgHdlsSessionId session = {};
+        if (R_SUCCEEDED(hiddbgAttachHdlsWorkBuffer(&session, workMem, kWorkMemSize))) {
+            HiddbgHdlsDeviceInfo device = {};
+            device.deviceType         = HidDeviceType_FullKey3;          // Pro Controller
+            device.npadInterfaceType  = HidNpadInterfaceType_Bluetooth;  // dedicated controller (not merged)
+            device.singleColorBody    = RGBA8_MAXALPHA(0x2D, 0x2D, 0x2D);
+            device.singleColorButtons = RGBA8_MAXALPHA(0xE6, 0xE6, 0xE6);
+            device.colorLeftGrip      = device.singleColorBody;
+            device.colorRightGrip     = device.singleColorBody;
+
+            HiddbgHdlsHandle handle = {};
+            if (R_SUCCEEDED(hiddbgAttachHdlsVirtualDevice(&handle, &device))) {
+                HiddbgHdlsState state = {};
+                state.battery_level = 4; // full
+
+                svcSleepThread(kAttachSettle);
+                state.buttons = HiddbgNpadButton_Home;
+                pressed = R_SUCCEEDED(hiddbgSetHdlsState(handle, &state));
+
+                svcSleepThread(holdNs);
+                state.buttons = 0;
+                hiddbgSetHdlsState(handle, &state); // always release, even if the press failed
+
+                svcSleepThread(kReleaseSettle);
+                hiddbgDetachHdlsVirtualDevice(handle);
+            }
+            hiddbgReleaseHdlsWorkBuffer(session);
+        }
+        free(workMem);
+    }
+    hiddbgExit();
+    return pressed;
+}
+
 // Main processCommand function
 void processCommand(const std::vector<std::string>& cmd, const std::string& packagePath = "", const std::string& selectedCommand = "") {
     const std::string& commandName = cmd[0];
@@ -4921,6 +5002,13 @@ void processCommand(const std::vector<std::string>& cmd, const std::string& pack
             break;
             
         case 'h':
+            if (commandName == "home" || commandName == "hold-home") {
+                if (pressHomeButton(commandName == "home" ? kHomeShortHold : kHomeLongHold))
+                    suppressHiddenCompleteNotify.store(true, std::memory_order_release);
+                else
+                    setCommandFailed();
+                return;
+            }
             if (commandName.compare(0, 7, "hex-by-") == 0) {
                 if (cmdSize >= 4) {
                     std::string sourcePath = cmd[1];
@@ -5810,28 +5898,72 @@ inline bool hexValMatchesCustom(const std::string& filePath, const std::string& 
     return true;
 }
 
-// Join remaining command argv into a condition string. Each extra arg is single-quoted
-// so later {file_name} expansion can insert names that contain spaces (package folders)
-// without splitting matching_ini_val's <section> token.
+// Join the remaining command argv (cmd[1..]) onto a condition string.
+//
+// Backward compatibility: parseCommandLine() has already removed the quotes that
+// package authors wrote, so for plain arguments this reproduces the old behavior
+// exactly (args joined with single spaces). Quotes are only added back around an
+// argument when they're needed to keep it as one token:
+//   - it contains whitespace (e.g. 'some value' or a quoted path with spaces),
+//   - it contains a quote character, or
+//   - it contains a '{' placeholder ({file_name} etc.) whose expanded value may
+//     contain spaces (package folder names) once substituted later.
+// Double quotes are preferred because '"' cannot appear in FAT/exFAT file names,
+// whereas apostrophes are common in package names ("Mario's Mods").
+//
+// If the condition text is still empty when the first argument is appended (the
+// author wrote ";visibility_condition='path_exists /x'" or "...= path_exists /x"),
+// that argument IS the condition (or its mode) and is appended raw, as before.
 inline void appendConditionArgs(std::string& condition, const std::vector<std::string>& cmd) {
     for (size_t j = 1; j < cmd.size(); ++j) {
-        condition += " '";
-        condition += cmd[j];
-        condition += "'";
+        const std::string& arg = cmd[j];
+        if (j == 1 && condition.empty()) {
+            condition = arg;
+            continue;
+        }
+        if (arg.empty()) {
+            // Old behavior: " " + "" -> the empty arg disappears when tokenized.
+            condition += ' ';
+            continue;
+        }
+        const bool hasSpace = arg.find_first_of(" \t") != std::string::npos;
+        const bool hasDq    = arg.find('"')  != std::string::npos;
+        const bool hasSq    = arg.find('\'') != std::string::npos;
+        const bool hasBrace = arg.find('{')  != std::string::npos;
+        condition += ' ';
+        if (hasSpace || hasDq || hasSq || hasBrace) {
+            const char q = hasDq ? '\'' : '"';
+            condition += q;
+            condition += arg;
+            condition += q;
+        } else {
+            condition += arg;
+        }
     }
 }
+
+// Optional per-menu-build cache for matching_ini_val. Each entry is the whole INI
+// file parsed once via getParsedDataFromIniFile(), which uses the same line parsing,
+// trimming, locking and first-match-wins rule as parseValueFromIniSection(), so the
+// result is identical; it just avoids re-reading the file for every list row.
+// Only pass a cache for a single, short-lived batch of evaluations (e.g. one
+// createUI pass) so it can never serve stale data after commands modify the file.
+using MenuConditionIniCache = std::unordered_map<std::string, std::map<std::string, std::map<std::string, std::string>>>;
 
 // Evaluates a "<mode> <args...>" condition string. Returns true when satisfied.
 // Used by both ;visibility_condition= (true -> shown) and
 // ;toggle_state_condition= (true -> ON). An empty condition returns true; an
 // unknown mode or missing argument returns false.
-inline bool evaluateMenuCondition(std::string condition, const std::string& packagePath) {
+inline bool evaluateMenuCondition(std::string condition, const std::string& packagePath,
+                                  MenuConditionIniCache* iniCache = nullptr) {
     replacePlaceholdersInArg(condition, generalPlaceholders);
 
     size_t pos = 0;
     const size_t end = condition.size();
 
-    // Pull the next token. Single- or double-quoted spans keep embedded spaces.
+    // Pull the next token. A token that starts with a single or double quote runs
+    // to the matching quote and keeps embedded spaces; anything else runs to the
+    // next space (quote characters inside an unquoted word are kept literally).
     auto nextToken = [&]() -> std::string {
         while (pos < end && condition[pos] == ' ') ++pos;
         if (pos >= end) return "";
@@ -5847,11 +5979,32 @@ inline bool evaluateMenuCondition(std::string condition, const std::string& pack
         while (pos < end && condition[pos] != ' ') ++pos;
         return condition.substr(start, pos - start);
     };
-    // The remaining text after pos, leading spaces trimmed (free-text field).
+    // The remaining text (free-text field). Copied verbatim -- same spacing as the
+    // old code -- except that a quoted argument (one that starts with a quote at a
+    // token boundary, as written by appendConditionArgs) is copied without its
+    // quotes. Outer quotes on the whole result are then removed, as before.
+    // Since appendConditionArgs only quotes arguments that need it, this equals the
+    // old result for every argument list without spaces/quotes/placeholders,
+    // e.g. "AA BB CC" -> "AA BB CC", and "'a b' c" -> "a b c".
     auto remainder = [&]() -> std::string {
         while (pos < end && condition[pos] == ' ') ++pos;
-        std::string rest = condition.substr(pos);
-        removeQuotes(rest);
+        std::string rest;
+        rest.reserve(end - pos);
+        bool atTokenStart = true;
+        while (pos < end) {
+            const char c = condition[pos];
+            if (atTokenStart && (c == '\'' || c == '"')) {
+                ++pos;
+                while (pos < end && condition[pos] != c) rest += condition[pos++];
+                if (pos < end) ++pos;
+                atTokenStart = false;
+            } else {
+                rest += c;
+                ++pos;
+                atTokenStart = (c == ' ');
+            }
+        }
+        removeQuotes(rest); // old behavior: outer quotes on the free text were stripped
         return rest;
     };
 
@@ -5921,7 +6074,19 @@ inline bool evaluateMenuCondition(std::string condition, const std::string& pack
         const std::string expected = remainder();
         if (path.empty() || section.empty() || key.empty()) return false;
         preprocessPath(path, packagePath);
-        std::string currentVal = parseValueFromIniSection(path, section, key);
+        std::string currentVal;
+        if (iniCache) {
+            auto it = iniCache->find(path);
+            if (it == iniCache->end())
+                it = iniCache->emplace(path, getParsedDataFromIniFile(path)).first;
+            auto sIt = it->second.find(section);
+            if (sIt != it->second.end()) {
+                auto kIt = sIt->second.find(key);
+                if (kIt != sIt->second.end()) currentVal = kIt->second;
+            }
+        } else {
+            currentVal = parseValueFromIniSection(path, section, key);
+        }
         removeQuotes(currentVal);
         return negate ^ (currentVal == expected);
     }
@@ -5974,6 +6139,7 @@ void backgroundInterpreter(void* workPtr) {
         clearInterpreterFlags();
         resetPercentages();
         threadFailure.store(false, std::memory_order_release);
+        suppressHiddenCompleteNotify.store(false, std::memory_order_release);
         
         runningInterpreter.store(true, std::memory_order_release);
         
@@ -5994,10 +6160,15 @@ void backgroundInterpreter(void* workPtr) {
     // Clean up work data
     delete workData;
     
+    // One-shot: always consumed here so it can't carry over to a later run.
+    const bool skipCompleteNotify = suppressHiddenCompleteNotify.exchange(false, std::memory_order_acq_rel);
+
     if (ult::isHidden.load(std::memory_order_acquire)) {
         if (tsl::notification && ult::useNotifications) {
-            if (commandSuccess.load(std::memory_order_acquire))
-                tsl::notification->showNow(NOTIFY_HEADER + TASK_IS_COMPLETE);
+            if (commandSuccess.load(std::memory_order_acquire)) {
+                if (!skipCompleteNotify)
+                    tsl::notification->showNow(NOTIFY_HEADER + TASK_IS_COMPLETE);
+            }
             else
                 tsl::notification->showNow(NOTIFY_HEADER + TASK_HAS_FAILED);
         }
