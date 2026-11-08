@@ -4732,7 +4732,7 @@ std::atomic<bool> suppressHiddenCompleteNotify{false};
 // connected. Runs on the interpreter thread; total time is holdNs + ~150 ms.
 // Ultrahand closes the overlay by itself when it sees the HOME press.
 // ---------------------------------------------------------------------------
-constexpr u64 kHomeShortHold = 10'000'000ULL;   // 10 ms: a normal click
+constexpr u64 kHomeShortHold = 100'000'000ULL;  // 100 ms: a normal click
 constexpr u64 kHomeLongHold  = 510'000'000ULL;  // 510 ms: long-press hold for `home-hold`
 
 static bool pressHomeButton(const u64 holdNs = kHomeShortHold) {
