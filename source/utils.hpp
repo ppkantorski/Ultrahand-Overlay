@@ -4715,15 +4715,15 @@ static inline bool ipcPollExit(u64 programId) {
     return false;
 }
 
-// Set by the `home` / `hold-home` commands after a successful press. The press hides the overlay on
+// Set by the `home-press` / `home-hold` commands after a successful press. The press hides the overlay on
 // purpose, so the "Task is complete!" notification that backgroundInterpreter() shows
 // for runs that finish while hidden is skipped for that run. Failures still notify.
 std::atomic<bool> suppressHiddenCompleteNotify{false};
 
 // ---------------------------------------------------------------------------
 // pressHomeButton -- simulates one press of the HOME button, held for holdNs.
-//   `home`      -> short click (opens the HOME menu)
-//   `hold-home` -> long hold   (opens the quick-settings menu: sleep / brightness / airplane mode)
+//   `home-press` -> short click (opens the HOME menu)
+//   `home-hold`  -> long hold   (opens the quick-settings menu: sleep / brightness / airplane mode)
 //
 // Overlays run with AppletType_None, so the applet "RequestHomeMenu" route is
 // unavailable. Instead a temporary virtual Pro Controller is attached through
@@ -4733,7 +4733,7 @@ std::atomic<bool> suppressHiddenCompleteNotify{false};
 // Ultrahand closes the overlay by itself when it sees the HOME press.
 // ---------------------------------------------------------------------------
 constexpr u64 kHomeShortHold = 10'000'000ULL;   // 10 ms: a normal click
-constexpr u64 kHomeLongHold  = 510'000'000ULL;  // 510 ms: long-press hold for `hold-home`
+constexpr u64 kHomeLongHold  = 510'000'000ULL;  // 510 ms: long-press hold for `home-hold`
 
 static bool pressHomeButton(const u64 holdNs = kHomeShortHold) {
     constexpr size_t kWorkMemSize   = 0x1000;           // HDLS work buffer: 0x1000 bytes, 0x1000-aligned
@@ -5002,8 +5002,8 @@ void processCommand(const std::vector<std::string>& cmd, const std::string& pack
             break;
             
         case 'h':
-            if (commandName == "home" || commandName == "hold-home") {
-                if (pressHomeButton(commandName == "home" ? kHomeShortHold : kHomeLongHold))
+            if (commandName == "home-press" || commandName == "home-hold") {
+                if (pressHomeButton(commandName == "home-press" ? kHomeShortHold : kHomeLongHold))
                     suppressHiddenCompleteNotify.store(true, std::memory_order_release);
                 else
                     setCommandFailed();
