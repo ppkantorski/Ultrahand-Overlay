@@ -95,6 +95,7 @@ body:
     attributes:
       label: Overlay Memory Allocation
       description: Select the memory allocation configured for overlays in nx-ovlloader.
+      default: 6 MB
       options:
         - 4 MB
         - 6 MB
