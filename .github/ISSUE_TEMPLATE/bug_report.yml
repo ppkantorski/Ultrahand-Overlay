@@ -90,6 +90,20 @@ body:
     validations:
       required: true
 
+  - type: dropdown
+    id: overlay_memory
+    attributes:
+      label: Overlay Memory Allocation
+      description: Select the memory allocation configured for overlays in nx-ovlloader.
+      options:
+        - 4 MB
+        - 6 MB
+        - 8 MB
+        - 10 MB
+        - Higher than 10 MB
+    validations:
+      required: true
+
   - type: markdown
     attributes:
       value: |
